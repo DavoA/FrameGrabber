@@ -48,10 +48,16 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: chmod +x gradlew && ./gradlew connectedDebugAndroidTest --stacktrace
+          script: chmod +x gradlew && sh -c './gradlew connectedDebugAndroidTest --stacktrace; r=$?; adb pull /sdcard/Download/FrameGrabberShots shots; exit $r'
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: emulator-test-report
           path: app/build/reports/androidTests/
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/
