@@ -73,21 +73,11 @@
             android:id="@+id/tabBatch"
             style="@style/Segment"
             android:checked="true"
-            android:drawableStart="@drawable/ic_burst"
-            android:drawablePadding="6dp"
-            android:drawableTint="@color/segment_text"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
             android:text="Пачка кадров" />
         <RadioButton
             android:id="@+id/tabSettings"
             style="@style/Segment"
-            android:drawableStart="@drawable/ic_tune"
-            android:drawablePadding="6dp"
-            android:drawableTint="@color/segment_text"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
-            android:text="Формат" />
+            android:text="Формат и размер" />
     </RadioGroup>
 
     <FrameLayout

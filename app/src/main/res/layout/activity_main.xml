@@ -112,8 +112,10 @@
                     style="@style/BtnPrimary"
                     android:layout_width="wrap_content"
                     android:minHeight="44dp"
-                    android:paddingStart="22dp"
-                    android:paddingEnd="22dp"
+                    android:minWidth="200dp"
+                    android:maxLines="1"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
                     android:text="Выбрать видео" />
             </LinearLayout>
 
@@ -170,6 +172,8 @@
                 style="@style/GlassBtn"
                 android:layout_gravity="top|end"
                 android:layout_margin="8dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="10dp"
                 android:contentDescription="Назад к видео"
                 android:src="@drawable/ic_close"
                 android:visibility="gone" />
@@ -230,6 +234,9 @@
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="8dp"
                     android:fontFamily="monospace"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:textSize="14sp"
                     android:hint="1:23.5"
                     android:imeOptions="actionGo"
                     android:inputType="text" />

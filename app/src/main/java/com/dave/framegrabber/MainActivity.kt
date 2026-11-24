@@ -242,6 +242,13 @@ class MainActivity : Activity() {
         btnCapture = findViewById(R.id.btnCapture)
         list = findViewById(R.id.list)
         previewCard.clipToOutline = true
+        // Preview height adapts to the screen: ~16:10 of the width, but never more than a third of the height
+        previewCard.addOnLayoutChangeListener { v, l, _, r, _, ol, _, or_, _ ->
+            if (r - l == or_ - ol) return@addOnLayoutChangeListener
+            val want = ((r - l) * 0.62f).toInt()
+                .coerceIn((170 * dp).toInt(), (resources.displayMetrics.heightPixels * 0.34f).toInt())
+            if (v.layoutParams.height != want) v.post { v.layoutParams.height = want; v.requestLayout() }
+        }
     }
 
     private fun bindHeader(h: View) {

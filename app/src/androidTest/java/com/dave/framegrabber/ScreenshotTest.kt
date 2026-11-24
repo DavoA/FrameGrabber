@@ -57,8 +57,11 @@ class ScreenshotTest {
         // 3. capture a few frames
         repeat(4) { k ->
             inst.runOnMainSync {
-                a.findViewById<android.widget.SeekBar>(R.id.seek).let { it.progress = it.max * (k + 1) / 5 }
+                val t = a.findViewById<android.widget.EditText>(R.id.editTime)
+                t.setText("0:0${k}.${k * 2}")
+                t.onEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_GO)
             }
+            Thread.sleep(600)
             inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnCapture).performClick() }
             Thread.sleep(1200)
         }
