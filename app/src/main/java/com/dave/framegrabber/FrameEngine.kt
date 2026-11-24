@@ -10,6 +10,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import java.io.Closeable
+import java.io.File
 import java.io.OutputStream
 import kotlin.math.max
 import kotlin.math.min
@@ -74,8 +75,15 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
         if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC
 
     /** Full-resolution frame. exact=true decodes the precise frame (slower). */
-    fun frame(us: Long, exact: Boolean = true): Bitmap? =
-        r.getFrameAtTime(us.coerceIn(0L, lastUs), option(exact))
+    fun frame(us: Long, exact: Boolean = true): Bitmap? {
+        val t = us.coerceIn(0L, lastUs)
+        return if (Build.VERSION.SDK_INT >= 30) {
+            // Ask explicitly for 8-bit ARGB: HDR / 10-bit videos may otherwise come back in formats
+            // that JPEG/PNG encoding and Canvas can't handle.
+            val p = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
+            r.getFrameAtTime(t, option(exact), p)
+        } else r.getFrameAtTime(t, option(exact))
+    }
 
     /** Downscaled frame for previews / filmstrip. */
     fun scaledFrame(us: Long, maxW: Int, maxH: Int, exact: Boolean): Bitmap? =
@@ -168,5 +176,55 @@ object TimeUtil {
         return "%02d-%02d-%02d.%03d".format(
             totalMs / 3_600_000, (totalMs / 60_000) % 60, (totalMs / 1000) % 60, totalMs % 1000
         )
+    }
+}
+
+/** Grabs a frame, renders it to the output spec and writes it to a file. Used by single capture and batch. */
+object FrameCapture {
+    class Shot(val file: File, val thumb: Bitmap)
+
+    /** Any bitmap -> plain software ARGB_8888 (safe for Canvas and every encoder). */
+    private fun normalize(b: Bitmap): Bitmap =
+        if (b.config == Bitmap.Config.ARGB_8888) b
+        else b.copy(Bitmap.Config.ARGB_8888, false) ?: error("Не удалось преобразовать кадр (${b.config})")
+
+    /** Tries precise frame, then nearest keyframe, then scaled decode. Error lists why each attempt failed. */
+    fun grab(e: FrameEngine, us: Long): Bitmap {
+        val attempts = listOf<Pair<String, () -> Bitmap?>>(
+            "точный" to { e.frame(us, exact = true) },
+            "ключевой" to { e.frame(us, exact = false) },
+            "масштаб" to { e.scaledFrame(us, max(16, e.width), max(16, e.height), exact = false) },
+        )
+        val why = mutableListOf<String>()
+        for ((name, attempt) in attempts) {
+            try {
+                val b = attempt()
+                if (b != null) return normalize(b)
+                why += "$name: пусто"
+            } catch (t: Throwable) {
+                why += "$name: ${t.javaClass.simpleName} ${t.message ?: ""}".trim()
+            }
+        }
+        error("Нет кадра на ${TimeUtil.format(us)} (${why.joinToString("; ")})")
+    }
+
+    fun capture(e: FrameEngine, us: Long, spec: OutputSpec, dir: File, baseName: String): Shot {
+        val src = grab(e, us)
+        val out = spec.size?.let { (w, h) -> FrameRender.fit(src, w, h, transparentPad = spec.format != Fmt.JPG) } ?: src
+        dir.mkdirs()
+        val stamp = TimeUtil.stamp(us)
+        var file = File(dir, "${baseName}_$stamp.${spec.format.ext}")
+        var n = 2
+        while (file.exists()) file = File(dir, "${baseName}_${stamp}_${n++}.${spec.format.ext}")
+        try {
+            file.outputStream().buffered().use { FrameRender.encode(out, spec.format, spec.quality, it) }
+        } catch (t: Throwable) {
+            file.delete()
+            throw IllegalStateException(
+                "Ошибка сохранения ${out.width}×${out.height} ${out.config} → ${spec.format}: ${t.javaClass.simpleName} ${t.message ?: ""}", t
+            )
+        }
+        if (file.length() == 0L) { file.delete(); error("Пустой файл после сохранения") }
+        return Shot(file, FrameRender.thumb(out))
     }
 }

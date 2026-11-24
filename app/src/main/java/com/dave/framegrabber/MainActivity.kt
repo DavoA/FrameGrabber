@@ -414,16 +414,8 @@ class MainActivity : Activity() {
 
     /** Runs on a background thread with the given engine. */
     private fun makeCapture(e: FrameEngine, us: Long, spec: OutputSpec): Capture {
-        val src = runCatching { e.frame(us, exact = true) }.getOrNull()
-            ?: runCatching { e.frame(us, exact = false) }.getOrNull()
-            ?: runCatching { e.scaledFrame(us, e.width.coerceAtLeast(16), e.height.coerceAtLeast(16), exact = false) }.getOrNull()
-            ?: error("Не удалось получить кадр на ${TimeUtil.format(us)}")
-        val out = spec.size?.let { (w, h) -> FrameRender.fit(src, w, h, transparentPad = spec.format != Fmt.JPG) } ?: src
-        var file = File(capDir, "${baseName}_${TimeUtil.stamp(us)}.${spec.format.ext}")
-        var n = 2
-        while (file.exists()) file = File(capDir, "${baseName}_${TimeUtil.stamp(us)}_${n++}.${spec.format.ext}")
-        file.outputStream().buffered().use { FrameRender.encode(out, spec.format, spec.quality, it) }
-        return Capture(file, FrameRender.thumb(out), us, spec.format)
+        val shot = FrameCapture.capture(e, us, spec, capDir, baseName)
+        return Capture(shot.file, shot.thumb, us, spec.format)
     }
 
     private fun captureCurrent() {
@@ -434,7 +426,7 @@ class MainActivity : Activity() {
             val res = runCatching { makeCapture(e, us, spec) }
             ui.post {
                 res.onSuccess { shutterFlash(); addCapture(it) }
-                    .onFailure { toast(it.message ?: "Ошибка") }
+                    .onFailure { showError(it) }
             }
         }
     }
@@ -713,6 +705,20 @@ class MainActivity : Activity() {
         v.alpha = 0f
         v.translationY = -8 * resources.displayMetrics.density
         v.animate().alpha(1f).translationY(0f).setDuration(250).start()
+    }
+
+    /** Error dialog with selectable text, so it can be copied or screenshotted. */
+    private fun showError(t: Throwable) {
+        val msg = t.message ?: t.javaClass.simpleName
+        AlertDialog.Builder(this)
+            .setTitle("Не получилось снять кадр")
+            .setMessage(msg)
+            .setPositiveButton("OK", null)
+            .setNeutralButton("Копировать") { _, _ ->
+                val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("error", msg))
+            }
+            .show()
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
