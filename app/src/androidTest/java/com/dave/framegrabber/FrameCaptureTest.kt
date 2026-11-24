@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -39,8 +40,12 @@ class FrameCaptureTest {
     }
 
     /** Same loop the batch mode runs: every 0.5 s across the clip, all formats. */
-    private fun batch(name: String) {
+    private fun batch(name: String, mayBeUnsupported: Boolean = false) {
         FrameEngine(appCtx, clip(name)).use { e ->
+            if (mayBeUnsupported) {
+                // The emulator has no 10-bit HEVC decoder; real phones that shoot HDR do.
+                assumeTrue("no decoder for $name here", runCatching { FrameCapture.grab(e, 0) }.isSuccess)
+            }
             Log.i("FrameCaptureTest", "$name: ${e.width}x${e.height} ${e.fps} fps ${e.durationUs} us")
             assertTrue("duration", e.durationUs > 3_000_000)
             for (fmt in Fmt.values()) {
@@ -63,7 +68,7 @@ class FrameCaptureTest {
     @Test fun h264_batch() = batch("h264.mp4")
     @Test fun h264_rotated_batch() = batch("h264_rot.mp4")
     @Test fun hevc_batch() = batch("hevc.mp4")
-    @Test fun hevc10_hdr_batch() = batch("hevc10_hlg.mp4")
+    @Test fun hevc10_hdr_batch() = batch("hevc10_hlg.mp4", mayBeUnsupported = true)
 
     @Test fun resize_and_last_frame() {
         FrameEngine(appCtx, clip("h264.mp4")).use { e ->

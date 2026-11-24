@@ -465,8 +465,7 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Runs on the SAME retriever/thread as single capture (a second MediaMetadataRetriever on the
-     * same video returns null frames on many phones — that's why batch used to skip everything).
+     * Runs on the same retriever/thread as single capture, so both paths behave identically.
      * One task per frame, so "Stop" reacts immediately.
      */
     private fun runBatch(e: FrameEngine, times: List<Long>, spec: OutputSpec) {
