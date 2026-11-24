@@ -327,7 +327,7 @@
             android:id="@+id/btnSaveAll"
             style="@style/ToolBtn"
             android:drawableStart="@drawable/ic_gallery"
-            android:text="В галерею" />
+            android:text="Галерея" />
         <Button
             android:id="@+id/btnZip"
             style="@style/ToolBtn"
