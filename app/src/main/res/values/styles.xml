@@ -119,4 +119,51 @@
         <item name="android:paddingTop">12dp</item>
         <item name="android:paddingBottom">12dp</item>
     </style>
+
+    <style name="IconBtn">
+        <item name="android:layout_width">46dp</item>
+        <item name="android:layout_height">46dp</item>
+        <item name="android:background">@drawable/btn_icon</item>
+        <item name="android:tint">@color/accent</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
+    </style>
+
+    <style name="GlassBtn">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">38dp</item>
+        <item name="android:background">@drawable/btn_icon_glass</item>
+        <item name="android:tint">@color/text</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
+    </style>
+
+    <!-- Big labelled buttons in the capture action bar -->
+    <style name="ActionBtn">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/btn_action</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:drawablePadding">2dp</item>
+        <item name="android:drawableTint">@color/accent</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
+    </style>
+
+    <!-- Secondary button with an icon on the left -->
+    <style name="ToolBtn" parent="BtnSecondary">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:drawableTint">@color/accent</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:gravity">center</item>
+    </style>
 </resources>

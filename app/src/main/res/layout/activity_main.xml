@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Root is a FrameLayout so "flying" thumbnails can be animated above everything. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- ===== App bar ===== -->
+        <LinearLayout
+            android:id="@+id/appBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="8dp">
+
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:elevation="4dp"
+                android:src="@drawable/logo_mark" />
+
+            <LinearLayout
+                android:id="@+id/titleBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingStart="12dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.01"
+                    android:text="Кадры из видео"
+                    android:textColor="@color/text"
+                    android:textSize="20sp" />
+                <TextView
+                    android:id="@+id/txtInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="middle"
+                    android:singleLine="true"
+                    android:text="Видео не выбрано"
+                    android:textColor="@color/textDim"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnPick"
+                style="@style/IconBtn"
+                android:contentDescription="Выбрать видео"
+                android:src="@drawable/ic_video_library" />
+        </LinearLayout>
+
+        <!-- ===== Pinned preview ===== -->
+        <FrameLayout
+            android:id="@+id/previewCard"
+            android:layout_width="match_parent"
+            android:layout_height="230dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:background="@drawable/bg_preview"
+            android:elevation="6dp">
+
+            <ImageView
+                android:id="@+id/imgPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter" />
+
+            <!-- A captured frame opened from the grid -->
+            <ImageView
+                android:id="@+id/imgCapture"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#FF030806"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/placeholder"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView
+                    android:id="@+id/phIcon"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/logo_mark" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="12dp"
+                    android:text="Выбери видео, чтобы начать"
+                    android:textColor="@color/textDim"
+                    android:textSize="14sp" />
+                <Button
+                    android:id="@+id/btnPickBig"
+                    style="@style/BtnPrimary"
+                    android:layout_width="wrap_content"
+                    android:minHeight="44dp"
+                    android:paddingStart="22dp"
+                    android:paddingEnd="22dp"
+                    android:text="Выбрать видео" />
+            </LinearLayout>
+
+            <!-- Mode chip: ● ВИДЕО / КАДР 3 из 20 -->
+            <LinearLayout
+                android:id="@+id/chipMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:layout_margin="10dp"
+                android:background="@drawable/bg_chip"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="4dp"
+                android:visibility="gone">
+                <View
+                    android:id="@+id/chipDot"
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:background="@drawable/dot" />
+                <TextView
+                    android:id="@+id/chipText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="6dp"
+                    android:letterSpacing="0.08"
+                    android:text="ВИДЕО"
+                    android:textColor="@color/accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txtTimeBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="10dp"
+                android:background="@drawable/bg_chip"
+                android:fontFamily="monospace"
+                android:paddingStart="10dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="3dp"
+                android:textColor="@color/text"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/btnCloseCap"
+                style="@style/GlassBtn"
+                android:layout_gravity="top|end"
+                android:layout_margin="8dp"
+                android:contentDescription="Назад к видео"
+                android:src="@drawable/ic_close"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/btnCapPrev"
+                style="@style/GlassBtn"
+                android:layout_gravity="center_vertical|start"
+                android:layout_margin="8dp"
+                android:contentDescription="Предыдущий кадр"
+                android:src="@drawable/ic_chev_left"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/btnCapNext"
+                style="@style/GlassBtn"
+                android:layout_gravity="center_vertical|end"
+                android:layout_margin="8dp"
+                android:contentDescription="Следующий кадр"
+                android:src="@drawable/ic_chev_right"
+                android:visibility="gone" />
+
+            <View
+                android:id="@+id/flash"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0"
+                android:background="#FFFFFFFF" />
+        </FrameLayout>
+
+        <!-- ===== Context action bar (video controls OR capture actions) ===== -->
+        <FrameLayout
+            android:id="@+id/actionBar"
+            android:layout_width="match_parent"
+            android:layout_height="68dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="4dp">
+
+            <LinearLayout
+                android:id="@+id/videoBar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnPrev"
+                    style="@style/BtnSecondary"
+                    android:text="−1f" />
+
+                <EditText
+                    android:id="@+id/editTime"
+                    style="@style/Input"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:fontFamily="monospace"
+                    android:hint="1:23.5"
+                    android:imeOptions="actionGo"
+                    android:inputType="text" />
+
+                <Button
+                    android:id="@+id/btnNext"
+                    style="@style/BtnSecondary"
+                    android:text="+1f" />
+
+                <ImageButton
+                    android:id="@+id/btnCapture"
+                    android:layout_width="62dp"
+                    android:layout_height="62dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/btn_shutter"
+                    android:contentDescription="Снять кадр"
+                    android:elevation="4dp"
+                    android:src="@drawable/ic_camera"
+                    android:stateListAnimator="@animator/press_scale"
+                    android:tint="#FFFFFFFF" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/captureBar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:visibility="gone">
+                <Button
+                    android:id="@+id/actShare"
+                    style="@style/ActionBtn"
+                    android:drawableTop="@drawable/ic_share"
+                    android:text="Поделиться" />
+                <Button
+                    android:id="@+id/actSave"
+                    style="@style/ActionBtn"
+                    android:layout_marginStart="8dp"
+                    android:drawableTop="@drawable/ic_download"
+                    android:text="Сохранить" />
+                <Button
+                    android:id="@+id/actJump"
+                    style="@style/ActionBtn"
+                    android:layout_marginStart="8dp"
+                    android:drawableTop="@drawable/ic_target"
+                    android:text="К моменту" />
+                <Button
+                    android:id="@+id/actDelete"
+                    style="@style/ActionBtn"
+                    android:layout_marginStart="8dp"
+                    android:drawableTint="@color/danger"
+                    android:drawableTop="@drawable/ic_delete"
+                    android:text="Удалить" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:divider="@null"
+            android:scrollbars="none" />
+    </LinearLayout>
+</FrameLayout>
