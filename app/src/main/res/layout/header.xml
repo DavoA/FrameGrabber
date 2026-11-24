@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Everything above the captures grid. Used as ListView header so the whole screen scrolls. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="8dp">
+
+    <!-- App bar -->
+    <LinearLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <ImageView
+            android:id="@+id/logo"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_thumb"
+            android:src="@drawable/ic_launcher" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="12dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Кадры из видео"
+                android:textColor="@color/text"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Нарезка кадров по интервалу"
+                android:textColor="@color/textDim"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ===== Card: video ===== -->
+    <LinearLayout
+        android:id="@+id/cardVideo"
+        style="@style/Card">
+
+        <Button
+            android:id="@+id/btnPick"
+            style="@style/BtnPrimary"
+            android:layout_marginTop="0dp"
+            android:text="📂  Выбрать видео" />
+
+        <TextView
+            android:id="@+id/txtInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:text="Видео не выбрано"
+            android:textColor="@color/textDim"
+            android:textSize="13sp" />
+
+        <FrameLayout
+            android:id="@+id/previewFrame"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:background="@drawable/bg_preview">
+
+            <ImageView
+                android:id="@+id/imgPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter" />
+
+            <TextView
+                android:id="@+id/txtPlaceholder"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:lineSpacingExtra="6dp"
+                android:text="🎬\nВыбери видео, чтобы начать"
+                android:textColor="@color/textDim"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/txtTimeBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_badge"
+                android:paddingStart="8dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="3dp"
+                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- Shutter flash -->
+            <View
+                android:id="@+id/flash"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0"
+                android:background="#FFFFFFFF" />
+        </FrameLayout>
+
+        <SeekBar
+            android:id="@+id/seek"
+            style="@style/Slider" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+            <LinearLayout
+                android:id="@+id/filmstrip"
+                android:layout_width="wrap_content"
+                android:layout_height="54dp"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="12dp">
+
+            <Button
+                android:id="@+id/btnPrev"
+                style="@style/BtnSecondary"
+                android:text="−1f" />
+
+            <EditText
+                android:id="@+id/editTime"
+                style="@style/Input"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:hint="1:23.5"
+                android:imeOptions="actionGo"
+                android:inputType="text" />
+
+            <Button
+                android:id="@+id/btnNext"
+                style="@style/BtnSecondary"
+                android:text="+1f" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnCapture"
+            style="@style/BtnPrimary"
+            android:text="📸  Снять текущий кадр" />
+    </LinearLayout>
+
+    <!-- ===== Card: output settings ===== -->
+    <LinearLayout
+        android:id="@+id/cardSettings"
+        style="@style/Card">
+
+        <TextView
+            style="@style/CardTitle"
+            android:text="⚙️  Настройки" />
+
+        <TextView
+            style="@style/Label"
+            android:paddingTop="0dp"
+            android:text="Размер" />
+
+        <RadioGroup
+            android:id="@+id/radioSize"
+            style="@style/SegmentGroup">
+            <RadioButton android:id="@+id/sizeOrig" style="@style/Segment" android:checked="true" android:text="Оригинал" />
+            <RadioButton android:id="@+id/size720" style="@style/Segment" android:text="720p" />
+            <RadioButton android:id="@+id/size1080" style="@style/Segment" android:text="1080p" />
+            <RadioButton android:id="@+id/sizeCustom" style="@style/Segment" android:text="Свой" />
+        </RadioGroup>
+
+        <LinearLayout
+            android:id="@+id/customSizeRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="8dp"
+            android:visibility="gone">
+            <EditText
+                android:id="@+id/editW"
+                style="@style/Input"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:hint="Ширина"
+                android:inputType="number"
+                android:text="1920" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="8dp"
+                android:text="×"
+                android:textColor="@color/textDim" />
+            <EditText
+                android:id="@+id/editH"
+                style="@style/Input"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:hint="Высота"
+                android:inputType="number"
+                android:text="1080" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Label"
+            android:text="Формат" />
+
+        <RadioGroup
+            android:id="@+id/radioFormat"
+            style="@style/SegmentGroup">
+            <RadioButton android:id="@+id/fmtJpg" style="@style/Segment" android:checked="true" android:text="JPG" />
+            <RadioButton android:id="@+id/fmtPng" style="@style/Segment" android:text="PNG" />
+            <RadioButton android:id="@+id/fmtWebp" style="@style/Segment" android:text="WebP" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/txtQuality"
+            style="@style/Label"
+            android:text="Качество: 92" />
+
+        <SeekBar
+            android:id="@+id/seekQuality"
+            style="@style/Slider"
+            android:paddingTop="4dp"
+            android:max="100"
+            android:progress="92" />
+    </LinearLayout>
+
+    <!-- ===== Card: batch ===== -->
+    <LinearLayout
+        android:id="@+id/cardBatch"
+        style="@style/Card">
+
+        <TextView
+            style="@style/CardTitle"
+            android:text="🎞  Пакетный режим" />
+
+        <RadioGroup
+            android:id="@+id/radioBatch"
+            style="@style/SegmentGroup">
+            <RadioButton android:id="@+id/batchInterval" style="@style/Segment" android:checked="true" android:text="Каждые N сек" />
+            <RadioButton android:id="@+id/batchCount" style="@style/Segment" android:text="Кол-во кадров" />
+        </RadioGroup>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="12dp">
+            <TextView
+                android:id="@+id/lblBatch"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Интервал, сек"
+                android:textColor="@color/text" />
+            <EditText
+                android:id="@+id/editBatch"
+                style="@style/Input"
+                android:layout_width="110dp"
+                android:inputType="numberDecimal"
+                android:text="5" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="10dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingEnd="8dp"
+                android:text="С"
+                android:textColor="@color/textDim" />
+            <EditText
+                android:id="@+id/editFrom"
+                style="@style/Input"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:hint="0:00"
+                android:inputType="text" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="10dp"
+                android:paddingEnd="8dp"
+                android:text="по"
+                android:textColor="@color/textDim" />
+            <EditText
+                android:id="@+id/editTo"
+                style="@style/Input"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:hint="конец"
+                android:inputType="text" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnBatch"
+            style="@style/BtnPrimary"
+            android:text="🎞  Снять пачку кадров" />
+
+        <ProgressBar
+            android:id="@+id/progressBatch"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:progressBackgroundTint="@color/stroke"
+            android:progressTint="@color/accent"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/txtProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingTop="6dp"
+            android:textColor="@color/textDim"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- ===== Card: captures header ===== -->
+    <LinearLayout
+        android:id="@+id/cardCaptures"
+        style="@style/Card"
+        android:layout_marginBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                style="@style/CardTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:paddingBottom="0dp"
+                android:text="🖼  Снятые кадры" />
+            <TextView
+                android:id="@+id/txtCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_count"
+                android:minWidth="32dp"
+                android:gravity="center"
+                android:paddingStart="10dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="3dp"
+                android:text="0"
+                android:textColor="#FFFFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/txtEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingTop="14dp"
+            android:paddingBottom="4dp"
+            android:text="Пока пусто — сними кадр или пачку"
+            android:textColor="@color/textDim"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:id="@+id/capActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="12dp"
+            android:visibility="gone">
+            <Button
+                android:id="@+id/btnSaveAll"
+                style="@style/BtnSecondary"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="В галерею" />
+            <Button
+                android:id="@+id/btnZip"
+                style="@style/BtnSecondary"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:text="ZIP" />
+            <Button
+                android:id="@+id/btnClear"
+                style="@style/BtnSecondary"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="Очистить"
+                android:textColor="@color/danger" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

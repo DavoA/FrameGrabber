@@ -14,11 +14,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build
         run: |
-          unzip -q -o FrameGrabber.zip
-          cd FrameGrabber
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk ../FrameGrabber.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FrameGrabber.apk
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
