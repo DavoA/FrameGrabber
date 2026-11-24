@@ -203,7 +203,8 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
         // ---- palms
         for (p in palms) drawPalm(c, w * p.xFrac, h, h * p.hFrac, p.lean, t + p.phase)
 
-        if (running) postInvalidateOnAnimation()
+        // Respect the system "remove animations" / battery saver setting: then it's a still picture.
+        if (running && android.animation.ValueAnimator.areAnimatorsEnabled()) postInvalidateOnAnimation()
     }
 
     /** Curved trunk + drooping fronds that sway a little. */
