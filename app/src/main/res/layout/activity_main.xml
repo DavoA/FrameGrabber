@@ -6,6 +6,12 @@
     android:layout_height="match_parent"
     android:background="@color/bg">
 
+    <!-- Animated synthwave background (sky, sun, green triangle waves, palms) -->
+    <com.dave.framegrabber.SynthwaveView
+        android:id="@+id/bgView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <LinearLayout
         android:id="@+id/content"
         android:layout_width="match_parent"

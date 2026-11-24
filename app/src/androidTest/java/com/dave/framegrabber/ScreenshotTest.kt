@@ -36,7 +36,7 @@ class ScreenshotTest {
     }
 
     private fun launch(intent: Intent): Activity {
-        intent.setClassName(appCtx, MainActivity::class.java.name)
+        if (intent.component == null) intent.setClassName(appCtx, MainActivity::class.java.name)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return inst.startActivitySync(intent)
     }
@@ -89,6 +89,23 @@ class ScreenshotTest {
             a.findViewById<android.widget.RadioButton>(R.id.tabSettings).isChecked = true
         }
         Thread.sleep(1500); shot("6_settings")
-        a.finish()
+        a.finish(); Thread.sleep(800)
+
+        // 7-8. file browser: folders, then search
+        inst.uiAutomation.grantRuntimePermission(appCtx.packageName, android.Manifest.permission.READ_MEDIA_VIDEO)
+        val v = ContentValues().apply {
+            put(MediaStore.Video.Media.DISPLAY_NAME, "synthwave_clip.mp4")
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/Test")
+        }
+        appCtx.contentResolver.insert(MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), v)?.let { uri ->
+            appCtx.contentResolver.openOutputStream(uri)?.use { o -> f.inputStream().use { it.copyTo(o) } }
+        }
+        Thread.sleep(1500)
+        val b = launch(Intent().setClassName(appCtx, FileBrowserActivity::class.java.name))
+        Thread.sleep(3000); shot("7_browser")
+        inst.runOnMainSync { b.findViewById<android.widget.EditText>(R.id.editSearch).setText("synth") }
+        Thread.sleep(3000); shot("8_search")
+        b.finish()
     }
 }

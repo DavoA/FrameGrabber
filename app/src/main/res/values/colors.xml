@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Synthwave: night-purple base, sunset pink/orange, neon green (our accent) and cyan -->
 <resources>
-    <color name="bg">#FF07130D</color>
-    <color name="surface">#FF0F2219</color>
-    <color name="surface2">#FF163024</color>
-    <color name="stroke">#FF234A38</color>
-    <color name="primary">#FF1F7A4D</color>
-    <color name="primaryBright">#FF34A96B</color>
-    <color name="accent">#FF7FE0A6</color>
-    <color name="text">#FFE7F4EC</color>
-    <color name="textDim">#FF8FB3A0</color>
-    <color name="danger">#FFE57373</color>
+    <color name="bg">#FF0B0220</color>
+    <color name="surface">#E0170A33</color>
+    <color name="surface2">#CC261050</color>
+    <color name="stroke">#FF47267A</color>
+    <color name="primary">#FFFF2E97</color>
+    <color name="primaryBright">#FFFF9A3D</color>
+    <color name="accent">#FF5CF5AE</color>
+    <color name="cyan">#FF36E2F5</color>
+    <color name="text">#FFF7F0FF</color>
+    <color name="textDim">#FFB9A7DC</color>
+    <color name="danger">#FFFF5C7A</color>
 </resources>

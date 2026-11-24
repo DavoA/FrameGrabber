@@ -7,7 +7,7 @@
         <aapt:attr name="android:fillColor">
             <gradient android:type="linear"
                 android:startX="0" android:startY="0" android:endX="108" android:endY="108"
-                android:startColor="#FF2A9A62" android:endColor="#FF0A3321" />
+                android:startColor="#FFFF2E97" android:endColor="#FF2B0A5C" />
         </aapt:attr>
     </path>
     <!-- soft glow -->
@@ -15,7 +15,7 @@
         <aapt:attr name="android:fillColor">
             <gradient android:type="radial"
                 android:centerX="40" android:centerY="36" android:gradientRadius="56"
-                android:startColor="#337FE0A6" android:endColor="#007FE0A6" />
+                android:startColor="#55FF9A3D" android:endColor="#00FF9A3D" />
         </aapt:attr>
     </path>
 </vector>

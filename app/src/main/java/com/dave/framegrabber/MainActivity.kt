@@ -97,6 +97,7 @@ class MainActivity : Activity() {
     private val dp get() = resources.displayMetrics.density
 
     // pinned views
+    private lateinit var bgView: SynthwaveView
     private lateinit var root: FrameLayout
     private lateinit var content: View
     private lateinit var logo: ImageView
@@ -160,7 +161,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         capDir = File(cacheDir, "captures").apply { deleteRecursively(); mkdirs() }
+        if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false) // background under the bars
         setContentView(R.layout.activity_main)
+        bgView = findViewById(R.id.bgView)
         bindViews()
         header = layoutInflater.inflate(R.layout.header, list, false)
         bindHeader(header)
@@ -193,6 +196,9 @@ class MainActivity : Activity() {
             super.onBackPressed()
         }
     }
+
+    override fun onResume() { super.onResume(); bgView.running = true }
+    override fun onPause() { bgView.running = false; super.onPause() }
 
     override fun onDestroy() {
         batchCancel?.set(true)
@@ -283,8 +289,9 @@ class MainActivity : Activity() {
     }
 
     private fun setupListeners() {
-        btnPick.setOnClickListener { pickVideo() }
-        findViewById<View>(R.id.btnPickBig).setOnClickListener { pickVideo() }
+        btnPick.setOnClickListener { openBrowser() }
+        btnPick.setOnLongClickListener { pickVideo(); true } // long press: pick with another app
+        findViewById<View>(R.id.btnPickBig).setOnClickListener { openBrowser() }
 
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
@@ -374,6 +381,13 @@ class MainActivity : Activity() {
 
     // ================================================================ loading video
 
+    /** Our own ZArchiver-style file browser (FileBrowserActivity). */
+    private fun openBrowser() {
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(this, FileBrowserActivity::class.java), REQ_PICK)
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     /**
      * ACTION_GET_CONTENT + chooser (not ACTION_OPEN_DOCUMENT): the system "storage" picker only lists
      * built-in document providers, while GET_CONTENT lets ANY app that can hand out a file answer —
@@ -392,7 +406,10 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_PICK && resultCode == RESULT_OK) data?.data?.let { loadVideo(it) }
+        if (requestCode != REQ_PICK || resultCode != RESULT_OK || data == null) return
+        val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)
+        val uri = if (path != null) Uri.fromFile(File(path)) else data.data
+        uri?.let { loadVideo(it) }
     }
 
     private fun handleIncoming(intent: Intent?) {
