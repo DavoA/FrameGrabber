@@ -8,21 +8,22 @@ import com.dave.framegrabber.R
 import com.dave.framegrabber.batch.BatchState
 import com.dave.framegrabber.data.CaptureStore
 import com.dave.framegrabber.data.Prefs
-import com.dave.framegrabber.ui.switchPanel
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * The main screen, split into parts. Each part owns its own views and logic:
+ * The main screen, split into parts. Each part owns its own views and logic.
+ * Pages (bottom bar): «Съёмка» (page_capture.xml), «Кадры» (the list), «Инструменты» (page_tools.xml).
  *
+ *  - [nav]     — the bottom bar and page switching
  *  - [video]   — the opened video: loading, preview, timeline, frame stepping, playback with sound
- *  - [viewer]  — a captured frame opened in the big preview (zoom, flip, share/save/delete/text)
- *  - [grid]    — the captured frames grid + "Галерея / ZIP / Очистить"
+ *  - [viewer]  — a captured frame opened full screen (zoom, flip, share/save/delete/text)
+ *  - [grid]    — page «Кадры»: the frames grid + "Галерея / ZIP / Очистить"
  *  - [range]   — the «Отрезок» card used by batch and export
- *  - [batch]   — tab «Пачка»: many frames at once (runs in the background service)
- *  - [export]  — tab «Экспорт»: GIF, MP4 clip, contact sheet
- *  - [format]  — tab «Формат»: size, format, quality, "sharpest frame"
+ *  - [batch]   — «Пачка кадров»: many frames at once (runs in the background service)
+ *  - [export]  — «Экспорт»: GIF, MP4 clip, contact sheet
+ *  - [format]  — size, format, quality, "sharpest frame" (edited in ⚙ settings)
  *  - [recent]  — recently opened videos on the start screen
  *  - [shutter] — the 📷 button (take the current frame)
  *  - [ocr]     — "copy text from a frame"
@@ -31,7 +32,7 @@ import java.util.concurrent.Executors
  *
  * Parts talk to each other only through this object (e.g. `s.viewer.close()`).
  */
-class MainScreen(val act: MainActivity, val header: View) {
+class MainScreen(val act: MainActivity) {
     val prefs = Prefs(act)
     val ui = Handler(Looper.getMainLooper())
     /** All calls to the video engine go through this one thread (MediaMetadataRetriever is not thread-safe). */
@@ -48,18 +49,19 @@ class MainScreen(val act: MainActivity, val header: View) {
         mkdirs()
     }
 
-    /** Find a view in the pinned part of the screen. */
+    /** Find a view on the screen (any page). */
     fun <T : View> pinned(id: Int): T = act.findViewById(id)
-    /** Find a view in the scrolling part (the list header). */
-    fun <T : View> h(id: Int): T = header.findViewById(id)
+    /** Same as [pinned] (kept short for the page parts). */
+    fun <T : View> h(id: Int): T = act.findViewById(id)
 
     // Order matters only for init blocks (they bind views and listeners, they don't call each other).
     val effects = Effects(this)
+    val nav = NavController(this)
     val video = VideoController(this)
     val viewer = ViewerController(this)
     val grid = CapturesController(this)
     val range = RangeCard(this)
-    val format = FormatPanel(this)
+    val format = CaptureFormat(this)
     val batch = BatchPanel(this)
     val export = ExportPanel(this)
     val recent = RecentStrip(this)
@@ -68,27 +70,20 @@ class MainScreen(val act: MainActivity, val header: View) {
     val settings = SettingsDialog(this)
 
     init {
-        setupTabs()
         batch.updateHint()
         recent.build()
         effects.playEntrance()
         effects.startIdle()
+        freezeBackgroundWhileScrolling(h(R.id.pageTools))
     }
 
-    /** Tabs «Пачка / Экспорт / Формат» (the last one is remembered). */
-    private fun setupTabs() {
-        val panels = listOf(h<View>(R.id.cardBatch), h<View>(R.id.cardExport), h<View>(R.id.cardSettings))
-        val tabIds = listOf(R.id.tabBatch, R.id.tabExport, R.id.tabSettings)
-        val tab = prefs.tab.coerceIn(0, 2)
-        panels.forEachIndexed { i, p -> p.visibility = if (i == tab) View.VISIBLE else View.GONE }
-        h<android.widget.RadioGroup>(R.id.radioTabs).apply {
-            check(tabIds[tab])
-            setOnCheckedChangeListener { _, id ->
-                val to = tabIds.indexOf(id).coerceAtLeast(0)
-                val from = panels.indexOfFirst { it.visibility == View.VISIBLE }.coerceAtLeast(0)
-                if (from != to) switchPanel(panels[from], panels[to], if (to > from) 1 else -1)
-                prefs.tab = to
-            }
+    /** The animated background pauses while a page scrolls (smoother scrolling). */
+    private fun freezeBackgroundWhileScrolling(v: View) {
+        val resume = Runnable { act.bgView.scrolling = false }
+        v.setOnScrollChangeListener { _, _, _, _, _ ->
+            act.bgView.scrolling = true
+            ui.removeCallbacks(resume)
+            ui.postDelayed(resume, 180)
         }
     }
 

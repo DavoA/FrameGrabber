@@ -127,6 +127,91 @@
             android:tint="@color/accent" />
     </LinearLayout>
 
+    <!-- Frame quality (moved here from the main screen: set once) -->
+    <TextView
+        style="@style/Label"
+        android:paddingTop="20dp"
+        android:letterSpacing="0.1"
+        android:text="КАЧЕСТВО КАДРОВ" />
+    <TextView
+        style="@style/Label"
+        android:text="Размер" />
+
+    <RadioGroup
+        android:id="@+id/radioSize"
+        style="@style/SegmentGroup">
+        <RadioButton android:id="@+id/sizeOrig" style="@style/Segment" android:checked="true" android:text="Оригинал" />
+        <RadioButton android:id="@+id/size720" style="@style/Segment" android:text="720p" />
+        <RadioButton android:id="@+id/size1080" style="@style/Segment" android:text="1080p" />
+        <RadioButton android:id="@+id/sizeCustom" style="@style/Segment" android:text="Свой" />
+    </RadioGroup>
+
+    <LinearLayout
+        android:id="@+id/customSizeRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:visibility="gone">
+        <EditText
+            android:id="@+id/editW"
+            style="@style/Input"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:hint="Ширина"
+            android:inputType="number"
+            android:text="1920" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="×"
+            android:textColor="@color/textDim" />
+        <EditText
+            android:id="@+id/editH"
+            style="@style/Input"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:hint="Высота"
+            android:inputType="number"
+            android:text="1080" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/Label"
+        android:text="Формат" />
+
+    <RadioGroup
+        android:id="@+id/radioFormat"
+        style="@style/SegmentGroup">
+        <RadioButton android:id="@+id/fmtJpg" style="@style/Segment" android:checked="true" android:text="JPG" />
+        <RadioButton android:id="@+id/fmtPng" style="@style/Segment" android:text="PNG" />
+        <RadioButton android:id="@+id/fmtWebp" style="@style/Segment" android:text="WebP" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/txtQuality"
+        style="@style/Label"
+        android:text="Качество: 92" />
+
+    <SeekBar
+        android:id="@+id/seekQuality"
+        style="@style/Slider"
+        android:paddingTop="4dp"
+        android:max="100"
+        android:progress="92" />
+
+    <TextView style="@style/Label" android:text="Умная съёмка" />
+    <Switch
+        android:id="@+id/swSharpest"
+        style="@style/Toggle"
+        android:checked="true"
+        android:text="Самый резкий кадр рядом (±0,5 с)" />
+    <TextView
+        style="@style/SubHint"
+        android:text="Проверяет соседние кадры и сохраняет наименее смазанный. Помогает при движении." />
+
     <!-- File names -->
     <TextView
         style="@style/Label"

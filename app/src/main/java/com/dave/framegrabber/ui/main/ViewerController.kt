@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import android.widget.TextView
 import com.dave.framegrabber.R
 import com.dave.framegrabber.core.FrameRender
 import com.dave.framegrabber.core.TimeUtil
@@ -13,131 +14,119 @@ import com.dave.framegrabber.data.Capture
 import com.dave.framegrabber.data.CaptureStore
 import com.dave.framegrabber.ui.anim
 import com.dave.framegrabber.ui.dp
-import com.dave.framegrabber.ui.hideKeyboard
-import com.dave.framegrabber.ui.popIn
 import com.dave.framegrabber.ui.shake
 import com.dave.framegrabber.ui.widget.ZoomImageView
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 
 /**
- * A captured frame opened in the big preview: pinch-zoom, swipe/arrows to flip,
- * and the action bar (Отправить / Сохранить / Момент / Текст / Удалить) instead of the video controls.
+ * A captured frame opened full screen: pinch-zoom, swipe/arrows to flip, and the actions
+ * Отправить / Сохранить / Момент / Текст / Удалить at the bottom.
  */
 class ViewerController(private val s: MainScreen) {
 
     companion object {
-        private const val VIEW_MAX_SIDE = 1600
+        private const val VIEW_MAX_SIDE = 2048
     }
 
-    /** Frame currently open in the preview; null = the video is shown. */
+    /** Frame currently open; null = viewer closed. */
     var selected: Capture? = null
         private set
 
     private val captures get() = CaptureStore.captures
     private val viewGen = AtomicInteger()
 
-    private val imgCapture = s.pinned<ZoomImageView>(R.id.imgCapture)
-    private val btnClose = s.pinned<View>(R.id.btnCloseCap)
+    private val root = s.pinned<View>(R.id.viewer)
+    private val img = s.pinned<ZoomImageView>(R.id.imgCapture)
+    private val top = s.pinned<View>(R.id.viewerTop)
+    private val bottom = s.pinned<View>(R.id.viewerBottom)
+    private val title = s.pinned<TextView>(R.id.txtViewerTitle)
+    private val info = s.pinned<TextView>(R.id.txtViewerInfo)
     private val btnPrev = s.pinned<View>(R.id.btnCapPrev)
     private val btnNext = s.pinned<View>(R.id.btnCapNext)
-    private val videoBar = s.pinned<View>(R.id.videoBar)
-    private val captureBar = s.pinned<ViewGroup>(R.id.captureBar)
+    private val actions = s.pinned<ViewGroup>(R.id.captureBar)
 
     init {
-        btnClose.setOnClickListener { close() }
+        s.pinned<View>(R.id.btnCloseCap).setOnClickListener { close() }
         btnPrev.setOnClickListener { step(-1) }
         btnNext.setOnClickListener { step(+1) }
-        imgCapture.onSwipe = { d -> step(d) }
+        img.onSwipe = { d -> step(d) }
         s.pinned<View>(R.id.actShare).setOnClickListener { selected?.let { s.grid.share(it) } }
         s.pinned<View>(R.id.actSave).setOnClickListener { selected?.let { s.grid.saveOne(it) } }
-        s.pinned<View>(R.id.actJump).setOnClickListener { selected?.let { c -> close(); s.video.seekTo(c.timeUs) } }
+        s.pinned<View>(R.id.actJump).setOnClickListener {
+            selected?.let { c -> close(); s.nav.show(NavController.Page.CAPTURE); s.video.seekTo(c.timeUs) }
+        }
         s.pinned<View>(R.id.actText).setOnClickListener { selected?.let { s.ocr.recognize(it) } }
         s.pinned<View>(R.id.actDelete).setOnClickListener { deleteSelected() }
     }
 
     fun open(c: Capture, dir: Int = 0) {
-        val wasOpen = selected != null
         if (selected === c) return
+        val wasOpen = selected != null
         selected = c
         s.grid.refresh()
-        s.video.editTime.hideKeyboard()
+        s.video.pausePlayback()
 
-        imgCapture.resetZoom()
-        imgCapture.setImageBitmap(c.thumb) // instant low-res, full image follows
-        imgCapture.visibility = View.VISIBLE
-        val w = max(s.video.previewCard.width, 1).toFloat()
+        img.resetZoom()
+        img.setImageBitmap(c.thumb) // instant low-res, the full image follows
+        val w = max(root.width, 1).toFloat()
         when {
             !wasOpen -> {
-                imgCapture.alpha = 0f
-                imgCapture.translationX = 0f
-                imgCapture.scaleX = 0.86f; imgCapture.scaleY = 0.86f
-                imgCapture.anim().alpha(1f).scaleX(1f).scaleY(1f).setDuration(380)
+                root.visibility = View.VISIBLE
+                root.alpha = 0f
+                root.anim().alpha(1f).setDuration(200).start()
+                img.alpha = 0f
+                img.translationX = 0f
+                img.scaleX = 0.8f; img.scaleY = 0.8f
+                img.anim().alpha(1f).scaleX(1f).scaleY(1f).setDuration(380)
                     .setInterpolator(OvershootInterpolator(1.1f)).start()
-                s.video.imgPreview.anim().alpha(0f).setDuration(250).start()
-                enterChrome()
+                slideIn(top, -1); slideIn(bottom, +1)
+                popActions()
             }
             dir != 0 -> {   // flipped with swipe / arrows: slide in from that side
-                imgCapture.translationX = dir * w * 0.35f
-                imgCapture.alpha = 0.3f
-                imgCapture.scaleX = 1f; imgCapture.scaleY = 1f
-                imgCapture.anim().translationX(0f).alpha(1f).setDuration(300)
-                    .setInterpolator(DecelerateInterpolator(1.6f)).start()
+                img.translationX = dir * w * 0.35f
+                img.alpha = 0.3f
+                img.anim().translationX(0f).alpha(1f).setDuration(300).setInterpolator(DecelerateInterpolator(1.6f)).start()
             }
             else -> {
-                imgCapture.alpha = 0.4f
-                imgCapture.scaleX = 0.94f; imgCapture.scaleY = 0.94f
-                imgCapture.anim().alpha(1f).scaleX(1f).scaleY(1f).setDuration(260).start()
+                img.alpha = 0f
+                img.scaleX = 0.85f; img.scaleY = 0.85f
+                img.anim().alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(OvershootInterpolator(1.4f)).start()
             }
         }
         updateChrome()
         loadFull(c)
     }
 
-    /** Back to the video. No-op if nothing is open. */
+    /** No-op if nothing is open. */
     fun close() {
         if (selected == null) return
         selected = null
         viewGen.incrementAndGet()
         s.grid.refresh()
-        imgCapture.anim().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(220)
-            .withEndAction { imgCapture.visibility = View.GONE; imgCapture.setImageDrawable(null) }.start()
-        s.video.imgPreview.anim().alpha(1f).setDuration(260).start()
-        exitChrome()
-        s.video.resetChip()
-        s.video.showTime()
+        img.anim().scaleX(0.9f).scaleY(0.9f).setDuration(200).start()
+        root.anim().alpha(0f).setDuration(220).withEndAction {
+            root.visibility = View.GONE
+            img.setImageDrawable(null); img.scaleX = 1f; img.scaleY = 1f
+        }.start()
     }
 
     private fun step(d: Int) {
         val c = selected ?: return
         val i = captures.indexOf(c) + d
-        if (i in captures.indices) open(captures[i], d) else imgCapture.shake(d)
+        if (i in captures.indices) open(captures[i], d) else img.shake(d)
     }
 
     private fun deleteSelected() {
         val c = selected ?: return
         val idx = captures.indexOf(c)
-        imgCapture.anim().alpha(0f).scaleX(0.6f).scaleY(0.6f).translationY(40 * imgCapture.dp).setDuration(240)
+        img.anim().alpha(0f).scaleX(0.6f).scaleY(0.6f).translationY(40 * img.dp).setDuration(240)
             .setInterpolator(AccelerateInterpolator()).withEndAction {
-                imgCapture.translationY = 0f
+                img.translationY = 0f
                 s.grid.remove(c)
                 if (captures.isEmpty()) close() // `selected` is still c, so the exit animation runs
-                else openInPlace(captures[idx.coerceAtMost(captures.size - 1)])
+                else open(captures[idx.coerceAtMost(captures.size - 1)])
             }.start()
-    }
-
-    /** Shows another frame while the viewer is already open (after a delete). */
-    private fun openInPlace(c: Capture) {
-        selected = c
-        s.grid.refresh()
-        imgCapture.resetZoom()
-        imgCapture.setImageBitmap(c.thumb)
-        imgCapture.alpha = 0f
-        imgCapture.scaleX = 0.85f; imgCapture.scaleY = 0.85f
-        imgCapture.anim().alpha(1f).scaleX(1f).scaleY(1f).setDuration(300)
-            .setInterpolator(OvershootInterpolator(1.4f)).start()
-        updateChrome()
-        loadFull(c)
     }
 
     /** Replace the small thumbnail with the real saved image. */
@@ -145,17 +134,17 @@ class ViewerController(private val s: MainScreen) {
         val gen = viewGen.incrementAndGet()
         s.io.execute {
             val b = runCatching { FrameRender.decodeFile(c.file, VIEW_MAX_SIDE) }.getOrNull()
-            s.ui.post { if (gen == viewGen.get() && selected === c && b != null) imgCapture.setImageBitmap(b) }
+            s.ui.post { if (gen == viewGen.get() && selected === c && b != null) img.setImageBitmap(b) }
         }
     }
 
-    /** Chip "КАДР 2 ИЗ 4", badge with the real file resolution, arrows dimmed at the ends. */
+    /** "КАДР 2 ИЗ 4", the real file resolution, arrows dimmed at the ends. */
     fun updateChrome() {
         val c = selected ?: return
         val i = captures.indexOf(c)
-        s.video.setChip(live = false, text = "КАДР ${i + 1} ИЗ ${captures.size}")
+        title.text = "КАДР ${i + 1} ИЗ ${captures.size}"
         val size = Formatter.formatShortFileSize(s.act, c.file.length())
-        s.video.txtTimeBadge.text = buildString {
+        info.text = buildString {
             if (c.sharpened) append("★ ")   // the sharper neighbour was taken
             append("${c.width}×${c.height} · ${c.fmt.name} · $size")
             append("  ")
@@ -166,38 +155,19 @@ class ViewerController(private val s: MainScreen) {
         btnNext.anim().alpha(if (i < captures.size - 1) 1f else 0.3f).setDuration(150).start()
     }
 
-    private fun enterChrome() {
-        s.video.setPlayButtonVisible(false)
-        listOf(btnClose, btnPrev, btnNext).forEachIndexed { i, v -> v.popIn(60L * i) }
-        if (s.video.txtTimeBadge.visibility != View.VISIBLE) s.video.txtTimeBadge.popIn()
-        swapBars(out = videoBar, into = captureBar)
+    private fun slideIn(v: View, fromDir: Int) {
+        v.alpha = 0f
+        v.translationY = fromDir * 30 * v.dp
+        v.anim().alpha(1f).translationY(0f).setStartDelay(80).setDuration(300).start()
     }
 
-    private fun exitChrome() {
-        listOf(btnClose, btnPrev, btnNext).forEach { v ->
-            v.anim().alpha(0f).scaleX(0.6f).scaleY(0.6f).setDuration(150)
-                .withEndAction { v.visibility = View.GONE }.start()
-        }
-        swapBars(out = captureBar, into = videoBar)
-        s.video.setPlayButtonVisible(true)
-    }
-
-    /** Context bar swap: video controls ↔ frame actions (the action buttons pop one by one). */
-    private fun swapBars(out: View, into: View) {
-        val d = out.dp
-        out.anim().alpha(0f).translationY(16 * d).setDuration(160)
-            .withEndAction { out.visibility = View.GONE; out.translationY = 0f }.start()
-        into.visibility = View.VISIBLE
-        into.alpha = 0f
-        into.translationY = -16 * d
-        into.anim().alpha(1f).translationY(0f).setStartDelay(90).setDuration(260).start()
-        if (into === captureBar) {
-            for (i in 0 until captureBar.childCount) {
-                val b = captureBar.getChildAt(i)
-                b.scaleX = 0.7f; b.scaleY = 0.7f
-                b.anim().scaleX(1f).scaleY(1f).setStartDelay(110L + 45L * i).setDuration(300)
-                    .setInterpolator(OvershootInterpolator(2f)).start()
-            }
+    /** Action buttons pop one by one. */
+    private fun popActions() {
+        for (i in 0 until actions.childCount) {
+            val b = actions.getChildAt(i)
+            b.scaleX = 0.7f; b.scaleY = 0.7f
+            b.anim().scaleX(1f).scaleY(1f).setStartDelay(140L + 45L * i).setDuration(300)
+                .setInterpolator(OvershootInterpolator(2f)).start()
         }
     }
 }

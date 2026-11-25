@@ -8,15 +8,14 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.animation.OvershootInterpolator
-import android.widget.ListView
 import com.dave.framegrabber.data.AppTheme
 import com.dave.framegrabber.ui.anim
 import com.dave.framegrabber.ui.dp
 import com.dave.framegrabber.ui.browser.FileBrowserActivity
 import com.dave.framegrabber.ui.main.MainScreen
+import com.dave.framegrabber.ui.main.NavController
 import com.dave.framegrabber.ui.widget.SynthwaveView
 import java.io.File
-import kotlin.math.max
 
 /**
  * Entry point. Only wiring lives here: the window, opening videos (file browser / other apps /
@@ -31,7 +30,9 @@ class MainActivity : Activity() {
 
     lateinit var bgView: SynthwaveView
         private set
-    private lateinit var screen: MainScreen
+    /** The screen's parts (public for the UI tests). */
+    lateinit var screen: MainScreen
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,9 +41,8 @@ class MainActivity : Activity() {
         bgView = findViewById(R.id.bgView)
         AppTheme.apply(this, bgView, AppTheme.get(this), animate = false)
 
-        val list = findViewById<ListView>(R.id.list)
-        screen = MainScreen(this, layoutInflater.inflate(R.layout.header, list, false))
-        applyInsets(list)
+        screen = MainScreen(this)
+        applyInsets()
 
         findViewById<View>(R.id.btnPick).apply {
             setOnClickListener { openBrowser() }
@@ -57,14 +57,24 @@ class MainActivity : Activity() {
         handleIncoming(intent)
     }
 
-    /** Android 15 draws edge-to-edge: keep content out from under status/nav bars and the keyboard. */
-    private fun applyInsets(list: ListView) {
+    /**
+     * Android 15 draws edge-to-edge: the content starts below the status bar, the bottom bar grows
+     * under the navigation bar, and the full-screen viewer keeps its buttons clear of both.
+     */
+    private fun applyInsets() {
         if (Build.VERSION.SDK_INT < 30) return
-        findViewById<View>(R.id.content).setOnApplyWindowInsetsListener { v, insets ->
+        val nav = findViewById<View>(R.id.bottomNav)
+        val navHeight = nav.layoutParams.height
+        val viewerTop = findViewById<View>(R.id.viewerTop)
+        val viewerBottom = findViewById<View>(R.id.viewerBottom)
+        val pad = (12 * nav.dp).toInt()
+        findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars())
-            val ime = insets.getInsets(WindowInsets.Type.ime())
-            v.setPadding(bars.left, bars.top, bars.right, 0)
-            list.setPadding(0, 0, 0, max(bars.bottom, ime.bottom) + (12 * v.dp).toInt())
+            findViewById<View>(R.id.content).setPadding(bars.left, bars.top, bars.right, 0)
+            nav.setPadding(0, 0, 0, bars.bottom)
+            nav.layoutParams = nav.layoutParams.apply { height = navHeight + bars.bottom }
+            viewerTop.setPadding(pad + bars.left, pad + bars.top, pad + bars.right, pad)
+            viewerBottom.setPadding(pad + bars.left, pad, pad + bars.right, pad + bars.bottom)
             insets
         }
     }
@@ -90,6 +100,8 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         if (screen.viewer.selected != null) {
             screen.viewer.close()
+        } else if (screen.nav.page != NavController.Page.CAPTURE) {
+            screen.nav.show(NavController.Page.CAPTURE)
         } else {
             @Suppress("DEPRECATION")
             super.onBackPressed()
@@ -156,7 +168,7 @@ class MainActivity : Activity() {
                 // the browser returns a file path (a file:// Uri can't pass through setResult)
                 val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)
                 val uri = if (path != null) Uri.fromFile(File(path)) else data.data
-                uri?.let { screen.video.load(it) }
+                uri?.let { screen.video.load(it); screen.nav.show(NavController.Page.CAPTURE) }
             }
         }
     }

@@ -26,6 +26,7 @@ import com.dave.framegrabber.data.Output
 import com.dave.framegrabber.ui.anim
 import com.dave.framegrabber.ui.bump
 import com.dave.framegrabber.ui.dp
+import com.dave.framegrabber.ui.floatLoop
 import com.dave.framegrabber.ui.shareUri
 import com.dave.framegrabber.ui.showAnimated
 import com.dave.framegrabber.ui.showError
@@ -34,8 +35,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * "Снятые кадры": the grid of captured frames (the screen's scrolling list), the counter,
- * and saving / sharing / ZIP / clearing.
+ * Page «Кадры»: the grid of captured frames, the counter, and saving / sharing / ZIP / clearing.
  */
 class CapturesController(private val s: MainScreen) {
 
@@ -44,12 +44,12 @@ class CapturesController(private val s: MainScreen) {
     private val pendingAnim = HashSet<Capture>()
 
     val list = s.pinned<ListView>(R.id.list)
+    /** Title, counter, action buttons and the empty state above the grid. */
+    private val header = s.act.layoutInflater.inflate(R.layout.frames_header, list, false)
     private val adapter = GridAdapter()
-    private val txtCount = s.h<TextView>(R.id.txtCount)
-    private val capActions = s.h<View>(R.id.capActions)
-    private val emptyBox = s.h<View>(R.id.emptyBox)
-    /** Where a new frame "flies" to. */
-    val counter: View get() = txtCount
+    private val txtCount = header.findViewById<TextView>(R.id.txtCount)
+    private val capActions = header.findViewById<View>(R.id.capActions)
+    private val emptyBox = header.findViewById<View>(R.id.emptyBox)
 
     /** New frames from single capture and from the background batch arrive here. */
     private val storeListener = object : CaptureStore.Listener {
@@ -57,7 +57,7 @@ class CapturesController(private val s: MainScreen) {
     }
 
     init {
-        list.addHeaderView(s.header, null, false)
+        list.addHeaderView(header, null, false)
         list.adapter = adapter
         list.itemsCanFocus = true
         list.selector = ColorDrawable(Color.TRANSPARENT)
@@ -68,9 +68,10 @@ class CapturesController(private val s: MainScreen) {
             }
             override fun onScroll(v: AbsListView, first: Int, visible: Int, total: Int) {}
         })
-        s.h<View>(R.id.btnSaveAll).setOnClickListener { saveAll() }
-        s.h<View>(R.id.btnZip).setOnClickListener { makeZip() }
-        s.h<View>(R.id.btnClear).setOnClickListener { confirmClear() }
+        header.findViewById<View>(R.id.btnSaveAll).setOnClickListener { saveAll() }
+        header.findViewById<View>(R.id.btnZip).setOnClickListener { makeZip() }
+        header.findViewById<View>(R.id.btnClear).setOnClickListener { confirmClear() }
+        header.findViewById<View>(R.id.emptyIcon).floatLoop(6f, 1700)
         updateUi(animate = false)
     }
 
@@ -90,7 +91,7 @@ class CapturesController(private val s: MainScreen) {
         refresh()
         updateUi()
         s.viewer.updateChrome()
-        if (scroll) list.post { list.smoothScrollToPosition(adapter.count) }
+        if (scroll && list.visibility == View.VISIBLE) list.post { list.smoothScrollToPosition(adapter.count) }
     }
 
     fun remove(c: Capture) {
@@ -104,6 +105,7 @@ class CapturesController(private val s: MainScreen) {
     /** Counter, empty state, action buttons. */
     private fun updateUi(animate: Boolean = true) {
         val n = captures.size
+        s.nav.setCount(n, animate)
         if (txtCount.text.toString() != n.toString()) {
             txtCount.text = n.toString()
             if (animate) txtCount.bump()

@@ -36,15 +36,14 @@ class Effects(private val s: MainScreen) {
         btnPick.anim().scaleX(1f).scaleY(1f).setStartDelay(300).setDuration(400)
             .setInterpolator(OvershootInterpolator(2f)).start()
 
-        val rise = listOf(s.pinned<View>(R.id.previewCard), s.pinned<View>(R.id.actionBar)) +
-            listOf(R.id.cardTimeline, R.id.radioTabs, R.id.panelHost, R.id.capHeader).map { s.h<View>(it) }
-        rise.forEachIndexed { i, v -> v.riseIn(200L + 70L * i) }
+        s.pinned<View>(R.id.previewCard).riseIn(200)
+        if (s.pinned<View>(R.id.cardRecent).visibility == View.VISIBLE) s.pinned<View>(R.id.cardRecent).riseIn(280)
+        s.pinned<View>(R.id.bottomNav).riseIn(320, 60f)
     }
 
     /** Gentle looping motion: floating placeholder logo, floating empty icon, pulsing "live" dot. */
     fun startIdle() {
         s.pinned<View>(R.id.phIcon).floatLoop(8f, 1400)
-        s.h<View>(R.id.emptyIcon).floatLoop(6f, 1700)
         s.pinned<View>(R.id.chipDot).pulse(0.25f, 800)
     }
 
@@ -64,8 +63,7 @@ class Effects(private val s: MainScreen) {
     }
 
     /**
-     * A copy of the new frame shrinks and flies from the preview down to the "Снятые кадры" counter
-     * (or to the bottom of the screen if the counter is scrolled away), then [onLanded] runs.
+     * A copy of the new frame shrinks and flies from the preview into the «Кадры» tab, then [onLanded] runs.
      */
     fun flyToCaptures(bmp: Bitmap, onLanded: () -> Unit) {
         val card = s.video.previewCard
@@ -75,16 +73,10 @@ class Effects(private val s: MainScreen) {
         val w = (card.width * 0.55f).toInt()
         val h = (card.height * 0.55f).toInt()
 
-        val counter = s.grid.counter
-        val list = s.grid.list
-        val r = Rect()
-        val (tx, ty) = if (counter.isShown && counter.getGlobalVisibleRect(r) && r.height() > 0) {
-            val t = IntArray(2).also { counter.getLocationInWindow(it) }
-            (t[0] - rootLoc[0] + counter.width / 2f) to (t[1] - rootLoc[1] + counter.height / 2f)
-        } else {
-            val l = IntArray(2).also { list.getLocationInWindow(it) }
-            (l[0] - rootLoc[0] + list.width / 2f) to (l[1] - rootLoc[1] + list.height - 30 * root.dp)
-        }
+        val target = s.nav.framesTarget
+        val t = IntArray(2).also { target.getLocationInWindow(it) }
+        val tx = t[0] - rootLoc[0] + target.width / 2f
+        val ty = t[1] - rootLoc[1] + target.height / 2f
 
         val iv = ImageView(s.act).apply {
             setImageBitmap(bmp)

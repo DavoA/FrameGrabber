@@ -25,14 +25,15 @@ import com.dave.framegrabber.ui.anim
 import com.dave.framegrabber.ui.dp
 import com.dave.framegrabber.ui.hideKeyboard
 import com.dave.framegrabber.ui.popIn
+import com.dave.framegrabber.ui.riseIn
 import com.dave.framegrabber.ui.showError
 import com.dave.framegrabber.ui.toast
 import com.dave.framegrabber.ui.wiggle
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * The opened video: loading it, the big preview, the timeline (filmstrip + seek bar),
- * frame stepping, the time field and playback with sound.
+ * Page «Съёмка»: the opened video, the big preview, the timeline (filmstrip + seek bar),
+ * frame stepping, "go to time" (tap the time on the preview) and playback with sound.
  */
 class VideoController(private val s: MainScreen) {
 
@@ -63,7 +64,8 @@ class VideoController(private val s: MainScreen) {
     private val chipDot = s.pinned<View>(R.id.chipDot)
     private val chipText = s.pinned<TextView>(R.id.chipText)
     val txtTimeBadge = s.pinned<TextView>(R.id.txtTimeBadge)
-    val editTime = s.pinned<EditText>(R.id.editTime)
+    private val cardTimeline = s.pinned<View>(R.id.cardTimeline)
+    private val controls = s.pinned<View>(R.id.captureControls)
     private val videoSurface = s.pinned<TextureView>(R.id.videoSurface)
     private val btnPlay = s.pinned<ImageButton>(R.id.btnPlay)
     private val seek = s.h<SeekBar>(R.id.seek)
@@ -87,13 +89,6 @@ class VideoController(private val s: MainScreen) {
     init {
         previewCard.clipToOutline = true
         s.h<View>(R.id.timelineBox).clipToOutline = true
-        // Preview height adapts to the screen: ~16:10 of the width, but never more than a third of the height
-        previewCard.addOnLayoutChangeListener { v, l, _, r, _, ol, _, or_, _ ->
-            if (r - l == or_ - ol) return@addOnLayoutChangeListener
-            val want = ((r - l) * 0.62f).toInt()
-                .coerceIn((170 * v.dp).toInt(), (v.resources.displayMetrics.heightPixels * 0.34f).toInt())
-            if (v.layoutParams.height != want) v.post { v.layoutParams.height = want; v.requestLayout() }
-        }
 
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
@@ -107,14 +102,7 @@ class VideoController(private val s: MainScreen) {
         })
         s.pinned<View>(R.id.btnPrev).setOnClickListener { stepFrame(-1) }
         s.pinned<View>(R.id.btnNext).setOnClickListener { stepFrame(+1) }
-        editTime.setOnEditorActionListener { v, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_GO || actionId == EditorInfo.IME_ACTION_DONE) {
-                val us = TimeUtil.parse(v.text.toString())
-                if (us == null) s.act.toast("Формат времени: 12.5 или 1:23.5") else seekTo(us)
-                v.hideKeyboard()
-                true
-            } else false
-        }
+        txtTimeBadge.setOnClickListener { askTime() }
         btnPlay.setOnClickListener { togglePlayback() }
         videoSurface.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
@@ -170,6 +158,9 @@ class VideoController(private val s: MainScreen) {
         showTime()
         s.range.onVideoChanged()
         s.batch.updateHint()
+        // timeline and −1f / 📷 / +1f appear once there's a video
+        if (cardTimeline.visibility != View.VISIBLE) cardTimeline.riseIn(150, 20f)
+        if (controls.visibility != View.VISIBLE) controls.riseIn(230, 20f)
 
         // placeholder out, preview in
         if (placeholder.visibility == View.VISIBLE) {
@@ -260,11 +251,49 @@ class VideoController(private val s: MainScreen) {
         }
     }
 
-    /** Current time into the time field (and the preview badge while the video is shown). */
+    /** Current time on the preview badge. */
     fun showTime() {
-        val t = TimeUtil.format(currentUs)
-        editTime.setText(t)
-        if (s.viewer.selected == null) txtTimeBadge.text = t
+        txtTimeBadge.text = TimeUtil.format(currentUs)
+    }
+
+    /** Tap on the time: type a moment to jump to (12.5 / 1:23.5 / 1:02:03). */
+    private fun askTime() {
+        if (engine == null) return
+        val edit = EditText(s.act).apply {
+            setText(TimeUtil.format(currentUs))
+            setSelectAllOnFocus(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            setTextColor(s.act.getColor(R.color.text))
+            gravity = android.view.Gravity.CENTER
+            textSize = 20f
+            typeface = android.graphics.Typeface.MONOSPACE
+            imeOptions = EditorInfo.IME_ACTION_GO
+            setSingleLine()
+        }
+        val box = FrameLayout(s.act).apply {
+            val p = (20 * edit.dp).toInt()
+            setPadding(p, p / 2, p, 0)
+            addView(edit)
+        }
+        lateinit var dlg: android.app.AlertDialog
+        fun go() {
+            val us = TimeUtil.parse(edit.text.toString())
+            if (us == null) { s.act.toast("Формат времени: 12.5 или 1:23.5"); return }
+            seekTo(us); edit.hideKeyboard(); dlg.dismiss()
+        }
+        dlg = android.app.AlertDialog.Builder(s.act)
+            .setTitle("Перейти к моменту")
+            .setView(box)
+            .setPositiveButton("Перейти", null)
+            .setNegativeButton("Отмена", null)
+            .create()
+        dlg.setOnShowListener {
+            dlg.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener { go() }
+            edit.requestFocus()
+            dlg.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        }
+        edit.setOnEditorActionListener { _, id, _ -> if (id == EditorInfo.IME_ACTION_GO) { go(); true } else false }
+        dlg.show()
     }
 
     /** The chip in the preview corner: "● ВИДЕО", "КАДР 2 ИЗ 4", ... */

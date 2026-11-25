@@ -24,7 +24,7 @@ import com.dave.framegrabber.ui.toast
 import java.io.File
 
 /**
- * Tab «Экспорт»: GIF and MP4 clip from the «Отрезок», contact sheet from the captured frames.
+ * «Экспорт» (page «Инструменты»): GIF and MP4 clip from the «Отрезок», contact sheet from the captured frames.
  * Everything is written straight into the destination file (no temp files in the cache).
  */
 class ExportPanel(private val s: MainScreen) {

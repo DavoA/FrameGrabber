@@ -61,24 +61,21 @@ class ScreenshotTest {
         val a = launch(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(f), "video/mp4"))
         Thread.sleep(3500); shot("2_loaded")
 
-        // 3. capture a few frames
+        // 3. capture a few frames (jump to a moment, press 📷)
+        val main = a as MainActivity
         repeat(4) { k ->
-            inst.runOnMainSync {
-                val t = a.findViewById<android.widget.EditText>(R.id.editTime)
-                t.setText("0:0${k}.${k * 2}")
-                t.onEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_GO)
-            }
+            inst.runOnMainSync { main.screen.video.seekTo(k * 1_000_000L + k * 200_000L) }
             Thread.sleep(600)
             inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnCapture).performClick() }
             Thread.sleep(2500)
         }
         Thread.sleep(800); shot("3_captured")
 
-        // 4. scroll down to the grid
-        inst.runOnMainSync { a.findViewById<ListView>(R.id.list).setSelection(1) }
-        Thread.sleep(1200); shot("4_grid")
+        // 4. «Кадры» page
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navFrames).performClick() }
+        Thread.sleep(1500); shot("4_grid")
 
-        // 5. open a capture in the big preview
+        // 5. open a frame full screen
         inst.runOnMainSync {
             val list = a.findViewById<ListView>(R.id.list)
             for (i in 0 until list.childCount) {
@@ -89,13 +86,14 @@ class ScreenshotTest {
             }
         }
         Thread.sleep(1500); shot("5_viewer")
+        inst.runOnMainSync { main.screen.viewer.close() }
+        Thread.sleep(800)
 
-        // 6. settings tab
-        inst.runOnMainSync {
-            a.findViewById<ListView>(R.id.list).setSelection(0)
-            a.findViewById<android.widget.RadioButton>(R.id.tabSettings).isChecked = true
-        }
-        Thread.sleep(1500); shot("6_settings")
+        // 6. «Инструменты» page
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
+        Thread.sleep(1500); shot("6_tools")
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navCapture).performClick() }
+        Thread.sleep(800)
 
         // general settings dialog, switch to the wave theme
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnSettings).performClick() }

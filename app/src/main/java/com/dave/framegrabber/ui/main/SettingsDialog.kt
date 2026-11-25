@@ -10,6 +10,9 @@ import android.view.animation.OvershootInterpolator
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioGroup
+import android.widget.SeekBar
+import android.widget.Switch
 import android.widget.TextView
 import com.dave.framegrabber.R
 import com.dave.framegrabber.data.AppTheme
@@ -20,11 +23,13 @@ import com.dave.framegrabber.ocr.Ocr
 import com.dave.framegrabber.ui.anim
 import com.dave.framegrabber.ui.dp
 import com.dave.framegrabber.ui.onTextChanged
+import com.dave.framegrabber.ui.showAnimated
 import com.dave.framegrabber.ui.toast
 import com.dave.framegrabber.ui.widget.SynthwaveView
 
 /**
- * ⚙ «Общие настройки»: theme, file name pattern, save folder, OCR languages.
+ * ⚙ «Общие настройки»: theme, frame quality (size, format, quality, sharpest frame),
+ * file name pattern, save folder, OCR languages.
  * Everything applies immediately; nothing on the screen is lost.
  */
 class SettingsDialog(private val s: MainScreen) {
@@ -35,6 +40,7 @@ class SettingsDialog(private val s: MainScreen) {
     fun show() {
         val v = s.act.layoutInflater.inflate(R.layout.dialog_settings, null)
         bindTheme(v)
+        bindQuality(v)
         bindNames(v)
         bindFolder(v)
         bindOcr(v)
@@ -76,6 +82,53 @@ class SettingsDialog(private val s: MainScreen) {
         showChoice(AppTheme.get(s.act), animate = false)
         optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
         optWave.setOnClickListener { choose(AppTheme.WAVE) }
+    }
+
+    /** Size / format / quality / "sharpest frame nearby" — saved instantly. */
+    private fun bindQuality(v: View) {
+        val p = s.prefs
+        val radioSize = v.findViewById<RadioGroup>(R.id.radioSize)
+        val customRow = v.findViewById<View>(R.id.customSizeRow)
+        val editW = v.findViewById<EditText>(R.id.editW)
+        val editH = v.findViewById<EditText>(R.id.editH)
+        val radioFormat = v.findViewById<RadioGroup>(R.id.radioFormat)
+        val txtQuality = v.findViewById<TextView>(R.id.txtQuality)
+        val seekQuality = v.findViewById<SeekBar>(R.id.seekQuality)
+        val swSharpest = v.findViewById<Switch>(R.id.swSharpest)
+
+        fun showQuality(lossless: Boolean) {
+            seekQuality.isEnabled = !lossless
+            seekQuality.alpha = if (lossless) 0.35f else 1f
+            txtQuality.text = if (lossless) "Качество: без потерь" else "Качество: ${seekQuality.progress}"
+        }
+        // saved values first, then listeners
+        radioFormat.check(when (p.format) { "PNG" -> R.id.fmtPng; "WEBP" -> R.id.fmtWebp; else -> R.id.fmtJpg })
+        radioSize.check(when (p.size) { "720" -> R.id.size720; "1080" -> R.id.size1080; "custom" -> R.id.sizeCustom; else -> R.id.sizeOrig })
+        customRow.visibility = if (p.size == "custom") View.VISIBLE else View.GONE
+        editW.setText(p.customW); editH.setText(p.customH)
+        seekQuality.progress = p.quality
+        showQuality(p.format == "PNG")
+        swSharpest.isChecked = p.sharpest
+
+        radioSize.setOnCheckedChangeListener { _, id ->
+            if (id == R.id.sizeCustom) customRow.showAnimated() else customRow.visibility = View.GONE
+            p.size = when (id) { R.id.size720 -> "720"; R.id.size1080 -> "1080"; R.id.sizeCustom -> "custom"; else -> "orig" }
+        }
+        radioFormat.setOnCheckedChangeListener { _, id ->
+            p.format = when (id) { R.id.fmtPng -> "PNG"; R.id.fmtWebp -> "WEBP"; else -> "JPG" }
+            showQuality(id == R.id.fmtPng)
+        }
+        seekQuality.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar, value: Int, fromUser: Boolean) {
+                if (value < 1) sb.progress = 1
+                txtQuality.text = "Качество: ${sb.progress}"
+            }
+            override fun onStartTrackingTouch(sb: SeekBar) {}
+            override fun onStopTrackingTouch(sb: SeekBar) { p.quality = sb.progress }
+        })
+        editW.onTextChanged { p.customW = it }
+        editH.onTextChanged { p.customH = it }
+        swSharpest.setOnCheckedChangeListener { _, on -> p.sharpest = on }
     }
 
     private fun bindNames(v: View) {

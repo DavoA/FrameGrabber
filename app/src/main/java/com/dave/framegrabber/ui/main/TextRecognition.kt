@@ -61,7 +61,7 @@ class TextRecognition(private val s: MainScreen) {
 
     private fun show(text: String) {
         if (text.isBlank()) { s.act.toast("Текст на кадре не найден"); return }
-        val pad = (20 * s.header.dp).toInt()
+        val pad = (20 * s.act.resources.displayMetrics.density).toInt()
         val tv = EditText(s.act).apply {
             setText(text)
             setTextColor(s.act.getColor(R.color.text))

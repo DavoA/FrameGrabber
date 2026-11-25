@@ -26,7 +26,7 @@ import com.dave.framegrabber.ui.toast
 import kotlin.math.max
 
 /**
- * Tab «Пачка»: many frames at once (every N seconds or N frames evenly), optionally skipping
+ * «Пачка кадров» (page «Инструменты»): many frames at once (every N seconds or N frames evenly), optionally skipping
  * blurry and duplicate frames. The work runs in [com.dave.framegrabber.batch.BatchService],
  * this panel only starts it and shows progress.
  */
