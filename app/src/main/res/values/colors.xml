@@ -2,6 +2,7 @@
 <!-- Main color is GREEN. Sunset pink/orange and cyan are only secondary accents (sky, sun, palms, shutter ring). -->
 <resources>
     <color name="bg">#FF04120B</color>
+    <color name="bgClassic">#FF07130D</color>
     <color name="surface">#E00C2218</color>
     <color name="surface2">#CC14301F</color>
     <color name="stroke">#FF234A38</color>

@@ -57,7 +57,10 @@ import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.max
 
-class Capture(val file: File, val thumb: Bitmap, val timeUs: Long, val fmt: Fmt) {
+class Capture(
+    val file: File, val thumb: Bitmap, val timeUs: Long, val fmt: Fmt,
+    val width: Int, val height: Int, val exact: Boolean
+) {
     var galleryUri: Uri? = null
 }
 
@@ -164,6 +167,7 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false) // background under the bars
         setContentView(R.layout.activity_main)
         bgView = findViewById(R.id.bgView)
+        AppTheme.apply(this, bgView, AppTheme.get(this), animate = false)
         bindViews()
         header = layoutInflater.inflate(R.layout.header, list, false)
         bindHeader(header)
@@ -203,7 +207,7 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onResume() { super.onResume(); bgView.running = true }
+    override fun onResume() { super.onResume(); bgView.running = AppTheme.get(this) == AppTheme.WAVE }
     override fun onPause() { bgView.running = false; super.onPause() }
 
     override fun onDestroy() {
@@ -296,6 +300,10 @@ class MainActivity : Activity() {
 
     private fun setupListeners() {
         btnPick.setOnClickListener { openBrowser() }
+        findViewById<View>(R.id.btnSettings).setOnClickListener { v ->
+            v.anim().rotationBy(120f).setDuration(450).setInterpolator(OvershootInterpolator()).start()
+            showSettings()
+        }
         btnPick.setOnLongClickListener { pickVideo(); true } // long press: pick with another app
         findViewById<View>(R.id.btnPickBig).setOnClickListener { openBrowser() }
 
@@ -581,7 +589,7 @@ class MainActivity : Activity() {
     /** Runs on a background thread with the given engine. */
     private fun makeCapture(e: FrameEngine, us: Long, spec: OutputSpec): Capture {
         val shot = FrameCapture.capture(e, us, spec, capDir, baseName)
-        return Capture(shot.file, shot.thumb, us, spec.format)
+        return Capture(shot.file, shot.thumb, us, spec.format, shot.width, shot.height, shot.exact)
     }
 
     private fun captureCurrent() {
@@ -805,7 +813,14 @@ class MainActivity : Activity() {
         val c = selected ?: return
         val i = captures.indexOf(c)
         setChip(live = false, text = "КАДР ${i + 1} ИЗ ${captures.size}")
-        txtTimeBadge.text = TimeUtil.format(c.timeUs)
+        // real file resolution, so it's obvious the original quality was saved
+        val size = android.text.format.Formatter.formatShortFileSize(this, c.file.length())
+        txtTimeBadge.text = buildString {
+            append("${c.width}×${c.height} · ${c.fmt.name} · $size")
+            append("  ")
+            if (!c.exact) append("≈")
+            append(TimeUtil.format(c.timeUs))
+        }
         btnCapPrev.anim().alpha(if (i > 0) 1f else 0.3f).setDuration(150).start()
         btnCapNext.anim().alpha(if (i < captures.size - 1) 1f else 0.3f).setDuration(150).start()
     }
@@ -965,6 +980,49 @@ class MainActivity : Activity() {
             }
             .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    // ================================================================ general settings
+
+    /** "Общие настройки": theme picker. Applies instantly, nothing is lost (no activity restart). */
+    private fun showSettings() {
+        val v = layoutInflater.inflate(R.layout.dialog_settings, null)
+        val optClassic = v.findViewById<View>(R.id.optClassic)
+        val optWave = v.findViewById<View>(R.id.optWave)
+        val chkClassic = v.findViewById<View>(R.id.chkClassic)
+        val chkWave = v.findViewById<View>(R.id.chkWave)
+        val preview = v.findViewById<SynthwaveView>(R.id.wavePreview)
+        v.findViewById<View>(R.id.waveSwatch).clipToOutline = true
+
+        fun show(t: AppTheme, animate: Boolean) {
+            optClassic.isSelected = t == AppTheme.CLASSIC
+            optWave.isSelected = t == AppTheme.WAVE
+            for ((chk, on) in listOf(chkClassic to (t == AppTheme.CLASSIC), chkWave to (t == AppTheme.WAVE))) {
+                if (!animate) { chk.alpha = if (on) 1f else 0f; chk.scaleX = 1f; chk.scaleY = 1f; continue }
+                if (on) { chk.scaleX = 0.3f; chk.scaleY = 0.3f; chk.anim().alpha(1f).scaleX(1f).scaleY(1f)
+                    .setInterpolator(OvershootInterpolator(3f)).setDuration(300).start() }
+                else chk.anim().alpha(0f).setDuration(150).start()
+            }
+        }
+        fun choose(t: AppTheme) {
+            if (AppTheme.get(this) == t) return
+            AppTheme.set(this, t)
+            show(t, animate = true)
+            AppTheme.apply(this, bgView, t, animate = true)
+        }
+        show(AppTheme.get(this), animate = false)
+        optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
+        optWave.setOnClickListener { choose(AppTheme.WAVE) }
+
+        val dlg = AlertDialog.Builder(this).setView(v).create()
+        v.findViewById<View>(R.id.btnDone).setOnClickListener { dlg.dismiss() }
+        dlg.setOnDismissListener { preview.running = false }
+        dlg.show()
+        // options slide in
+        listOf(optClassic, optWave).forEachIndexed { i, o ->
+            o.alpha = 0f; o.translationY = 24 * dp
+            o.anim().alpha(1f).translationY(0f).setStartDelay(80L + 70L * i).setDuration(300).start()
+        }
     }
 
     // ================================================================ UI state helpers

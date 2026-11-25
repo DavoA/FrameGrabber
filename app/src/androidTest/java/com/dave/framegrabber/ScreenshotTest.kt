@@ -43,6 +43,7 @@ class ScreenshotTest {
 
     @Test fun screens() {
         StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX)
+        AppTheme.set(appCtx, AppTheme.CLASSIC)
         // 1. empty state
         val a0 = launch(Intent(Intent.ACTION_MAIN))
         Thread.sleep(2500); shot("1_empty")
@@ -89,6 +90,11 @@ class ScreenshotTest {
             a.findViewById<android.widget.RadioButton>(R.id.tabSettings).isChecked = true
         }
         Thread.sleep(1500); shot("6_settings")
+
+        // general settings dialog, switch to the wave theme
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnSettings).performClick() }
+        Thread.sleep(1200); shot("9_general_settings")
+        AppTheme.set(appCtx, AppTheme.WAVE)
         a.finish(); Thread.sleep(800)
 
         // 7-8. file browser: folders, then search

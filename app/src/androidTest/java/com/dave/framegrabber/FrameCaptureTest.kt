@@ -56,6 +56,7 @@ class FrameCaptureTest {
                 while (t <= e.lastUs) {
                     val shot = FrameCapture.capture(e, t, spec, dir, "clip")
                     checkFile(shot.file, e.width, e.height)
+                    assertEquals("saved at full resolution", e.width, shot.width)
                     assertNotNull(shot.thumb)
                     t += 500_000; n++
                 }

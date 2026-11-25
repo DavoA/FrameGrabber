@@ -116,7 +116,7 @@ object FrameRender {
     }
 
     /** Small RGB_565 thumbnail for the captures grid (keeps memory low with hundreds of frames). */
-    fun thumb(src: Bitmap, maxSide: Int = 220): Bitmap {
+    fun thumb(src: Bitmap, maxSide: Int = 320): Bitmap {
         val s = min(1f, maxSide.toFloat() / max(src.width, src.height))
         val tw = max(1, (src.width * s).roundToInt())
         val th = max(1, (src.height * s).roundToInt())
@@ -181,35 +181,51 @@ object TimeUtil {
 
 /** Grabs a frame, renders it to the output spec and writes it to a file. Used by single capture and batch. */
 object FrameCapture {
-    class Shot(val file: File, val thumb: Bitmap)
+    class Shot(val file: File, val thumb: Bitmap, val width: Int, val height: Int, val exact: Boolean)
 
     /** Any bitmap -> plain software ARGB_8888 (safe for Canvas and every encoder). */
     private fun normalize(b: Bitmap): Bitmap =
         if (b.config == Bitmap.Config.ARGB_8888) b
         else b.copy(Bitmap.Config.ARGB_8888, false) ?: error("Не удалось преобразовать кадр (${b.config})")
 
-    /** Tries precise frame, then nearest keyframe, then scaled decode. Error lists why each attempt failed. */
-    fun grab(e: FrameEngine, us: Long): Bitmap {
-        val attempts = listOf<Pair<String, () -> Bitmap?>>(
-            "точный" to { e.frame(us, exact = true) },
-            "ключевой" to { e.frame(us, exact = false) },
-            "масштаб" to { e.scaledFrame(us, max(16, e.width), max(16, e.height), exact = false) },
+    /** A grabbed frame and how it was obtained. */
+    class Grab(val bitmap: Bitmap, val method: String, val exact: Boolean)
+
+    /**
+     * Tries the precise frame, then the nearest keyframe, then a scaled decode at full size.
+     * A result smaller than the video's real resolution is NOT accepted silently (some decoders hand
+     * back reduced frames): the next method is tried and the largest frame wins.
+     * The error lists why each attempt failed.
+     */
+    fun grab(e: FrameEngine, us: Long): Grab {
+        val full = max(e.width, e.height)
+        val attempts = listOf<Triple<String, Boolean, () -> Bitmap?>>(
+            Triple("точный", true, { e.frame(us, exact = true) }),
+            Triple("ключевой", false, { e.frame(us, exact = false) }),
+            // bounding box = long side in both directions, so rotation can never shrink the frame
+            Triple("масштаб", false, { e.scaledFrame(us, max(16, full), max(16, full), exact = false) }),
         )
         val why = mutableListOf<String>()
-        for ((name, attempt) in attempts) {
+        var best: Grab? = null
+        for ((name, exact, attempt) in attempts) {
             try {
                 val b = attempt()
-                if (b != null) return normalize(b)
-                why += "$name: пусто"
+                if (b == null) { why += "$name: пусто"; continue }
+                val g = Grab(normalize(b), name, exact)
+                val long = max(g.bitmap.width, g.bitmap.height)
+                if (full <= 0 || long >= full * 0.95f) return g          // full resolution: done
+                why += "$name: только ${g.bitmap.width}×${g.bitmap.height}"
+                if (best == null || long > max(best.bitmap.width, best.bitmap.height)) best = g
             } catch (t: Throwable) {
                 why += "$name: ${t.javaClass.simpleName} ${t.message ?: ""}".trim()
             }
         }
-        error("Нет кадра на ${TimeUtil.format(us)} (${why.joinToString("; ")})")
+        return best ?: error("Нет кадра на ${TimeUtil.format(us)} (${why.joinToString("; ")})")
     }
 
     fun capture(e: FrameEngine, us: Long, spec: OutputSpec, dir: File, baseName: String): Shot {
-        val src = grab(e, us)
+        val g = grab(e, us)
+        val src = g.bitmap
         val out = spec.size?.let { (w, h) -> FrameRender.fit(src, w, h, transparentPad = spec.format != Fmt.JPG) } ?: src
         dir.mkdirs()
         val stamp = TimeUtil.stamp(us)
@@ -225,6 +241,6 @@ object FrameCapture {
             )
         }
         if (file.length() == 0L) { file.delete(); error("Пустой файл после сохранения") }
-        return Shot(file, FrameRender.thumb(out))
+        return Shot(file, FrameRender.thumb(out), out.width, out.height, g.exact)
     }
 }

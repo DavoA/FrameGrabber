@@ -10,7 +10,8 @@
     <com.dave.framegrabber.SynthwaveView
         android:id="@+id/bgView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/content"
@@ -62,6 +63,13 @@
                     android:textColor="@color/textDim"
                     android:textSize="12sp" />
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnSettings"
+                style="@style/IconBtn"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Общие настройки"
+                android:src="@drawable/ic_settings" />
 
             <ImageButton
                 android:id="@+id/btnPick"

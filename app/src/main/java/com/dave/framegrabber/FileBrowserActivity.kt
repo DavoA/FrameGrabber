@@ -127,6 +127,7 @@ class FileBrowserActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
         setContentView(R.layout.activity_browser)
         bgView = findViewById(R.id.bgView)
+        AppTheme.apply(this, bgView, AppTheme.get(this), animate = false)
         editSearch = findViewById(R.id.editSearch)
         btnClearSearch = findViewById(R.id.btnClearSearch)
         chipsBox = findViewById(R.id.chips)
@@ -186,7 +187,7 @@ class FileBrowserActivity : Activity() {
         if (hasPermission()) start() else requestPerm()
     }
 
-    override fun onResume() { super.onResume(); bgView.running = true }
+    override fun onResume() { super.onResume(); bgView.running = AppTheme.get(this) == AppTheme.WAVE }
     override fun onPause() { bgView.running = false; super.onPause() }
 
     override fun onDestroy() {
