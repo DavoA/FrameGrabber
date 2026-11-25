@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Synthwave: night-purple base, sunset pink/orange, neon green (our accent) and cyan -->
+<!-- Main color is GREEN. Sunset pink/orange and cyan are only secondary accents (sky, sun, palms, shutter ring). -->
 <resources>
-    <color name="bg">#FF0B0220</color>
-    <color name="surface">#E0170A33</color>
-    <color name="surface2">#CC261050</color>
-    <color name="stroke">#FF47267A</color>
-    <color name="primary">#FFFF2E97</color>
-    <color name="primaryBright">#FFFF9A3D</color>
+    <color name="bg">#FF04120B</color>
+    <color name="surface">#E00C2218</color>
+    <color name="surface2">#CC14301F</color>
+    <color name="stroke">#FF234A38</color>
+    <color name="primary">#FF1A8A50</color>
+    <color name="primaryBright">#FF2FC47F</color>
     <color name="accent">#FF5CF5AE</color>
     <color name="cyan">#FF36E2F5</color>
-    <color name="text">#FFF7F0FF</color>
-    <color name="textDim">#FFB9A7DC</color>
+    <color name="pink">#FFFF2E97</color>
+    <color name="orange">#FFFF9A3D</color>
+    <color name="text">#FFE9F7EF</color>
+    <color name="textDim">#FF94BCA6</color>
     <color name="danger">#FFFF5C7A</color>
 </resources>

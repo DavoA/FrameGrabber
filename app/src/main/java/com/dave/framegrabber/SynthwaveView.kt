@@ -25,13 +25,13 @@ import kotlin.random.Random
  */
 class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : View(ctx, attrs) {
 
-    // ---- palette
-    private val skyTop = Color.parseColor("#0B0220")
-    private val skyMid = Color.parseColor("#3A0B5E")
-    private val skyLow = Color.parseColor("#B0206E")
+    // ---- palette (green is the main color; sunset tones only near the horizon)
+    private val skyTop = Color.parseColor("#04120B")
+    private val skyMid = Color.parseColor("#0B3A2A")
+    private val skyLow = Color.parseColor("#8A1F6A")
     private val skyHorizon = Color.parseColor("#FF7A3D")
     private val neonGreen = Color.parseColor("#5CF5AE")
-    private val palmColor = Color.parseColor("#0A0216")
+    private val palmColor = Color.parseColor("#03100A")
 
     // ---- terrain mesh
     private val cols = 25            // vertices per row (odd -> a center line)
@@ -48,7 +48,7 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
     private val meshPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val groundPaint = Paint().apply { color = Color.parseColor("#0E0326") }
+    private val groundPaint = Paint().apply { color = Color.parseColor("#05150E") }
     private val starPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val palmPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = palmColor }
     private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -181,7 +181,7 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
                 val fade = p.coerceIn(0f, 1f)
                 vColors[v] = Color.argb(
                     (180 + 60 * fade).toInt(),
-                    (14 + 40 * lit).toInt(), (3 + 60 * lit * fade).toInt(), (38 + 50 * lit).toInt()
+                    (4 + 18 * lit).toInt(), (22 + 70 * lit * fade).toInt(), (14 + 34 * lit).toInt()
                 )
             }
         }
