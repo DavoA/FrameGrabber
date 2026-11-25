@@ -216,6 +216,11 @@ class SettingsDialog(private val s: MainScreen) {
         v.findViewById<View>(R.id.rowTgSetup).setOnClickListener {
             com.dave.framegrabber.ui.telegram.TgSetupDialog(s.act) { refresh() }.show()
         }
+        v.findViewById<TextView>(R.id.txtStats).text =
+            "Статистика канала · постов: ${com.dave.framegrabber.telegram.PostLog(s.act).posts.size}"
+        v.findViewById<View>(R.id.rowStats).setOnClickListener {
+            s.act.startActivity(android.content.Intent(s.act, com.dave.framegrabber.ui.telegram.StatsActivity::class.java))
+        }
         v.findViewById<View>(R.id.rowTags).setOnClickListener {
             s.act.startActivity(android.content.Intent(s.act, com.dave.framegrabber.ui.telegram.TagsActivity::class.java))
         }

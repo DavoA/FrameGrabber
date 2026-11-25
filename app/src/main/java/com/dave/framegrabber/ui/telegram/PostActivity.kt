@@ -37,6 +37,7 @@ import com.dave.framegrabber.core.TimeUtil
 import com.dave.framegrabber.data.AppTheme
 import com.dave.framegrabber.telegram.PhotoPrep
 import com.dave.framegrabber.telegram.PostCaption
+import com.dave.framegrabber.telegram.PostLog
 import com.dave.framegrabber.telegram.TelegramApi
 import com.dave.framegrabber.telegram.TgException
 import com.dave.framegrabber.telegram.TgStore
@@ -63,12 +64,14 @@ class PostActivity : Activity() {
         private const val EXTRA_FILES = "files"
         private const val EXTRA_TIMES = "times"
         private const val EXTRA_VIDEO = "video"
+        private const val EXTRA_VIDEO_KEY = "videoKey"
 
-        fun intent(ctx: Context, files: List<String>, times: List<Long>, video: String) =
+        fun intent(ctx: Context, files: List<String>, times: List<Long>, video: String, videoKey: String) =
             Intent(ctx, PostActivity::class.java)
                 .putStringArrayListExtra(EXTRA_FILES, ArrayList(files))
                 .putExtra(EXTRA_TIMES, times.toLongArray())
                 .putExtra(EXTRA_VIDEO, video)
+                .putExtra(EXTRA_VIDEO_KEY, videoKey)
 
         /** Hashtag colour in Telegram's dark theme (preview). */
         private const val TG_LINK = 0xFF6AB3F3.toInt()
@@ -87,6 +90,14 @@ class PostActivity : Activity() {
     private var swapFrom = -1
 
     private val models = mutableListOf<String>()
+    /** Posts published before (for the "already posted?" checks). */
+    private lateinit var log: PostLog
+    private var videoKey = ""
+    /** Picture hash of each photo (by file path), computed in the background. */
+    private val hashes = HashMap<String, Long>()
+    private lateinit var cardDup: View
+    private lateinit var txtDup: TextView
+    private lateinit var txtNamesHint: TextView
     /** Hashtag choice (public for tests). */
     lateinit var tags: TagPicker
     private var posting = false
@@ -113,6 +124,8 @@ class PostActivity : Activity() {
         val bg = findViewById<SynthwaveView>(R.id.bgView)
         AppTheme.apply(this, bg, AppTheme.get(this), animate = false)
         store = TgStore(this)
+        log = PostLog(this)
+        videoKey = intent.getStringExtra(EXTRA_VIDEO_KEY) ?: ""
 
         intent.getStringArrayListExtra(EXTRA_FILES)?.forEach { files += File(it) }
         intent.getLongArrayExtra(EXTRA_TIMES)?.forEach { times += it }
@@ -132,9 +145,13 @@ class PostActivity : Activity() {
         btnPublish = findViewById(R.id.btnPublish)
         progress = findViewById(R.id.progressPost)
         status = findViewById(R.id.txtPostStatus)
+        cardDup = findViewById(R.id.cardDup)
+        txtDup = findViewById(R.id.txtDup)
+        txtNamesHint = findViewById(R.id.txtNamesHint)
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressed() }
         findViewById<View>(R.id.btnSetup).setOnClickListener { setup() }
+        findViewById<View>(R.id.btnStats).setOnClickListener { startActivity(Intent(this, StatsActivity::class.java)) }
         findViewById<View>(R.id.btnSetupNow).setOnClickListener { setup() }
         tags = TagPicker(this, findViewById(R.id.tagArea), editTagSearch) { updatePreview() }
         findViewById<View>(R.id.btnEditTags).setOnClickListener { startActivity(Intent(this, TagsActivity::class.java)) }
@@ -148,7 +165,7 @@ class PostActivity : Activity() {
 
         editStudio.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, store.studios))
         editModel.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, store.models))
-        editStudio.addTextChangedListener(watcher { updatePreview() })
+        editStudio.addTextChangedListener(watcher { updatePreview(); updateNamesHint() })
         editModel.setOnEditorActionListener { _, id, ev ->
             if (id == EditorInfo.IME_ACTION_DONE || ev?.keyCode == KeyEvent.KEYCODE_ENTER) { addModel(); true } else false
         }
@@ -158,6 +175,7 @@ class PostActivity : Activity() {
         applyInsets()
         loadThumbs()
         buildModelChips()
+        updateNamesHint()
         tags.render()
         updateSetup()
         updatePreview()
@@ -216,6 +234,13 @@ class PostActivity : Activity() {
                 val b = FrameRender.decodeFile(f, 480) ?: return@forEach
                 ui.post { thumbs[f.path] = b; buildPhotoGrids() }
             }
+            // then: was this video or any of these pictures already posted?
+            val h = files.associate { it.path to PostLog.hashOf(it) }
+            ui.post {
+                h.forEach { (k, v) -> if (v != null) hashes[k] = v }
+                updateDupWarning()
+                buildPhotoGrids()
+            }
         }
     }
 
@@ -265,6 +290,16 @@ class PostActivity : Activity() {
                     layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END)
                         .apply { setMargins(0, 0, (5 * d).toInt(), (5 * d).toInt()) }
                 })
+                // this picture was in an earlier post
+                if (f.path in dupPaths) tile.addView(TextView(this).apply {
+                    text = "уже было"
+                    setTextColor(0xFF2A220C.toInt()); textSize = 10f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setBackgroundColor(getColor(R.color.warn))
+                    setPadding((6 * d).toInt(), (1 * d).toInt(), (6 * d).toInt(), (1 * d).toInt())
+                    layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END)
+                        .apply { setMargins(0, (5 * d).toInt(), (5 * d).toInt(), 0) }
+                })
                 tile.setOnClickListener { tapPhoto(i) }
             }
             grid.addView(tile)
@@ -301,6 +336,7 @@ class PostActivity : Activity() {
     private fun buildModelChips() {
         modelChips.removeAllViews()
         modelChips.visibility = if (models.isEmpty()) View.GONE else View.VISIBLE
+        updateNamesHint()
         models.forEach { m ->
             modelChips.addView(Chips.make(this, "$m  ✕", on = true).apply {
                 contentDescription = "Убрать $m"
@@ -358,12 +394,19 @@ class PostActivity : Activity() {
         }
         val text = caption()
         val withoutTags = tags.selected.isEmpty()
-        AlertDialog.Builder(this)
-            .setTitle("Опубликовать в «${store.chatTitle.ifEmpty { store.chat }}»?")
-            .setMessage(text + if (withoutTags) "\n\n(без хэштегов)" else "")
-            .setPositiveButton("Опубликовать") { _, _ -> send(text, studio) }
-            .setNegativeButton("Отмена", null)
-            .show()
+        val dup = duplicates()
+        val b = AlertDialog.Builder(this)
+        if (dup != null && dup.any) {
+            // already posted: say what exactly, and ask
+            b.setTitle("⚠ Это уже было в канале")
+                .setMessage(describe(dup) + "\n\nВсё равно опубликовать?")
+                .setPositiveButton("Опубликовать") { _, _ -> send(text, studio) }
+        } else {
+            b.setTitle("Опубликовать в «${store.chatTitle.ifEmpty { store.chat }}»?")
+                .setMessage(text + if (withoutTags) "\n\n(без хэштегов)" else "")
+                .setPositiveButton("Опубликовать") { _, _ -> send(text, studio) }
+        }
+        b.setNegativeButton("Отмена", null).show()
     }
 
     private fun send(text: String, studio: String) {
@@ -407,14 +450,16 @@ class PostActivity : Activity() {
         posted = true
         setBusy(false, null, 0)
         store.rememberUsed(studio, models)
+        runCatching {
+            log.add(PostLog.Post(
+                System.currentTimeMillis(), store.chat, msgId, postLink(msgId), studio, models.toList(), tags.ordered(),
+                intent.getStringExtra(EXTRA_VIDEO) ?: "", videoKey, files.mapNotNull { hashes[it.path] },
+            ))
+        }
         com.dave.framegrabber.telegram.TagLibrary(this).countUse(tags.selected)
         store.clearDraft()
         setResult(RESULT_OK, Intent())
-        val link = when {
-            store.chatUsername.isNotEmpty() -> "https://t.me/${store.chatUsername}/$msgId"
-            store.chat.startsWith("-100") -> "https://t.me/c/${store.chat.removePrefix("-100")}/$msgId"
-            else -> null
-        }
+        val link = postLink(msgId)
         val b = AlertDialog.Builder(this)
             .setTitle("Опубликовано ✓")
             .setMessage("Пост в «${store.chatTitle.ifEmpty { store.chat }}» готов.")
@@ -426,6 +471,59 @@ class PostActivity : Activity() {
         }
         b.show()
     }
+
+    private fun postLink(msgId: Long): String? = when {
+        store.chatUsername.isNotEmpty() -> "https://t.me/${store.chatUsername}/$msgId"
+        store.chat.startsWith("-100") -> "https://t.me/c/${store.chat.removePrefix("-100")}/$msgId"
+        else -> null
+    }
+
+    // ================================================================ already posted?
+
+    /** Video / pictures / names compared with earlier posts (null until the photos are hashed). */
+    private fun duplicates(): PostLog.Duplicates? {
+        if (hashes.isEmpty()) return null
+        return log.check(videoKey, files.mapNotNull { hashes[it.path] }, editStudio.text.toString(), models)
+    }
+
+    /** Photos (file paths) that were in earlier posts. */
+    private var dupPaths: Set<String> = emptySet()
+
+    private fun updateDupWarning() {
+        val dup = duplicates() ?: return
+        dupPaths = dup.sameFrames.keys.map { files[it - 1].path }.toSet()
+        if (dup.sameVideo.isEmpty() && dup.sameFrames.isEmpty()) { cardDup.visibility = View.GONE; return }
+        txtDup.text = describe(dup, withNames = false)
+        cardDup.visibility = View.VISIBLE
+    }
+
+    /** "this studio + these models" posted before: a line under the fields. */
+    private fun updateNamesHint() {
+        if (!::log.isInitialized) return
+        val same = log.check("", emptyList(), editStudio.text.toString(), models).sameNames
+        if (same.isEmpty()) { txtNamesHint.visibility = View.GONE; return }
+        txtNamesHint.visibility = View.VISIBLE
+        txtNamesHint.text = "Эта студия с этими моделями уже была: постов ${same.size}, последний ${date(same.last().time)}"
+    }
+
+    private fun describe(dup: PostLog.Duplicates, withNames: Boolean = true): String = buildString {
+        fun post(p: PostLog.Post) = "${date(p.time)} — ${p.studio} - ${p.models.joinToString(" & ")}"
+        if (dup.sameVideo.isNotEmpty()) {
+            append("• Это видео уже выкладывалось: ")
+            append(dup.sameVideo.takeLast(3).joinToString("; ") { post(it) })
+            append('\n')
+        }
+        if (dup.sameFrames.isNotEmpty()) {
+            append("• Такие же кадры уже были: ")
+            append(dup.sameFrames.entries.joinToString("; ") { (n, p) -> "фото $n — пост от ${date(p.time)}" })
+            append('\n')
+        }
+        if (withNames && dup.sameNames.isNotEmpty() && dup.sameVideo.isEmpty()) {
+            append("• Эта студия с этими моделями уже была: ${post(dup.sameNames.last())}\n")
+        }
+    }.trim()
+
+    private fun date(t: Long): String = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale("ru")).format(java.util.Date(t))
 
     private fun setBusy(busy: Boolean, text: String?, p: Int) {
         btnPublish.isEnabled = !busy

@@ -50,6 +50,12 @@
                     android:textSize="12sp" />
             </LinearLayout>
             <ImageButton
+                android:id="@+id/btnStats"
+                style="@style/IconBtn"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Статистика канала"
+                android:src="@drawable/ic_stats" />
+            <ImageButton
                 android:id="@+id/btnSetup"
                 style="@style/IconBtn"
                 android:contentDescription="Бот и канал"
@@ -86,6 +92,28 @@
                         style="@style/BtnPrimary"
                         android:layout_marginTop="10dp"
                         android:text="Настроить" />
+                </LinearLayout>
+
+                <!-- "already posted" warning (video or frames) -->
+                <LinearLayout
+                    android:id="@+id/cardDup"
+                    style="@style/Card"
+                    android:background="@drawable/bg_card_warn"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="⚠ Похоже, это уже было в канале"
+                        android:textColor="@color/warn"
+                        android:textSize="15sp" />
+                    <TextView
+                        android:id="@+id/txtDup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="6dp"
+                        android:textColor="@color/text"
+                        android:textSize="13sp" />
                 </LinearLayout>
 
                 <!-- photos -->
@@ -151,6 +179,15 @@
                             android:text="＋"
                             android:textSize="20sp" />
                     </LinearLayout>
+                    <!-- "this studio + models were posted on …" -->
+                    <TextView
+                        android:id="@+id/txtNamesHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="8dp"
+                        android:textColor="@color/warn"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <!-- hashtags -->

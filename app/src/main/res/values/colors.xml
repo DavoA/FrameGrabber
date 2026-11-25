@@ -15,4 +15,5 @@
     <color name="text">#FFE9F7EF</color>
     <color name="textDim">#FF94BCA6</color>
     <color name="danger">#FFFF5C7A</color>
+    <color name="warn">#FFFFC857</color>
 </resources>

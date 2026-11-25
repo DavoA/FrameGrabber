@@ -80,7 +80,16 @@ class TelegramPick(private val s: MainScreen) {
 
     private fun next() {
         if (picked.size != PostCaption.PHOTOS) return
-        s.act.openPostEditor(PostActivity.intent(s.act, picked.map { it.file.path }, picked.map { it.timeUs }, s.video.baseName))
+        val uri = s.video.uri
+        val size = uri?.let { u ->
+            if (u.scheme == "file") java.io.File(u.path!!).length()
+            else runCatching {
+                s.act.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) c.getLong(0) else 0L }
+            }.getOrNull() ?: 0L
+        } ?: 0L
+        val key = com.dave.framegrabber.telegram.PostLog.videoKey(size, s.video.engine?.durationUs ?: 0)
+        s.act.openPostEditor(PostActivity.intent(s.act, picked.map { it.file.path }, picked.map { it.timeUs }, s.video.baseName, key))
     }
 
     /** Posted: leave picking. */

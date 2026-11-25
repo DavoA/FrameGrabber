@@ -60,6 +60,24 @@ class TelegramTest {
         assertEquals(0, again.restoreDefaults())
     }
 
+    @Test fun post_log_finds_repeats() {
+        File(ctx.filesDir, "tg_posts.json").delete()
+        val log = com.dave.framegrabber.telegram.PostLog(ctx)
+        log.add(com.dave.framegrabber.telegram.PostLog.Post(1_000, "@c", 5, null, "Studio X", listOf("Anna", "Bea"),
+            listOf("hd"), "clip", "1234:4000", listOf(0x0F0F0F0F0F0F0F0FL, 0x123456789ABCDEF0L)))
+        val again = com.dave.framegrabber.telegram.PostLog(ctx)
+        assertEquals(1, again.posts.size)
+        assertEquals(0x123456789ABCDEF0L, again.posts[0].frameHashes[1])
+        // same video (another path, same size+duration), a re-encoded frame (3 bits differ), same names in another order
+        val d = again.check("1234:4000", listOf(0L, 0x123456789ABCDEF0L xor 0b111), "studio x", listOf("bea", "Anna"))
+        assertEquals(1, d.sameVideo.size)
+        assertEquals(setOf(2), d.sameFrames.keys)
+        assertEquals(1, d.sameNames.size)
+        // nothing in common
+        val none = again.check("999:1", listOf(-1L), "Other", listOf("Anna"))
+        assertTrue(!none.any)
+    }
+
     @Test fun photo_prep_makes_small_jpeg() {
         val big = Bitmap.createBitmap(3840, 2160, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.rgb(20, 140, 80)) }
         val f = File(ctx.cacheDir, "big.png")
