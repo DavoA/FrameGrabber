@@ -67,7 +67,7 @@
                 android:drawablePadding="10dp"
                 android:drawableTint="@color/accent"
                 android:gravity="center_vertical"
-                android:hint="Поиск видео по всему телефону"
+                android:hint="Поиск по всем видео"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:paddingStart="14dp"
