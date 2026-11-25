@@ -44,8 +44,12 @@ class Prefs(ctx: Context) {
     var skipDupes: Boolean get() = sp.getBoolean("skipDup", false); set(v) = put { putBoolean("skipDup", v) }
 
     // export
-    var gifFps: Int get() = sp.getInt("gifFps", 10); set(v) = put { putInt("gifFps", v) }
+    var gifFps: Int get() = sp.getInt("gifFps", 15); set(v) = put { putInt("gifFps", v) }
+    /** 0 = original width. */
     var gifWidth: Int get() = sp.getInt("gifW", 480); set(v) = put { putInt("gifW", v) }
+    var gifQuality: String get() = str("gifQ", "HIGH"); set(v) = put { putString("gifQ", v) }
+    var gifSpeed: Float get() = sp.getFloat("gifSpeed", 1f); set(v) = put { putFloat("gifSpeed", v) }
+    var gifBoomerang: Boolean get() = sp.getBoolean("gifBoom", false); set(v) = put { putBoolean("gifBoom", v) }
 
     // ui
     var tab: Int get() = sp.getInt("tab", 0); set(v) = put { putInt("tab", v) }

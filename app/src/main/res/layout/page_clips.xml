@@ -26,30 +26,63 @@
                 style="@style/CardTitle"
                 android:text="GIF" />
             
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <RadioGroup
-                    android:id="@+id/radioGifFps"
-                    style="@style/SegmentGroup"
-                    android:layout_width="0dp"
-                    android:layout_weight="1">
-                    <RadioButton android:id="@+id/fps5" style="@style/Segment" android:text="5 к/с" />
-                    <RadioButton android:id="@+id/fps10" style="@style/Segment" android:checked="true" android:text="10" />
-                    <RadioButton android:id="@+id/fps15" style="@style/Segment" android:text="15" />
-                </RadioGroup>
-                <RadioGroup
-                    android:id="@+id/radioGifW"
-                    style="@style/SegmentGroup"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp">
-                    <RadioButton android:id="@+id/gw320" style="@style/Segment" android:text="320" />
-                    <RadioButton android:id="@+id/gw480" style="@style/Segment" android:checked="true" android:text="480" />
-                    <RadioButton android:id="@+id/gw720" style="@style/Segment" android:text="720" />
-                </RadioGroup>
-            </LinearLayout>
+            <TextView style="@style/Label" android:paddingTop="0dp" android:text="Плавность (кадров в секунду)" />
+            <RadioGroup
+                android:id="@+id/radioGifFps"
+                style="@style/SegmentGroup">
+                <RadioButton android:id="@+id/fps10" style="@style/Segment" android:text="10" />
+                <RadioButton android:id="@+id/fps15" style="@style/Segment" android:checked="true" android:text="15" />
+                <RadioButton android:id="@+id/fps20" style="@style/Segment" android:text="20" />
+                <RadioButton android:id="@+id/fps25" style="@style/Segment" android:text="25" />
+                <RadioButton android:id="@+id/fps30" style="@style/Segment" android:text="30" />
+            </RadioGroup>
+
+            <TextView style="@style/Label" android:text="Размер (ширина)" />
+            <RadioGroup
+                android:id="@+id/radioGifW"
+                style="@style/SegmentGroup">
+                <RadioButton android:id="@+id/gw320" style="@style/Segment" android:text="320" />
+                <RadioButton android:id="@+id/gw480" style="@style/Segment" android:checked="true" android:text="480" />
+                <RadioButton android:id="@+id/gw720" style="@style/Segment" android:text="720" />
+                <RadioButton android:id="@+id/gw1080" style="@style/Segment" android:text="1080" />
+                <RadioButton android:id="@+id/gwOrig" style="@style/Segment" android:text="Ориг." />
+            </RadioGroup>
+
+            <TextView style="@style/Label" android:text="Качество цвета" />
+            <RadioGroup
+                android:id="@+id/radioGifQ"
+                style="@style/SegmentGroup">
+                <RadioButton android:id="@+id/gqNormal" style="@style/Segment" android:text="Обычное" />
+                <RadioButton android:id="@+id/gqHigh" style="@style/Segment" android:checked="true" android:text="Высокое" />
+                <RadioButton android:id="@+id/gqMax" style="@style/Segment" android:text="Максимум" />
+            </RadioGroup>
+            <TextView
+                android:id="@+id/txtGifQHint"
+                style="@style/SubHint"
+                android:paddingTop="6dp" />
+
+            <TextView style="@style/Label" android:text="Скорость" />
+            <RadioGroup
+                android:id="@+id/radioGifSpeed"
+                style="@style/SegmentGroup">
+                <RadioButton android:id="@+id/gs05" style="@style/Segment" android:text="0.5×" />
+                <RadioButton android:id="@+id/gs1" style="@style/Segment" android:checked="true" android:text="1×" />
+                <RadioButton android:id="@+id/gs2" style="@style/Segment" android:text="2×" />
+            </RadioGroup>
+
+            <Switch
+                android:id="@+id/swBoomerang"
+                style="@style/Toggle"
+                android:layout_marginTop="8dp"
+                android:text="Бумеранг (вперёд и обратно)" />
+
+            <TextView
+                android:id="@+id/txtGifInfo"
+                style="@style/SubHint"
+                android:fontFamily="monospace"
+                android:gravity="center"
+                android:paddingTop="10dp" />
+
             <Button
                 android:id="@+id/btnGif"
                 style="@style/BtnPrimary"
@@ -58,6 +91,25 @@
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
                 android:text="Сделать GIF" />
+            <ProgressBar
+                android:id="@+id/progressGif"
+                style="@android:style/Widget.Material.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:max="1000"
+                android:progressBackgroundTint="@color/stroke"
+                android:progressTint="@color/accent"
+                android:visibility="gone" />
+            <TextView
+                android:id="@+id/txtGif"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingTop="6dp"
+                android:textColor="@color/textDim"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
             
         </LinearLayout>

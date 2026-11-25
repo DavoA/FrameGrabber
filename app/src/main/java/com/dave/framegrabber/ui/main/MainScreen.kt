@@ -61,7 +61,7 @@ class MainScreen(val act: MainActivity) {
     val video = VideoController(this)
     val viewer = ViewerController(this)
     val grid = CapturesController(this)
-    val rangeClips = RangeCard(this, h(R.id.rangeClips))
+    val rangeClips = RangeCard(this, h(R.id.rangeClips)) { clips.updateGifInfo() }
     val rangeBatch = RangeCard(this, h(R.id.rangeBatch)) { batch.updateHint() }
     val format = CaptureFormat(this)
     val batch = BatchPanel(this)

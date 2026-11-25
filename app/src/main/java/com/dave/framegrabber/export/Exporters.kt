@@ -31,29 +31,52 @@ import com.dave.framegrabber.ui.widget.*
 import com.dave.framegrabber.R
 
 object Exporters {
-    /** GIF from [fromUs]..[toUs] at [fps], [width] px wide. Calls [progress] (0..1). */
-    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, fps: Int, width: Int, dest: File, progress: (Float) -> Boolean) =
-        BufferedOutputStream(dest.outputStream()).use { gif(ctx, uri, fromUs, toUs, fps, width, it, progress) }
+    /** GIF into a file (used by tests). */
+    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, opts: GifOptions, dest: File, progress: (Float) -> Boolean) =
+        BufferedOutputStream(dest.outputStream()).use { gif(ctx, uri, fromUs, toUs, opts, it, progress) }
 
-    /** Writes the GIF straight into [os] (e.g. the gallery file) — no temp file. */
-    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, fps: Int, width: Int, os: OutputStream, progress: (Float) -> Boolean) {
+    /**
+     * GIF from [fromUs]..[toUs], written straight into [os] (e.g. the gallery file).
+     * Frames are read in runs (fast even at 30 fps); [progress] gets 0..1 and can return false to stop.
+     */
+    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, opts: GifOptions, os: OutputStream, progress: (Float) -> Boolean) {
         FrameEngine(ctx, uri).use { e ->
-            val w = min(width, max(e.width, 16)) and 1.inv()
-            val h = (w * e.height / max(1, e.width).toFloat()).roundToInt().coerceAtLeast(2) and 1.inv()
-            val step = 1_000_000L / fps
-            val count = ((toUs - fromUs) / step + 1).toInt().coerceAtLeast(1)
-            var frames = 0
-            run {
-                val g = GifEncoder(os, w, h, 1000 / fps)
-                for (i in 0 until count) {
-                    val t = fromUs + i * step
-                    val b = e.scaledFrame(t, w, h, exact = true) ?: e.scaledFrame(t, w, h, exact = false) ?: continue
-                    g.addFrame(b); frames++
-                    if (!progress((i + 1f) / count)) break
-                }
-                g.finish()
+            val (w, h) = opts.size(e)
+            val times = opts.frameTimes(fromUs, toUs)
+            val total = opts.outputFrames(fromUs, toUs)
+            require(total <= GifOptions.MAX_FRAMES) { "Слишком много кадров: $total (максимум ${GifOptions.MAX_FRAMES})" }
+            val g = GifEncoder(os, w, h, opts.quality)
+            val delays = opts.delaysCs(total)
+            var written = 0
+            // keep small frames for the way back (boomerang) if they fit in memory
+            val keep = opts.boomerang && w.toLong() * h * 4 * times.size < 160L * 1024 * 1024
+            val kept = ArrayList<Bitmap>()
+
+            fun put(b: Bitmap): Boolean {
+                g.addFrame(b, delays[written]); written++
+                return progress(written.toFloat() / total)
             }
-            if (frames == 0) error("Не удалось получить ни одного кадра из этого отрезка")
+
+            FrameReader.forEach(e, times, w, h) { _, b ->
+                val go = put(b)
+                if (keep) kept += b else b.recycle()
+                go
+            }
+            if (opts.boomerang && times.size > 2 && written < total) {
+                val back = times.subList(1, times.size - 1).reversed()
+                if (keep) {
+                    if (kept.size > 2) for (b in kept.subList(1, kept.size - 1).reversed()) if (!put(b)) break
+                } else {
+                    for (t in back) {
+                        val b = e.scaledFrame(t, w, h, exact = true) ?: continue
+                        val go = put(b); b.recycle()
+                        if (!go) break
+                    }
+                }
+            }
+            kept.forEach { it.recycle() }
+            g.finish()
+            if (written == 0) error("Не удалось получить ни одного кадра из этого отрезка")
         }
     }
 

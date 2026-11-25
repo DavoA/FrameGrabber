@@ -158,6 +158,7 @@ class VideoController(private val s: MainScreen) {
         showTime()
         s.rangeBatch.onVideoChanged()
         s.rangeClips.onVideoChanged()
+        s.clips.updateGifInfo()
         s.batch.updateHint()
         // timeline and −1f / 📷 / +1f appear once there's a video
         if (cardTimeline.visibility != View.VISIBLE) cardTimeline.riseIn(150, 20f)

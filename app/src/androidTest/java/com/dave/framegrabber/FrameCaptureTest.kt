@@ -107,7 +107,7 @@ class FrameCaptureTest {
     @Test fun gif_clip_sheet_export() {
         val uri = clip("h264.mp4")
         val gif = File(appCtx.cacheDir, "t.gif")
-        Exporters.gif(appCtx, uri, 500_000, 2_000_000, 10, 320, gif) { true }
+        Exporters.gif(appCtx, uri, 500_000, 2_000_000, GifOptions(10, 320, GifEncoder.Quality.HIGH), gif) { true }
         val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(gif.path, o)
         assertEquals(320, o.outWidth)
@@ -115,6 +115,17 @@ class FrameCaptureTest {
         // all frames decode (AnimatedImageDrawable walks the whole file)
         val d = android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(gif))
         assertTrue(d is android.graphics.drawable.AnimatedImageDrawable)
+
+        // smooth + max quality + boomerang + original size
+        val smooth = File(appCtx.cacheDir, "s.gif")
+        val opts = GifOptions(30, 0, GifEncoder.Quality.MAX, speed = 0.5f, boomerang = true)
+        assertEquals(60, opts.outputFrames(0, 500_000))
+        Exporters.gif(appCtx, uri, 0, 500_000, opts, smooth) { true }
+        val so = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(smooth.path, so)
+        assertEquals(1280, so.outWidth)
+        assertTrue(android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(smooth))
+            is android.graphics.drawable.AnimatedImageDrawable)
 
         val mp4 = File(appCtx.cacheDir, "t.mp4")
         Exporters.clip(appCtx, uri, 1_000_000, 3_000_000, mp4) { true }
@@ -154,7 +165,7 @@ class FrameCaptureTest {
     @Test fun export_directly_to_gallery() {
         val uri = clip("h264.mp4")
         val gifUri = Output.write(appCtx, "test_direct.gif", "image/gif", Output.Kind.IMAGE) { t ->
-            t.stream().buffered().use { os -> Exporters.gif(appCtx, uri, 0, 1_000_000, 10, 320, os) { true } }
+            t.stream().buffered().use { os -> Exporters.gif(appCtx, uri, 0, 1_000_000, GifOptions(10, 320, GifEncoder.Quality.NORMAL), os) { true } }
         }
         appCtx.contentResolver.openInputStream(gifUri)!!.use { i ->
             val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }

@@ -16,6 +16,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
+import android.widget.Switch
 import android.widget.TextView
 import com.dave.framegrabber.R
 import com.dave.framegrabber.core.TimeUtil
@@ -23,6 +24,8 @@ import com.dave.framegrabber.data.Made
 import com.dave.framegrabber.data.Naming
 import com.dave.framegrabber.data.Output
 import com.dave.framegrabber.export.Exporters
+import com.dave.framegrabber.export.GifEncoder
+import com.dave.framegrabber.export.GifOptions
 import com.dave.framegrabber.ui.anim
 import com.dave.framegrabber.ui.bump
 import com.dave.framegrabber.ui.dp
@@ -36,26 +39,74 @@ import java.io.File
  */
 class ClipsPanel(private val s: MainScreen) {
 
-    companion object {
-        private const val GIF_MAX_US = 20_000_000L
-    }
-
     private val radioFps = s.h<RadioGroup>(R.id.radioGifFps)
     private val radioWidth = s.h<RadioGroup>(R.id.radioGifW)
-    private val job = ExportJob(s, s.h(R.id.progressClips), s.h(R.id.txtClips))
+    private val radioQuality = s.h<RadioGroup>(R.id.radioGifQ)
+    private val radioSpeed = s.h<RadioGroup>(R.id.radioGifSpeed)
+    private val swBoomerang = s.h<Switch>(R.id.swBoomerang)
+    private val txtQualityHint = s.h<TextView>(R.id.txtGifQHint)
+    private val txtGifInfo = s.h<TextView>(R.id.txtGifInfo)
+    private val gifJob = ExportJob(s, s.h(R.id.progressGif), s.h(R.id.txtGif))
+    private val clipJob = ExportJob(s, s.h(R.id.progressClips), s.h(R.id.txtClips))
     private val madeList = s.h<LinearLayout>(R.id.madeList)
     private val madeEmpty = s.h<View>(R.id.txtMadeEmpty)
     private val madeCount = s.h<TextView>(R.id.txtMadeCount)
 
+    private val fpsIds = mapOf(R.id.fps10 to 10, R.id.fps15 to 15, R.id.fps20 to 20, R.id.fps25 to 25, R.id.fps30 to 30)
+    private val widthIds = mapOf(R.id.gw320 to 320, R.id.gw480 to 480, R.id.gw720 to 720, R.id.gw1080 to 1080, R.id.gwOrig to 0)
+    private val qualityIds = mapOf(
+        R.id.gqNormal to GifEncoder.Quality.NORMAL, R.id.gqHigh to GifEncoder.Quality.HIGH, R.id.gqMax to GifEncoder.Quality.MAX
+    )
+    private val speedIds = mapOf(R.id.gs05 to 0.5f, R.id.gs1 to 1f, R.id.gs2 to 2f)
+
     init {
+        // saved values first, then listeners
         val p = s.prefs
-        radioFps.check(when (p.gifFps) { 5 -> R.id.fps5; 15 -> R.id.fps15; else -> R.id.fps10 })
-        radioWidth.check(when (p.gifWidth) { 320 -> R.id.gw320; 720 -> R.id.gw720; else -> R.id.gw480 })
-        radioFps.setOnCheckedChangeListener { _, id -> p.gifFps = when (id) { R.id.fps5 -> 5; R.id.fps15 -> 15; else -> 10 } }
-        radioWidth.setOnCheckedChangeListener { _, id -> p.gifWidth = when (id) { R.id.gw320 -> 320; R.id.gw720 -> 720; else -> 480 } }
+        radioFps.check(fpsIds.entries.firstOrNull { it.value == p.gifFps }?.key ?: R.id.fps15)
+        radioWidth.check(widthIds.entries.firstOrNull { it.value == p.gifWidth }?.key ?: R.id.gw480)
+        radioQuality.check(qualityIds.entries.firstOrNull { it.value.name == p.gifQuality }?.key ?: R.id.gqHigh)
+        radioSpeed.check(speedIds.entries.firstOrNull { it.value == p.gifSpeed }?.key ?: R.id.gs1)
+        swBoomerang.isChecked = p.gifBoomerang
+        radioFps.setOnCheckedChangeListener { _, id -> p.gifFps = fpsIds[id] ?: 15; updateGifInfo() }
+        radioWidth.setOnCheckedChangeListener { _, id -> p.gifWidth = widthIds[id] ?: 480; updateGifInfo() }
+        radioQuality.setOnCheckedChangeListener { _, id -> p.gifQuality = (qualityIds[id] ?: GifEncoder.Quality.HIGH).name; updateGifInfo() }
+        radioSpeed.setOnCheckedChangeListener { _, id -> p.gifSpeed = speedIds[id] ?: 1f; updateGifInfo() }
+        swBoomerang.setOnCheckedChangeListener { _, on -> p.gifBoomerang = on; updateGifInfo() }
+        updateGifInfo()
         s.h<View>(R.id.btnGif).setOnClickListener { gif() }
         s.h<View>(R.id.btnClip).setOnClickListener { clip() }
         buildMade()
+    }
+
+    // ================================================================ GIF options
+
+    private fun options() = GifOptions(
+        fps = s.prefs.gifFps,
+        width = s.prefs.gifWidth,
+        quality = runCatching { GifEncoder.Quality.valueOf(s.prefs.gifQuality) }.getOrDefault(GifEncoder.Quality.HIGH),
+        speed = s.prefs.gifSpeed,
+        boomerang = s.prefs.gifBoomerang,
+    )
+
+    /** "≈ 90 кадров · 720×405 · 6.0 с" under the options (also called when the range or video changes). */
+    fun updateGifInfo() {
+        val o = options()
+        txtQualityHint.text = when (o.quality) {
+            GifEncoder.Quality.NORMAL -> "Быстро и маленький файл, на плавных переходах цвета возможны полосы"
+            GifEncoder.Quality.HIGH -> "Плавные переходы цвета без полос (сглаживание)"
+            GifEncoder.Quality.MAX -> "Самые точные цвета; файл больше, делается дольше"
+        }
+        val e = s.video.engine ?: run { txtGifInfo.text = "Сначала выбери видео"; return }
+        val (from, to) = s.rangeClips.bounds(e)
+        if (to <= from) { txtGifInfo.text = "Проверь отрезок"; return }
+        val frames = o.outputFrames(from, to)
+        val (w, h) = o.size(e)
+        val seconds = frames / o.fps.toFloat()
+        txtGifInfo.text = buildString {
+            append("≈ $frames кадров · ${w}×${h} · %.1f с".format(seconds))
+            if (frames > GifOptions.MAX_FRAMES) append("\nСлишком много кадров (макс. ${GifOptions.MAX_FRAMES}) — укороти отрезок или снизь плавность")
+        }
+        txtGifInfo.setTextColor(s.act.getColor(if (frames > GifOptions.MAX_FRAMES) R.color.danger else R.color.textDim))
     }
 
     // ================================================================ making
@@ -64,20 +115,33 @@ class ClipsPanel(private val s: MainScreen) {
         val e = s.video.requireEngine() ?: return
         val uri = s.video.uri ?: return
         val (from, to) = s.rangeClips.require(e) ?: return
-        if (to - from > GIF_MAX_US) {
-            s.act.toast("GIF до 20 секунд — укажи отрезок короче (сейчас ${TimeUtil.format(to - from)})")
-            s.rangeClips.card.bump(); return
+        val o = options()
+        val frames = o.outputFrames(from, to)
+        if (frames > GifOptions.MAX_FRAMES) {
+            s.act.toast("Получится $frames кадров — максимум ${GifOptions.MAX_FRAMES}. Укороти отрезок или снизь плавность.")
+            s.rangeClips.card.bump(); txtGifInfo.bump(); return
         }
-        val fps = s.prefs.gifFps
-        val width = s.prefs.gifWidth
+        val (w, h) = o.size(e)
         val name = Naming.stem(s.prefs.namePattern, s.video.baseName, from, 1) + ".gif"
-        job.launch("GIF", "Делаю GIF…", "image/gif", onDone = { made(it, "image/gif", name, to - from) }) {
-            Output.write(s.act, name, "image/gif", Output.Kind.IMAGE) { t ->
-                t.stream().buffered().use { os ->
-                    Exporters.gif(s.act, uri, from, to, fps, width, os) { job.report(it, "GIF"); true }
+        val lengthUs = (frames * 1_000_000L / o.fps)
+        val go = {
+            gifJob.launch("GIF", "Делаю GIF…", "image/gif", onDone = { made(it, "image/gif", name, lengthUs) }) {
+                Output.write(s.act, name, "image/gif", Output.Kind.IMAGE) { t ->
+                    t.stream().buffered().use { os ->
+                        Exporters.gif(s.act, uri, from, to, o, os) { gifJob.report(it, "GIF"); true }
+                    }
                 }
             }
         }
+        // big + smooth GIFs take a while and make large files: say so first
+        if (frames.toLong() * w * h > 250_000_000L) {
+            AlertDialog.Builder(s.act)
+                .setTitle("Большой GIF")
+                .setMessage("$frames кадров в ${w}×${h}: это займёт пару минут, а файл может получиться десятки мегабайт. Продолжить?")
+                .setPositiveButton("Сделать") { _, _ -> go() }
+                .setNegativeButton("Отмена", null)
+                .show()
+        } else go()
     }
 
     private fun clip() {
@@ -85,7 +149,7 @@ class ClipsPanel(private val s: MainScreen) {
         val uri = s.video.uri ?: return
         val (from, to) = s.rangeClips.require(e) ?: return
         val name = Naming.stem(s.prefs.namePattern, s.video.baseName, from, 1) + "_clip.mp4"
-        job.launch("Клип", "Вырезаю клип…", "video/mp4", onDone = { made(it, "video/mp4", name, to - from) }) {
+        clipJob.launch("Клип", "Вырезаю клип…", "video/mp4", onDone = { made(it, "video/mp4", name, to - from) }) {
             Output.write(s.act, name, "video/mp4", Output.Kind.VIDEO) { t ->
                 val pfd = t.fd()
                 if (pfd != null) {
@@ -93,13 +157,13 @@ class ClipsPanel(private val s: MainScreen) {
                     pfd.use { fd ->
                         Exporters.clip(s.act, uri, from, to,
                             { MediaMuxer(fd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4) }
-                        ) { job.report(it, "Клип"); true }
+                        ) { clipJob.report(it, "Клип"); true }
                     }
                 } else {
                     // folder without read/write access: build in the app's permanent storage, then copy
                     val tmp = File(File(s.act.filesDir, "export").apply { mkdirs() }, "clip.mp4")
                     try {
-                        Exporters.clip(s.act, uri, from, to, tmp) { job.report(it, "Клип"); true }
+                        Exporters.clip(s.act, uri, from, to, tmp) { clipJob.report(it, "Клип"); true }
                         t.stream().use { o -> tmp.inputStream().use { it.copyTo(o) } }
                     } finally { tmp.delete() }
                 }

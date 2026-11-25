@@ -47,6 +47,8 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
     val width: Int
     val height: Int
     val fps: Double
+    /** Number of frames in the video (0 = unknown). */
+    val frameCount: Int
 
     init {
         r.setDataSource(context, uri)
@@ -64,9 +66,10 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
         val rot = m(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
         if (rot == 90 || rot == 270) { width = h; height = w } else { width = w; height = h }
 
-        val frameCount = m(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)?.toLongOrNull()
+        val frames = m(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)?.toLongOrNull()
+        frameCount = frames?.toInt() ?: 0
         fps = when {
-            frameCount != null && frameCount > 0 && durationUs > 0 -> frameCount * 1_000_000.0 / durationUs
+            frames != null && frames > 0 && durationUs > 0 -> frames * 1_000_000.0 / durationUs
             else -> m(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toDoubleOrNull()
                 ?.takeIf { it > 0 } ?: 30.0
         }
@@ -93,6 +96,15 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
     }
 
     /** Downscaled frame for previews / filmstrip. */
+    /**
+     * [count] consecutive frames starting at frame [index], decoded in one go (much faster than
+     * asking for each frame separately). Full resolution — keep [count] small for big videos.
+     */
+    fun framesAt(index: Int, count: Int): List<Bitmap> {
+        val p = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
+        return r.getFramesAtIndex(index, count, p)
+    }
+
     fun scaledFrame(us: Long, maxW: Int, maxH: Int, exact: Boolean): Bitmap? =
         r.getScaledFrameAtTime(us.coerceIn(0L, lastUs), option(exact), maxW, maxH)
 
