@@ -144,6 +144,32 @@ class FrameCaptureTest {
         assertTrue(text, text.contains("Привет"))
     }
 
+    /** The real app path: write GIF / clip / sheet straight into the gallery (MediaStore), no temp files. */
+    @Test fun export_directly_to_gallery() {
+        val uri = clip("h264.mp4")
+        val gifUri = Output.write(appCtx, "test_direct.gif", "image/gif", Output.Kind.IMAGE) { t ->
+            t.stream().buffered().use { os -> Exporters.gif(appCtx, uri, 0, 1_000_000, 10, 320, os) { true } }
+        }
+        appCtx.contentResolver.openInputStream(gifUri)!!.use { i ->
+            val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(i, null, o)
+            assertEquals(320, o.outWidth)
+        }
+        val clipUri = Output.write(appCtx, "test_direct.mp4", "video/mp4", Output.Kind.VIDEO) { t ->
+            t.fd()!!.use { fd ->
+                Exporters.clip(appCtx, uri, 1_000_000, 3_000_000,
+                    { android.media.MediaMuxer(fd.fileDescriptor, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4) }) { true }
+            }
+        }
+        val r = android.media.MediaMetadataRetriever()
+        r.setDataSource(appCtx, clipUri)
+        val dur = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)!!.toLong()
+        r.release()
+        assertTrue("clip duration $dur", dur in 1500..3200)
+        appCtx.contentResolver.delete(gifUri, null, null)
+        appCtx.contentResolver.delete(clipUri, null, null)
+    }
+
     @Test fun naming_pattern() {
         assertEquals("clip_00-01-23.500", Naming.stem("{video}_{time}", "clip", 83_500_000L, 1))
         assertEquals("a_007", Naming.stem("a_{n}", "x", 0, 7))
