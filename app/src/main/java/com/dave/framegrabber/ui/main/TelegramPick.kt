@@ -71,8 +71,8 @@ class TelegramPick(private val s: MainScreen) {
 
     private fun update() {
         val k = picked.size
-        txt.text = if (k < PostCaption.PHOTOS) "Выбери ${PostCaption.PHOTOS} кадров: $k из ${PostCaption.PHOTOS}\nпервый — обложка"
-                   else "Выбрано ${PostCaption.PHOTOS} кадров ✓"
+        txt.text = if (k < PostCaption.PHOTOS) "Выбрано $k из ${PostCaption.PHOTOS}\n1-й — обложка"
+                   else "Выбрано ${PostCaption.PHOTOS} ✓"
         btnNext.isEnabled = k == PostCaption.PHOTOS
         btnNext.alpha = if (k == PostCaption.PHOTOS) 1f else 0.45f
         if (k == PostCaption.PHOTOS) btnNext.bump()
