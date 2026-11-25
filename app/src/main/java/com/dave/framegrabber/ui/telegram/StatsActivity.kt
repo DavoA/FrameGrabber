@@ -106,7 +106,10 @@ class StatsActivity : Activity() {
         addView(status)
         val btn = android.widget.Button(this@StatsActivity, null, 0, R.style.BtnPrimary).apply {
             text = if (at == 0L) "Загрузить все посты канала" else "Обновить"
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * d).toInt() }
+            gravity = Gravity.CENTER
+            isAllCaps = false
+            setPadding((16 * d).toInt(), 0, (16 * d).toInt(), 0)
+            layoutParams = LinearLayout.LayoutParams(-1, (52 * d).toInt()).apply { topMargin = (12 * d).toInt() }
         }
         addView(btn)
         btn.setOnClickListener {

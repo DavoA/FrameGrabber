@@ -33,7 +33,11 @@ class ChannelImport(private val channel: String, private val base: String = "htt
             if (page.isEmpty()) {
                 // no posts: the start of the channel — or no such public channel
                 if (before == null && !html.contains("tgme_channel_info")) {
-                    throw IllegalStateException("Канал @$channel не найден или он закрытый — импорт работает только для публичных каналов")
+                    // the channel exists (its card is shown) but Telegram hides its posts on the web:
+                    // that's what it does for 18+ channels
+                    if (html.contains("tgme_page_title") || html.contains("tgme_page_extra"))
+                        throw IllegalStateException("Telegram не показывает посты @$channel в веб-версии (так он делает с каналами 18+), поэтому прочитать историю отсюда нельзя.")
+                    throw IllegalStateException("Канал @$channel не найден")
                 }
                 break
             }
