@@ -230,13 +230,13 @@ class ProjectController(private val s: MainScreen) {
             text = buildString {
                 append("Кадров: ${it.frames}")
                 if (it.marks > 0) append(" · меток: ${it.marks}")
-                append(" · ${Formatter.formatShortFileSize(ctx, it.bytes)}")
             }
             textSize = 12f; setTextColor(ctx.getColor(R.color.accent)); maxLines = 1
         })
         texts.addView(TextView(ctx).apply {
-            text = if (isOpen) "открыт сейчас"
-                   else DateUtils.getRelativeTimeSpanString(it.updated, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+            val time = if (isOpen) "открыт сейчас"
+                       else DateUtils.getRelativeTimeSpanString(it.updated, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+            text = "$time · ${Formatter.formatShortFileSize(ctx, it.bytes)}"
             textSize = 11f; setTextColor(ctx.getColor(R.color.textDim)); maxLines = 1
         })
         row.addView(texts)
