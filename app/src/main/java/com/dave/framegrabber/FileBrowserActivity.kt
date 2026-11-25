@@ -253,7 +253,9 @@ class FileBrowserActivity : Activity() {
 
     private fun start() {
         buildChips()
-        openDir(storageRoot)
+        // reopen the folder used last time
+        val last = Prefs(this).lastDir?.let { File(it) }
+        openDir(if (last != null && last.isDirectory && last.path.startsWith(storageRoot.path)) last else storageRoot)
     }
 
     // ================================================================ places (chips)
@@ -316,6 +318,7 @@ class FileBrowserActivity : Activity() {
     private fun openDir(d: File) {
         mode = Mode.BROWSE
         dir = d
+        Prefs(this).lastDir = d.path
         val rel = d.path.removePrefix(storageRoot.path).trimStart('/')
         txtPath.text = if (rel.isEmpty()) "Память" else "Память / " + rel.replace("/", " / ")
         pathScroll.post { pathScroll.fullScroll(View.FOCUS_RIGHT) }

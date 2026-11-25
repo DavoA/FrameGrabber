@@ -96,13 +96,19 @@
                 android:layout_height="match_parent"
                 android:scaleType="fitCenter" />
 
-            <!-- A captured frame opened from the grid -->
-            <ImageView
+            <!-- Video playback with sound -->
+            <TextureView
+                android:id="@+id/videoSurface"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <!-- A captured frame opened from the grid (pinch to zoom, swipe to flip) -->
+            <com.dave.framegrabber.ZoomImageView
                 android:id="@+id/imgCapture"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#FF030806"
-                android:scaleType="fitCenter"
+                android:background="#FF020805"
                 android:visibility="gone" />
 
             <LinearLayout
@@ -181,6 +187,17 @@
                 android:paddingBottom="3dp"
                 android:textColor="@color/text"
                 android:textSize="12sp"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/btnPlay"
+                style="@style/GlassBtn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="bottom|start"
+                android:layout_margin="8dp"
+                android:contentDescription="Воспроизвести"
+                android:src="@drawable/ic_play"
                 android:visibility="gone" />
 
             <ImageButton
@@ -285,23 +302,29 @@
                     android:id="@+id/actShare"
                     style="@style/ActionBtn"
                     android:drawableTop="@drawable/ic_share"
-                    android:text="Поделиться" />
+                    android:text="Отправить" />
                 <Button
                     android:id="@+id/actSave"
                     style="@style/ActionBtn"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
                     android:drawableTop="@drawable/ic_download"
                     android:text="Сохранить" />
                 <Button
                     android:id="@+id/actJump"
                     style="@style/ActionBtn"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
                     android:drawableTop="@drawable/ic_target"
-                    android:text="К моменту" />
+                    android:text="Момент" />
+                <Button
+                    android:id="@+id/actText"
+                    style="@style/ActionBtn"
+                    android:layout_marginStart="6dp"
+                    android:drawableTop="@drawable/ic_text"
+                    android:text="Текст" />
                 <Button
                     android:id="@+id/actDelete"
                     style="@style/ActionBtn"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
                     android:drawableTint="@color/danger"
                     android:drawableTop="@drawable/ic_delete"
                     android:text="Удалить" />

@@ -14,6 +14,7 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     buildTypes {
@@ -31,8 +32,10 @@ android {
     }
 }
 
-// The app itself uses no libraries; these are only for the on-emulator tests (androidTest).
 dependencies {
+    // OCR ("copy text from a frame"): Tesseract, works offline, reads Latin, Cyrillic and Armenian
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.8.0")
+    // on-emulator tests only
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("junit:junit:4.13.2")

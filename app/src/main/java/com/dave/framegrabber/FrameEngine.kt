@@ -223,15 +223,42 @@ object FrameCapture {
         return best ?: error("Нет кадра на ${TimeUtil.format(us)} (${why.joinToString("; ")})")
     }
 
-    fun capture(e: FrameEngine, us: Long, spec: OutputSpec, dir: File, baseName: String): Shot {
+    /**
+     * "Sharpest frame nearby": looks at [steps] moments within ±[windowUs] and returns the time of the
+     * least blurry one. The original moment gets a small bonus so a still scene keeps the exact time.
+     */
+    fun sharpestNear(e: FrameEngine, us: Long, windowUs: Long = 500_000, steps: Int = 9): Long {
+        val from = (us - windowUs).coerceAtLeast(0L)
+        val to = (us + windowUs).coerceAtMost(e.lastUs)
+        if (to <= from) return us
+        val times = (0 until steps).map { from + (to - from) * it / (steps - 1) }.toMutableList()
+        if (us !in times) times += us
+        var bestT = us
+        var best = -1.0
+        for (t in times.distinct()) {
+            val b = runCatching { e.scaledFrame(t, 360, 360, exact = true) }.getOrNull() ?: continue
+            var score = ImageMetrics.sharpness(b)
+            if (t == us) score *= 1.08
+            if (score > best) { best = score; bestT = t }
+        }
+        return bestT
+    }
+
+    /** Small probe for batch filters: sharpness + perceptual hash. */
+    fun probe(e: FrameEngine, us: Long): Pair<Double, Long>? {
+        val b = runCatching { e.scaledFrame(us, 200, 200, exact = true) }.getOrNull() ?: return null
+        return ImageMetrics.sharpness(b) to ImageMetrics.dHash(b)
+    }
+
+    fun capture(e: FrameEngine, us: Long, spec: OutputSpec, dir: File, baseName: String, stem: String? = null): Shot {
         val g = grab(e, us)
         val src = g.bitmap
         val out = spec.size?.let { (w, h) -> FrameRender.fit(src, w, h, transparentPad = spec.format != Fmt.JPG) } ?: src
         dir.mkdirs()
-        val stamp = TimeUtil.stamp(us)
-        var file = File(dir, "${baseName}_$stamp.${spec.format.ext}")
+        val base = stem ?: "${baseName}_${TimeUtil.stamp(us)}"
+        var file = File(dir, "$base.${spec.format.ext}")
         var n = 2
-        while (file.exists()) file = File(dir, "${baseName}_${stamp}_${n++}.${spec.format.ext}")
+        while (file.exists()) file = File(dir, "${base}_${n++}.${spec.format.ext}")
         try {
             file.outputStream().buffered().use { FrameRender.encode(out, spec.format, spec.quality, it) }
         } catch (t: Throwable) {

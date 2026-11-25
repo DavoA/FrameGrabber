@@ -64,7 +64,7 @@ class ScreenshotTest {
             }
             Thread.sleep(600)
             inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnCapture).performClick() }
-            Thread.sleep(1200)
+            Thread.sleep(2500)
         }
         Thread.sleep(800); shot("3_captured")
 

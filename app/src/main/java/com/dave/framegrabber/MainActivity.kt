@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.view.GestureDetector
@@ -57,17 +58,11 @@ import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.max
 
-class Capture(
-    val file: File, val thumb: Bitmap, val timeUs: Long, val fmt: Fmt,
-    val width: Int, val height: Int, val exact: Boolean
-) {
-    var galleryUri: Uri? = null
-}
-
 class MainActivity : Activity() {
 
     companion object {
         private const val REQ_PICK = 1
+        private const val REQ_TREE = 2
         private const val ALBUM = "FrameGrabber"
         private const val FILMSTRIP_COUNT = 10
         private const val MAX_BATCH = 2000
@@ -87,14 +82,30 @@ class MainActivity : Activity() {
     private var baseName = "video"
     private var currentUs = 0L
 
-    private val captures = mutableListOf<Capture>()
+    /** Frames live in a process-wide store so the background batch can keep adding them. */
+    private val captures get() = CaptureStore.captures
+    private var videoUri: Uri? = null
+    private lateinit var prefs: Prefs
+    /** Restoring saved settings into the widgets: don't write them back meanwhile. */
+    private var restoring = false
+    private var player: android.media.MediaPlayer? = null
+    private var playerReady = false
+    private val playTicker = object : Runnable {
+        override fun run() {
+            val p = player ?: return
+            if (!p.isPlaying) return
+            currentUs = p.currentPosition * 1000L
+            seek.progress = p.currentPosition
+            txtTimeBadge.text = TimeUtil.format(currentUs)
+            ui.postDelayed(this, 40)
+        }
+    }
     private lateinit var capDir: File
     /** Capture currently opened in the big preview; null = showing the video. */
     private var selected: Capture? = null
     /** Captures that should play the "pop in" animation the first time they're shown. */
     private val pendingAnim = HashSet<Capture>()
 
-    private var batchCancel: AtomicBoolean? = null
     private var batchPulse: ObjectAnimator? = null
 
     private val dp get() = resources.displayMetrics.density
@@ -109,7 +120,9 @@ class MainActivity : Activity() {
     private lateinit var txtInfo: TextView
     private lateinit var previewCard: FrameLayout
     private lateinit var imgPreview: ImageView
-    private lateinit var imgCapture: ImageView
+    private lateinit var imgCapture: ZoomImageView
+    private lateinit var videoSurface: android.view.TextureView
+    private lateinit var btnPlay: ImageButton
     private lateinit var placeholder: View
     private lateinit var phIcon: View
     private lateinit var chipMode: View
@@ -129,6 +142,17 @@ class MainActivity : Activity() {
 
     // header (scrolling) views
     private lateinit var header: View
+    private lateinit var cardRecent: View
+    private lateinit var recentRow: LinearLayout
+    private lateinit var txtRangeLen: TextView
+    private lateinit var cardExport: View
+    private lateinit var swSkipBlur: android.widget.Switch
+    private lateinit var swSkipDup: android.widget.Switch
+    private lateinit var swSharpest: android.widget.Switch
+    private lateinit var radioGifFps: RadioGroup
+    private lateinit var radioGifW: RadioGroup
+    private lateinit var progressExport: ProgressBar
+    private lateinit var txtExport: TextView
     private lateinit var txtDuration: TextView
     private lateinit var seek: SeekBar
     private lateinit var filmstrip: LinearLayout
@@ -163,7 +187,12 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        capDir = File(cacheDir, "captures").apply { deleteRecursively(); mkdirs() }
+        prefs = Prefs(this)
+        capDir = File(cacheDir, "captures").apply {
+            // keep frames if this screen is re-created while frames exist / a batch runs in the background
+            if (CaptureStore.captures.isEmpty() && !BatchState.running) deleteRecursively()
+            mkdirs()
+        }
         if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false) // background under the bars
         setContentView(R.layout.activity_main)
         bgView = findViewById(R.id.bgView)
@@ -183,9 +212,13 @@ class MainActivity : Activity() {
         })
 
         applyInsets()
+        restorePrefs()
         setupListeners()
+        setupPlayer()
         updateCapturesUi(animate = false)
         updateBatchHint()
+        buildRecent()
+        if (BatchState.running) showBatchRunning()
         playEntrance()
         startIdleAnimations()
 
@@ -207,11 +240,27 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onResume() { super.onResume(); bgView.running = AppTheme.get(this) == AppTheme.WAVE }
-    override fun onPause() { bgView.running = false; super.onPause() }
+    override fun onResume() {
+        super.onResume()
+        bgView.running = AppTheme.get(this) == AppTheme.WAVE
+        CaptureStore.listener = captureListener
+        BatchState.listener = batchListener
+        grid.notifyDataSetChanged(); updateCapturesUi(animate = false)
+        if (BatchState.running) batchListener.onProgress()
+        else if (batchPulse != null) batchListener.onFinished()   // finished while we were away
+    }
+
+    override fun onPause() {
+        bgView.running = false
+        pausePlayback()
+        // while away, the service shows a "done" notification instead of updating this screen
+        CaptureStore.listener = null
+        BatchState.listener = null
+        super.onPause()
+    }
 
     override fun onDestroy() {
-        batchCancel?.set(true)
+        player?.release(); player = null
         val e = engine
         exec.execute { e?.close() }
         exec.shutdown()
@@ -257,6 +306,8 @@ class MainActivity : Activity() {
         editTime = findViewById(R.id.editTime)
         btnCapture = findViewById(R.id.btnCapture)
         list = findViewById(R.id.list)
+        videoSurface = findViewById(R.id.videoSurface)
+        btnPlay = findViewById(R.id.btnPlay)
         previewCard.clipToOutline = true
         // Preview height adapts to the screen: ~16:10 of the width, but never more than a third of the height
         previewCard.addOnLayoutChangeListener { v, l, _, r, _, ol, _, or_, _ ->
@@ -296,6 +347,17 @@ class MainActivity : Activity() {
         capActions = h.findViewById(R.id.capActions)
         emptyBox = h.findViewById(R.id.emptyBox)
         emptyIcon = h.findViewById(R.id.emptyIcon)
+        cardRecent = h.findViewById(R.id.cardRecent)
+        recentRow = h.findViewById(R.id.recentRow)
+        txtRangeLen = h.findViewById(R.id.txtRangeLen)
+        cardExport = h.findViewById(R.id.cardExport)
+        swSkipBlur = h.findViewById(R.id.swSkipBlur)
+        swSkipDup = h.findViewById(R.id.swSkipDup)
+        swSharpest = h.findViewById(R.id.swSharpest)
+        radioGifFps = h.findViewById(R.id.radioGifFps)
+        radioGifW = h.findViewById(R.id.radioGifW)
+        progressExport = h.findViewById(R.id.progressExport)
+        txtExport = h.findViewById(R.id.txtExport)
     }
 
     private fun setupListeners() {
@@ -342,19 +404,53 @@ class MainActivity : Activity() {
             selected?.let { c -> closeCapture(); seekTo(c.timeUs) }
         }
         findViewById<View>(R.id.actDelete).setOnClickListener { deleteSelected() }
-        setupSwipe()
+        findViewById<View>(R.id.actText).setOnClickListener { selected?.let { recognizeText(it) } }
+        imgCapture.onSwipe = { d -> stepCapture(d) }
+        btnPlay.setOnClickListener { togglePlayback() }
 
-        // tabs
+        // tabs (Пачка / Экспорт / Формат)
+        val panels = listOf(cardBatch, cardExport, cardSettings)
+        val tabIds = listOf(R.id.tabBatch, R.id.tabExport, R.id.tabSettings)
         radioTabs.setOnCheckedChangeListener { _, id ->
-            if (id == R.id.tabBatch) switchPanel(cardSettings, cardBatch, -1)
-            else switchPanel(cardBatch, cardSettings, +1)
+            val to = tabIds.indexOf(id).coerceAtLeast(0)
+            val from = panels.indexOfFirst { it.visibility == View.VISIBLE }.coerceAtLeast(0)
+            if (from != to) switchPanel(panels[from], panels[to], if (to > from) 1 else -1)
+            if (!restoring) prefs.tab = to
         }
+
+        // range
+        header.findViewById<View>(R.id.btnMarkIn).setOnClickListener {
+            if (engine == null) return@setOnClickListener nudge(btnPick, "Сначала выбери видео")
+            editFrom.setText(TimeUtil.format(currentUs)); bump(editFrom)
+        }
+        header.findViewById<View>(R.id.btnMarkOut).setOnClickListener {
+            if (engine == null) return@setOnClickListener nudge(btnPick, "Сначала выбери видео")
+            editTo.setText(TimeUtil.format(currentUs)); bump(editTo)
+        }
+
+        // export
+        header.findViewById<View>(R.id.btnGif).setOnClickListener { exportGif() }
+        header.findViewById<View>(R.id.btnClip).setOnClickListener { exportClip() }
+        header.findViewById<View>(R.id.btnSheet).setOnClickListener { exportSheet() }
+        radioGifFps.setOnCheckedChangeListener { _, id ->
+            if (!restoring) prefs.gifFps = when (id) { R.id.fps5 -> 5; R.id.fps15 -> 15; else -> 10 }
+        }
+        radioGifW.setOnCheckedChangeListener { _, id ->
+            if (!restoring) prefs.gifWidth = when (id) { R.id.gw320 -> 320; R.id.gw720 -> 720; else -> 480 }
+        }
+
+        // smart capture & batch filters
+        swSharpest.setOnCheckedChangeListener { _, on -> if (!restoring) prefs.sharpest = on }
+        swSkipBlur.setOnCheckedChangeListener { _, on -> if (!restoring) prefs.skipBlurry = on }
+        swSkipDup.setOnCheckedChangeListener { _, on -> if (!restoring) prefs.skipDupes = on }
 
         // settings
         radioSize.setOnCheckedChangeListener { _, id ->
             if (id == R.id.sizeCustom) showAnimated(customSizeRow) else customSizeRow.visibility = View.GONE
+            if (!restoring) prefs.size = when (id) { R.id.size720 -> "720"; R.id.size1080 -> "1080"; R.id.sizeCustom -> "custom"; else -> "orig" }
         }
         radioFormat.setOnCheckedChangeListener { _, id ->
+            if (!restoring) prefs.format = when (id) { R.id.fmtPng -> "PNG"; R.id.fmtWebp -> "WEBP"; else -> "JPG" }
             val lossless = id == R.id.fmtPng
             seekQuality.isEnabled = !lossless
             seekQuality.anim().alpha(if (lossless) 0.35f else 1f).setDuration(200).start()
@@ -366,13 +462,14 @@ class MainActivity : Activity() {
                 txtQuality.text = "Качество: ${sb.progress}"
             }
             override fun onStartTrackingTouch(sb: SeekBar) {}
-            override fun onStopTrackingTouch(sb: SeekBar) {}
+            override fun onStopTrackingTouch(sb: SeekBar) { prefs.quality = sb.progress }
         })
 
         // batch
         radioBatch.setOnCheckedChangeListener { _, id ->
-            if (id == R.id.batchInterval) { lblBatch.text = "Интервал, сек"; editBatch.setText("5") }
-            else { lblBatch.text = "Сколько кадров"; editBatch.setText("10") }
+            if (!restoring) prefs.batchCount = id == R.id.batchCount
+            if (id == R.id.batchInterval) { lblBatch.text = "Интервал, сек"; editBatch.setText(prefs.batchInterval) }
+            else { lblBatch.text = "Сколько кадров"; editBatch.setText(prefs.batchN) }
             editBatch.anim().cancel()
             editBatch.alpha = 0f
             editBatch.anim().alpha(1f).setDuration(250).start()
@@ -381,13 +478,31 @@ class MainActivity : Activity() {
         val hintWatcher = object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) = updateBatchHint()
+            override fun afterTextChanged(s: android.text.Editable?) { updateBatchHint(); updateRangeLen() }
         }
+        editBatch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (restoring) return
+                if (radioBatch.checkedRadioButtonId == R.id.batchCount) prefs.batchN = s.toString() else prefs.batchInterval = s.toString()
+            }
+        })
+        val sizeWatcher = object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (!restoring) { prefs.customW = editW.text.toString(); prefs.customH = editH.text.toString() }
+            }
+        }
+        editW.addTextChangedListener(sizeWatcher); editH.addTextChangedListener(sizeWatcher)
         editBatch.addTextChangedListener(hintWatcher)
         editFrom.addTextChangedListener(hintWatcher)
         editTo.addTextChangedListener(hintWatcher)
 
-        btnBatch.setOnClickListener { if (batchCancel != null) batchCancel?.set(true) else startBatch() }
+        btnBatch.setOnClickListener {
+            if (BatchState.running) { BatchState.stop(this); btnBatch.text = "Останавливаю…" } else startBatch()
+        }
         header.findViewById<View>(R.id.btnSaveAll).setOnClickListener { saveAll() }
         header.findViewById<View>(R.id.btnZip).setOnClickListener { makeZip() }
         header.findViewById<View>(R.id.btnClear).setOnClickListener { confirmClear() }
@@ -420,6 +535,19 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_TREE && resultCode == RESULT_OK) {
+            val tree = data?.data ?: return
+            runCatching {
+                contentResolver.takePersistableUriPermission(tree,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            prefs.folderTree = tree.toString()
+            prefs.folderTreeName = Uri.decode(DocumentsContract.getTreeDocumentId(tree)).replace("primary:", "Память/")
+            settingsFolderLabel?.text = Output.describe(this)
+            captures.forEach { it.galleryUri = null }  // next save goes to the new folder
+            toast("Кадры будут сохраняться в: ${Output.describe(this)}")
+            return
+        }
         if (requestCode != REQ_PICK || resultCode != RESULT_OK || data == null) return
         val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)
         val uri = if (path != null) Uri.fromFile(File(path)) else data.data
@@ -442,8 +570,8 @@ class MainActivity : Activity() {
         else intent.getParcelableExtra(Intent.EXTRA_STREAM)
 
     private fun loadVideo(uri: Uri) {
-        batchCancel?.set(true)
         if (selected != null) closeCapture()
+        pausePlayback()
         txtInfo.text = "Открываю…"
         val gen = loadGen.incrementAndGet()
         exec.execute {
@@ -462,8 +590,15 @@ class MainActivity : Activity() {
     private fun onVideoLoaded(e: FrameEngine, uri: Uri) {
         engine?.let { old -> exec.execute { old.close() } }
         engine = e
+        videoUri = uri
         baseName = displayName(uri)
         currentUs = 0
+        prepareVideo(uri, e)
+        rememberRecent(uri, e)
+        if (cardRecent.visibility == View.VISIBLE) {
+            cardRecent.anim().alpha(0f).translationY(-20 * dp).setDuration(220)
+                .withEndAction { cardRecent.visibility = View.GONE; cardRecent.alpha = 1f; cardRecent.translationY = 0f }.start()
+        }
         seek.max = (e.durationUs / 1000).toInt()
         seek.progress = 0
         editFrom.setText("")
@@ -472,6 +607,7 @@ class MainActivity : Activity() {
         txtDuration.text = TimeUtil.format(e.durationUs)
         showTime()
         updateBatchHint()
+        updateRangeLen()
 
         // placeholder out, preview in
         if (placeholder.visibility == View.VISIBLE) {
@@ -587,21 +723,30 @@ class MainActivity : Activity() {
     }
 
     /** Runs on a background thread with the given engine. */
-    private fun makeCapture(e: FrameEngine, us: Long, spec: OutputSpec): Capture {
-        val shot = FrameCapture.capture(e, us, spec, capDir, baseName)
-        return Capture(shot.file, shot.thumb, us, spec.format, shot.width, shot.height, shot.exact)
+    private fun makeCapture(e: FrameEngine, us0: Long, spec: OutputSpec, sharpest: Boolean, index: Int): Capture {
+        val us = if (sharpest) FrameCapture.sharpestNear(e, us0) else us0
+        val stem = Naming.stem(prefs.namePattern, baseName, us, index)
+        val shot = FrameCapture.capture(e, us, spec, capDir, baseName, stem)
+        return Capture(shot.file, shot.thumb, us, spec.format, shot.width, shot.height, shot.exact, sharpened = us != us0)
     }
 
     private fun captureCurrent() {
         val e = engine ?: return nudge(btnPick, "Сначала выбери видео")
         val spec = readSpec() ?: return
+        pausePlayback()
         val us = currentUs
+        val sharpest = swSharpest.isChecked
+        val index = captures.size + 1
+        if (sharpest) {   // looking at neighbours takes a moment: spin the shutter meanwhile
+            btnCapture.anim().rotationBy(360f).setDuration(900).setInterpolator(AccelerateDecelerateInterpolator()).start()
+        }
         exec.execute {
-            val res = runCatching { makeCapture(e, us, spec) }
+            val res = runCatching { makeCapture(e, us, spec, sharpest, index) }
             ui.post {
                 res.onSuccess { c ->
                     shutterFlash()
-                    flyToCaptures(c.thumb) { addCapture(c) }
+                    if (c.sharpened) toast("Взят более резкий кадр: ${TimeUtil.format(c.timeUs)}")
+                    flyToCaptures(c.thumb) { CaptureStore.add(c) }
                 }.onFailure { showError("Не получилось снять кадр", it) }
             }
         }
@@ -637,76 +782,78 @@ class MainActivity : Activity() {
 
     private fun startBatch() {
         val e = engine ?: return nudge(btnPick, "Сначала выбери видео")
+        val uri = videoUri ?: return
         val spec = readSpec() ?: return
         hideKeyboard(editBatch)
         val times = batchTimes(e, quiet = false) ?: return
-        val go = { runBatch(e, times, spec) }
+        val go = {
+            askNotificationPermission()
+            BatchState.start(this, BatchJob(
+                uri, baseName, times, spec, capDir, prefs.namePattern,
+                swSkipBlur.isChecked, swSkipDup.isChecked, swSharpest.isChecked
+            ))
+            showBatchRunning()
+        }
         if (times.size > 300) {
             AlertDialog.Builder(this)
-                .setMessage("Будет снято ${times.size} кадров. Это может занять время. Продолжить?")
+                .setMessage("Будет снято до ${times.size} кадров. Это может занять время — можно свернуть приложение, съёмка продолжится в фоне. Продолжить?")
                 .setPositiveButton("Да") { _, _ -> go() }
                 .setNegativeButton("Отмена", null)
                 .show()
         } else go()
     }
 
-    /**
-     * Runs on the same retriever/thread as single capture, so both paths behave identically.
-     * One task per frame, so "Stop" reacts immediately.
-     */
-    private fun runBatch(e: FrameEngine, times: List<Long>, spec: OutputSpec) {
-        val cancel = AtomicBoolean(false)
-        batchCancel = cancel
-        btnBatch.text = "Остановить"
-        btnBatch.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_stop, 0, 0, 0)
-        batchPulse = ObjectAnimator.ofFloat(btnBatch, View.ALPHA, 1f, 0.72f).apply {
-            duration = 650; repeatMode = ValueAnimator.REVERSE; repeatCount = ValueAnimator.INFINITE; start()
-        }
-        txtProgress.visibility = View.VISIBLE
-        txtProgress.text = "Подготовка…"
-        progressBatch.max = times.size
-        progressBatch.progress = 0
-        showAnimated(progressBatch)
-
-        val done = AtomicInteger()
-        val failed = AtomicInteger()
-        val firstError = AtomicReference<String?>(null)
-
-        times.forEachIndexed { i, t ->
-            exec.execute {
-                if (cancel.get() || engine !== e) return@execute
-                val r = runCatching { makeCapture(e, t, spec) }
-                r.onSuccess { done.incrementAndGet() }
-                    .onFailure { failed.incrementAndGet(); firstError.compareAndSet(null, it.message ?: it.javaClass.simpleName) }
-                ui.post {
-                    r.getOrNull()?.let { addCapture(it, scroll = false) }
-                    txtProgress.text = "Кадр ${i + 1} из ${times.size}"
-                    progressBatch.setProgress(i + 1, true)
-                }
-            }
-        }
-        exec.execute {
-            ui.post {
-                if (batchCancel === cancel) batchCancel = null
-                batchPulse?.cancel(); batchPulse = null
-                btnBatch.alpha = 1f
-                btnBatch.text = "Снять пачку кадров"
-                btnBatch.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_burst, 0, 0, 0)
-                progressBatch.anim().alpha(0f).setStartDelay(600).setDuration(300)
-                    .withEndAction { progressBatch.visibility = View.GONE; progressBatch.alpha = 1f }.start()
-                val d = done.get()
-                val f = failed.get()
-                txtProgress.text = buildString {
-                    append(if (cancel.get()) "Остановлено: снято $d" else "Готово: снято $d")
-                    if (f > 0) append(", пропущено $f\n(${firstError.get()})")
-                }
-                if (d > 0) list.post { list.smoothScrollToPositionFromTop(1, 0) }
-            }
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 77)
         }
     }
 
+    private fun showBatchRunning() {
+        btnBatch.text = "Остановить"
+        btnBatch.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_stop, 0, 0, 0)
+        if (batchPulse == null) batchPulse = ObjectAnimator.ofFloat(btnBatch, View.ALPHA, 1f, 0.72f).apply {
+            duration = 650; repeatMode = ValueAnimator.REVERSE; repeatCount = ValueAnimator.INFINITE; start()
+        }
+        txtProgress.visibility = View.VISIBLE
+        txtProgress.text = "Подготовка… (можно свернуть приложение)"
+        progressBatch.max = max(1, BatchState.total)
+        if (progressBatch.visibility != View.VISIBLE) showAnimated(progressBatch)
+    }
+
+    private val batchListener = object : BatchState.Listener {
+        override fun onProgress() {
+            val st = BatchState
+            if (progressBatch.visibility != View.VISIBLE) showBatchRunning()
+            progressBatch.max = max(1, st.total)
+            progressBatch.setProgress(st.index, true)
+            txtProgress.text = buildString {
+                append("Кадр ${st.index} из ${st.total}")
+                if (st.blurry + st.dupes > 0) append(" · пропущено ${st.blurry + st.dupes}")
+            }
+        }
+        override fun onFinished() {
+            batchPulse?.cancel(); batchPulse = null
+            btnBatch.alpha = 1f
+            btnBatch.text = "Снять пачку кадров"
+            btnBatch.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_burst, 0, 0, 0)
+            progressBatch.anim().alpha(0f).setStartDelay(600).setDuration(300)
+                .withEndAction { progressBatch.visibility = View.GONE; progressBatch.alpha = 1f }.start()
+            txtProgress.visibility = View.VISIBLE
+            txtProgress.text = BatchState.summary ?: "Готово"
+            if (BatchState.done > 0) list.post { list.smoothScrollToPositionFromTop(1, 0) }
+        }
+    }
+
+    private var settingsFolderLabel: TextView? = null
+
+    private val captureListener = object : CaptureStore.Listener {
+        override fun onAdded(c: Capture) = addCapture(c, scroll = !BatchState.running)
+    }
+
+    /** UI side of a new frame (the frame is already in [CaptureStore]). */
     private fun addCapture(c: Capture, scroll: Boolean = true) {
-        captures.add(c)
         pendingAnim.add(c)
         grid.notifyDataSetChanged()
         updateCapturesUi()
@@ -724,6 +871,7 @@ class MainActivity : Activity() {
         hideKeyboard(editTime)
 
         imgCapture.anim().cancel()
+        imgCapture.resetZoom()
         imgCapture.setImageBitmap(c.thumb) // instant low-res, full image follows
         imgCapture.visibility = View.VISIBLE
         val w = max(previewCard.width, 1).toFloat()
@@ -796,6 +944,7 @@ class MainActivity : Activity() {
     private fun openCaptureInPlace(c: Capture) {
         selected = c
         grid.notifyDataSetChanged()
+        imgCapture.resetZoom()
         imgCapture.setImageBitmap(c.thumb)
         imgCapture.alpha = 0f
         imgCapture.scaleX = 0.85f; imgCapture.scaleY = 0.85f
@@ -849,43 +998,12 @@ class MainActivity : Activity() {
         return BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
     }
 
-    /** Swipe left/right on the big preview to flip through captures. */
-    private fun setupSwipe() {
-        val gd = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent) = selected != null
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
-                if (selected == null || e1 == null) return false
-                val dx = e2.x - e1.x
-                if (abs(dx) > 60 * dp && abs(dx) > abs(e2.y - e1.y)) {
-                    stepCapture(if (dx < 0) +1 else -1)
-                    return true
-                }
-                return false
-            }
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                if (selected == null) return false
-                closeCapture(); return true
-            }
-        })
-        imgCapture.setOnTouchListener { _, ev -> gd.onTouchEvent(ev) }
-    }
-
     // ================================================================ saving / sharing
 
+    /** Saves to the chosen folder (General settings) or Pictures/FrameGrabber. */
     private fun saveToGallery(c: Capture): Uri {
         c.galleryUri?.let { return it }
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, c.file.name)
-            put(MediaStore.Images.Media.MIME_TYPE, c.fmt.mime)
-            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$ALBUM")
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
-        val col = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val uri = contentResolver.insert(col, values) ?: error("Не удалось создать файл в галерее")
-        contentResolver.openOutputStream(uri)!!.use { o -> c.file.inputStream().use { it.copyTo(o) } }
-        values.clear()
-        values.put(MediaStore.Images.Media.IS_PENDING, 0)
-        contentResolver.update(uri, values, null, null)
+        val uri = Output.save(this, c.file, c.file.name, c.fmt.mime, Output.Kind.IMAGE)
         c.galleryUri = uri
         return uri
     }
@@ -893,7 +1011,7 @@ class MainActivity : Activity() {
     private fun saveOne(c: Capture) = Thread {
         val r = runCatching { saveToGallery(c) }
         ui.post {
-            r.onSuccess { toast("Сохранено в Pictures/$ALBUM"); shutterFlash(soft = true) }
+            r.onSuccess { toast("Сохранено: ${Output.describe(this)}"); shutterFlash(soft = true) }
                 .onFailure { showError("Не удалось сохранить", it) }
         }
     }.start()
@@ -910,7 +1028,7 @@ class MainActivity : Activity() {
         Thread {
             var ok = 0
             for (c in snapshot) if (runCatching { saveToGallery(c) }.isSuccess) ok++
-            ui.post { toast("Сохранено $ok из ${snapshot.size} в Pictures/$ALBUM") }
+            ui.post { toast("Сохранено $ok из ${snapshot.size}: ${Output.describe(this)}") }
         }.start()
     }
 
@@ -1014,15 +1132,427 @@ class MainActivity : Activity() {
         optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
         optWave.setOnClickListener { choose(AppTheme.WAVE) }
 
+        // file names
+        val editPattern = v.findViewById<EditText>(R.id.editPattern)
+        val txtPreview = v.findViewById<TextView>(R.id.txtPatternPreview)
+        fun updatePreview() {
+            txtPreview.text = "Пример: " + Naming.stem(editPattern.text.toString(), baseName, 83_500_000L, 1) + ".jpg"
+        }
+        editPattern.setText(prefs.namePattern)
+        updatePreview()
+        editPattern.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                prefs.namePattern = s.toString().ifBlank { Prefs.DEFAULT_PATTERN }; updatePreview()
+            }
+        })
+
+        // save folder
+        val txtFolder = v.findViewById<TextView>(R.id.txtFolder)
+        txtFolder.text = Output.describe(this)
+        settingsFolderLabel = txtFolder
+        v.findViewById<View>(R.id.rowFolder).setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Куда сохранять кадры")
+                .setItems(arrayOf("Выбрать папку на телефоне…", "По умолчанию: Pictures/${Prefs.ALBUM}")) { _, w ->
+                    if (w == 0) {
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_TREE)
+                    } else {
+                        prefs.folderTree?.let { old ->
+                            runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old),
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+                        }
+                        prefs.folderTree = null; prefs.folderTreeName = null
+                        txtFolder.text = Output.describe(this)
+                        captures.forEach { it.galleryUri = null }
+                    }
+                }.show()
+        }
+
+        // OCR languages
+        val langBox = v.findViewById<LinearLayout>(R.id.ocrLangs)
+        val chosen = prefs.ocrLangs.split("+").toMutableSet()
+        for ((code, title) in Ocr.LANGS) {
+            langBox.addView(android.widget.CheckBox(this).apply {
+                text = title
+                setTextColor(getColor(R.color.text))
+                buttonTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.accent))
+                isChecked = code in chosen
+                setOnCheckedChangeListener { cb, on ->
+                    if (on) chosen += code else chosen -= code
+                    if (chosen.isEmpty()) { chosen += code; cb.isChecked = true; toast("Нужен хотя бы один язык") }
+                    prefs.ocrLangs = Ocr.LANGS.keys.filter { it in chosen }.joinToString("+")
+                }
+            })
+        }
+
         val dlg = AlertDialog.Builder(this).setView(v).create()
         v.findViewById<View>(R.id.btnDone).setOnClickListener { dlg.dismiss() }
-        dlg.setOnDismissListener { preview.running = false }
+        dlg.setOnDismissListener { preview.running = false; settingsFolderLabel = null }
         dlg.show()
         // options slide in
         listOf(optClassic, optWave).forEachIndexed { i, o ->
             o.alpha = 0f; o.translationY = 24 * dp
             o.anim().alpha(1f).translationY(0f).setStartDelay(80L + 70L * i).setDuration(300).start()
         }
+    }
+
+    // ================================================================ remembered settings
+
+    private fun restorePrefs() {
+        restoring = true
+        radioFormat.check(when (prefs.format) { "PNG" -> R.id.fmtPng; "WEBP" -> R.id.fmtWebp; else -> R.id.fmtJpg })
+        radioSize.check(when (prefs.size) { "720" -> R.id.size720; "1080" -> R.id.size1080; "custom" -> R.id.sizeCustom; else -> R.id.sizeOrig })
+        customSizeRow.visibility = if (prefs.size == "custom") View.VISIBLE else View.GONE
+        editW.setText(prefs.customW); editH.setText(prefs.customH)
+        seekQuality.progress = prefs.quality
+        val lossless = prefs.format == "PNG"
+        seekQuality.isEnabled = !lossless; seekQuality.alpha = if (lossless) 0.35f else 1f
+        txtQuality.text = if (lossless) "Качество: без потерь" else "Качество: ${prefs.quality}"
+        swSharpest.isChecked = prefs.sharpest
+        swSkipBlur.isChecked = prefs.skipBlurry
+        swSkipDup.isChecked = prefs.skipDupes
+        if (prefs.batchCount) {
+            radioBatch.check(R.id.batchCount); lblBatch.text = "Сколько кадров"; editBatch.setText(prefs.batchN)
+        } else {
+            radioBatch.check(R.id.batchInterval); lblBatch.text = "Интервал, сек"; editBatch.setText(prefs.batchInterval)
+        }
+        radioGifFps.check(when (prefs.gifFps) { 5 -> R.id.fps5; 15 -> R.id.fps15; else -> R.id.fps10 })
+        radioGifW.check(when (prefs.gifWidth) { 320 -> R.id.gw320; 720 -> R.id.gw720; else -> R.id.gw480 })
+        val panels = listOf(cardBatch, cardExport, cardSettings)
+        val tab = prefs.tab.coerceIn(0, 2)
+        panels.forEachIndexed { i, p -> p.visibility = if (i == tab) View.VISIBLE else View.GONE }
+        radioTabs.check(listOf(R.id.tabBatch, R.id.tabExport, R.id.tabSettings)[tab])
+        restoring = false
+    }
+
+    // ================================================================ range (shared by batch & export)
+
+    /** Selected range in µs, or a toast + null. */
+    private fun rangeUs(e: FrameEngine): Pair<Long, Long>? {
+        val from = TimeUtil.parse(editFrom.text.toString())?.coerceIn(0L, e.lastUs) ?: 0L
+        val to = TimeUtil.parse(editTo.text.toString())?.coerceIn(0L, e.lastUs) ?: e.lastUs
+        if (to <= from) { toast("Конец отрезка должен быть позже начала"); return null }
+        return from to to
+    }
+
+    private fun updateRangeLen() {
+        if (!::txtRangeLen.isInitialized) return
+        val e = engine ?: run { txtRangeLen.text = "всё видео"; return }
+        val from = TimeUtil.parse(editFrom.text.toString())?.coerceIn(0L, e.lastUs) ?: 0L
+        val to = TimeUtil.parse(editTo.text.toString())?.coerceIn(0L, e.lastUs) ?: e.lastUs
+        txtRangeLen.text = if (editFrom.text.isBlank() && editTo.text.isBlank()) "всё видео · ${TimeUtil.format(e.durationUs)}"
+            else if (to > from) "длина ${TimeUtil.format(to - from)}" else "проверь отрезок"
+    }
+
+    // ================================================================ export: GIF, clip, contact sheet
+
+    private var exporting = false
+
+    private fun startExport(title: String): Boolean {
+        if (exporting) { toast("Подожди, идёт экспорт"); return false }
+        exporting = true
+        progressExport.progress = 0
+        showAnimated(progressExport)
+        txtExport.visibility = View.VISIBLE
+        txtExport.text = title
+        return true
+    }
+
+    private fun exportProgress(f: Float, label: String) = ui.post {
+        progressExport.setProgress((f * 1000).toInt(), true)
+        txtExport.text = "$label ${(f * 100).toInt()}%"
+    }
+
+    private fun endExport(result: Result<Pair<Uri, String>>, label: String) = ui.post {
+        exporting = false
+        progressExport.anim().alpha(0f).setStartDelay(400).setDuration(250)
+            .withEndAction { progressExport.visibility = View.GONE; progressExport.alpha = 1f }.start()
+        result.onSuccess { (uri, mime) ->
+            txtExport.text = "$label готов: ${Output.describe(this)}"
+            AlertDialog.Builder(this)
+                .setTitle("$label готов")
+                .setMessage("Сохранено: ${Output.describe(this)}")
+                .setPositiveButton("Поделиться") { _, _ -> share(uri, mime) }
+                .setNegativeButton("OK", null)
+                .show()
+        }.onFailure { txtExport.text = "Ошибка: ${it.message}"; showError("Не получилось: $label", it) }
+    }
+
+    private fun exportGif() {
+        val e = engine ?: return nudge(btnPick, "Сначала выбери видео")
+        val uri = videoUri ?: return
+        val (from, to) = rangeUs(e) ?: return
+        val fps = prefs.gifFps
+        val width = prefs.gifWidth
+        val maxLen = 20_000_000L
+        if (to - from > maxLen) {
+            toast("GIF до 20 секунд — укажи отрезок короче (сейчас ${TimeUtil.format(to - from)})"); bump(header.findViewById(R.id.cardRange)); return
+        }
+        if (!startExport("Делаю GIF…")) return
+        Thread {
+            val r = runCatching {
+                val tmp = File(cacheDir, "export.gif")
+                Exporters.gif(this, uri, from, to, fps, width, tmp) { exportProgress(it, "GIF"); true }
+                val name = Naming.stem(prefs.namePattern, baseName, from, 1) + ".gif"
+                Output.save(this, tmp, name, "image/gif", Output.Kind.IMAGE).also { tmp.delete() } to "image/gif"
+            }
+            endExport(r, "GIF")
+        }.start()
+    }
+
+    private fun exportClip() {
+        val e = engine ?: return nudge(btnPick, "Сначала выбери видео")
+        val uri = videoUri ?: return
+        val (from, to) = rangeUs(e) ?: return
+        if (!startExport("Вырезаю клип…")) return
+        Thread {
+            val r = runCatching {
+                val tmp = File(cacheDir, "export.mp4")
+                Exporters.clip(this, uri, from, to, tmp) { exportProgress(it, "Клип"); true }
+                val name = Naming.stem(prefs.namePattern, baseName, from, 1) + "_clip.mp4"
+                Output.save(this, tmp, name, "video/mp4", Output.Kind.VIDEO).also { tmp.delete() } to "video/mp4"
+            }
+            endExport(r, "Клип")
+        }.start()
+    }
+
+    private fun exportSheet() {
+        if (captures.isEmpty()) { toast("Сначала сними кадры — лист собирается из них"); return }
+        val snapshot = captures.sortedBy { it.timeUs }
+        val e = engine
+        val sub = buildString {
+            append("${snapshot.size} кадров")
+            if (e != null) append(" · ${e.width}×${e.height} · ${TimeUtil.format(e.durationUs)}")
+        }
+        if (!startExport("Собираю лист кадров…")) return
+        Thread {
+            val r = runCatching {
+                exportProgress(0.3f, "Лист")
+                val bmp = ContactSheet.build(snapshot, baseName, sub)
+                exportProgress(0.8f, "Лист")
+                val tmp = File(cacheDir, "sheet.jpg")
+                tmp.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                bmp.recycle()
+                val name = Naming.stem(prefs.namePattern, baseName, 0, 1) + "_sheet.jpg"
+                Output.save(this, tmp, name, "image/jpeg", Output.Kind.IMAGE).also { tmp.delete() } to "image/jpeg"
+            }
+            endExport(r, "Лист кадров")
+        }.start()
+    }
+
+    // ================================================================ playback with sound
+
+    private fun setupPlayer() {
+        videoSurface.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, w: Int, h: Int) {
+                player?.setSurface(android.view.Surface(st)); fitVideo()
+            }
+            override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) = fitVideo()
+            override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
+            override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) {}
+        }
+    }
+
+    private fun prepareVideo(uri: Uri, e: FrameEngine) {
+        player?.release()
+        playerReady = false
+        btnPlay.visibility = View.GONE
+        val mp = android.media.MediaPlayer()
+        player = mp
+        runCatching {
+            mp.setDataSource(this, uri)
+            mp.setOnPreparedListener {
+                playerReady = true
+                popIn(btnPlay, 350)
+                fitVideo()
+            }
+            mp.setOnCompletionListener { pausePlayback() }
+            mp.setOnErrorListener { _, _, _ -> playerReady = false; btnPlay.visibility = View.GONE; true }
+            if (videoSurface.isAvailable) mp.setSurface(android.view.Surface(videoSurface.surfaceTexture))
+            mp.prepareAsync()
+        }.onFailure { player = null }
+    }
+
+    /** Letterbox the video inside the TextureView (TextureView stretches by default). */
+    private fun fitVideo() {
+        val e = engine ?: return
+        val vw = videoSurface.width.toFloat(); val vh = videoSurface.height.toFloat()
+        if (vw == 0f || e.width == 0) return
+        val s = minOf(vw / e.width, vh / e.height)
+        val m = android.graphics.Matrix()
+        m.setScale(e.width * s / vw, e.height * s / vh, vw / 2, vh / 2)
+        videoSurface.setTransform(m)
+    }
+
+    private fun togglePlayback() {
+        val p = player ?: return
+        if (!playerReady) return
+        if (p.isPlaying) { pausePlayback(); return }
+        if (selected != null) closeCapture()
+        if (currentUs >= (engine?.lastUs ?: 0) - 200_000) currentUs = 0
+        p.seekTo(currentUs / 1000, android.media.MediaPlayer.SEEK_CLOSEST)
+        videoSurface.visibility = View.VISIBLE
+        videoSurface.alpha = 0f
+        videoSurface.anim().alpha(1f).setDuration(200).start()
+        p.start()
+        btnPlay.setImageResource(R.drawable.ic_pause)
+        setChip(live = true, text = "ВОСПРОИЗВЕДЕНИЕ")
+        ui.post(playTicker)
+    }
+
+    private fun pausePlayback() {
+        val p = player ?: return
+        if (!playerReady) return
+        val wasPlaying = runCatching { p.isPlaying }.getOrDefault(false)
+        if (wasPlaying) p.pause()
+        ui.removeCallbacks(playTicker)
+        btnPlay.setImageResource(R.drawable.ic_play)
+        if (videoSurface.visibility == View.VISIBLE) {
+            if (wasPlaying) currentUs = p.currentPosition * 1000L
+            seek.progress = (currentUs / 1000).toInt()
+            showTime()
+            requestPreview(exact = true)
+            videoSurface.anim().alpha(0f).setStartDelay(150).setDuration(200)
+                .withEndAction { videoSurface.visibility = View.GONE }.start()
+            if (selected == null) setChip(live = true, text = "ВИДЕО")
+        }
+    }
+
+    // ================================================================ recent videos
+
+    private fun rememberRecent(uri: Uri, e: FrameEngine) {
+        val isPath = uri.scheme == "file"
+        val ref = if (isPath) uri.path!! else uri.toString()
+        if (!isPath) runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val info = "${e.width}×${e.height} · ${TimeUtil.format(e.durationUs).substringBefore('.')}"
+        val name = baseName
+        exec.execute {
+            val thumb = runCatching { e.scaledFrame(e.lastUs / 3, 320, 320, exact = false) }.getOrNull()
+            Recent.add(this, ref, isPath, name, info, thumb)
+        }
+    }
+
+    /** Horizontal strip of recently opened videos; shown on the start screen (no video loaded). */
+    private fun buildRecent() {
+        val items = Recent.list(this)
+        recentRow.removeAllViews()
+        if (items.isEmpty() || engine != null) { cardRecent.visibility = View.GONE; return }
+        cardRecent.visibility = View.VISIBLE
+        for ((i, it) in items.withIndex()) {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams((132 * dp).toInt(), -2).apply { marginEnd = (10 * dp).toInt() }
+                stateListAnimator = AnimatorInflater.loadStateListAnimator(context, R.animator.press_scale)
+            }
+            val img = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(-1, (76 * dp).toInt())
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                setBackgroundResource(R.drawable.bg_thumb)
+                clipToOutline = true
+                Recent.thumbFile(context, it)?.takeIf { f -> f.exists() }?.let { f -> setImageBitmap(BitmapFactory.decodeFile(f.path)) }
+            }
+            val name = TextView(this).apply {
+                text = it.name; setTextColor(getColor(R.color.text)); textSize = 12f
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+                setPadding(2, (6 * dp).toInt(), 2, 0)
+            }
+            val info = TextView(this).apply {
+                text = it.info; setTextColor(getColor(R.color.textDim)); textSize = 10f; maxLines = 1
+                setPadding(2, 0, 2, 0)
+            }
+            card.addView(img); card.addView(name); card.addView(info)
+            card.setOnClickListener { _ ->
+                val uri = if (it.isPath) Uri.fromFile(File(it.ref)) else Uri.parse(it.ref)
+                if (it.isPath && !File(it.ref).exists()) {
+                    toast("Файл больше не найден"); Recent.remove(this, it.ref); buildRecent()
+                } else loadVideo(uri)
+            }
+            card.setOnLongClickListener { _ ->
+                AlertDialog.Builder(this).setMessage("Убрать «${it.name}» из недавних?")
+                    .setPositiveButton("Убрать") { _, _ -> Recent.remove(this, it.ref); buildRecent() }
+                    .setNegativeButton("Отмена", null).show()
+                true
+            }
+            card.alpha = 0f; card.translationX = 40 * dp
+            card.anim().alpha(1f).translationX(0f).setStartDelay(250L + 60L * i).setDuration(320).start()
+            recentRow.addView(card)
+        }
+    }
+
+    // ================================================================ OCR
+
+    private fun recognizeText(c: Capture) {
+        val langs = prefs.ocrLangs.split("+").filter { it.isNotBlank() }
+        val missing = Ocr.missing(this, langs)
+        if (missing.isNotEmpty()) {
+            val names = missing.joinToString { Ocr.LANGS[it] ?: it }
+            AlertDialog.Builder(this)
+                .setTitle("Распознавание текста")
+                .setMessage("Один раз нужно скачать языковые файлы ($names, ≈ ${missing.size * 4} МБ). Потом всё работает без интернета.\n\nЯзыки можно поменять в общих настройках.")
+                .setPositiveButton("Скачать") { _, _ -> downloadOcr(missing) { recognizeText(c) } }
+                .setNegativeButton("Отмена", null)
+                .show()
+            return
+        }
+        val dlg = progressDialog("Читаю текст…")
+        Thread {
+            val r = runCatching {
+                val bmp = BitmapFactory.decodeFile(c.file.path) ?: error("Не удалось открыть кадр")
+                Ocr.recognize(this, bmp, langs).also { bmp.recycle() }
+            }
+            ui.post {
+                dlg.dismiss()
+                r.onSuccess { showText(it) }.onFailure { showError("Не удалось распознать текст", it) }
+            }
+        }.start()
+    }
+
+    private fun downloadOcr(langs: List<String>, then: () -> Unit) {
+        val dlg = progressDialog("Скачиваю языковые файлы…")
+        Thread {
+            val r = runCatching {
+                Ocr.download(this, langs) { lang, f ->
+                    ui.post { (dlg.findViewById<TextView>(android.R.id.message))?.text = "Скачиваю: ${Ocr.LANGS[lang]} ${(f * 100).toInt()}%" }
+                }
+            }
+            ui.post {
+                dlg.dismiss()
+                r.onSuccess { then() }.onFailure { showError("Не удалось скачать (нужен интернет)", it) }
+            }
+        }.start()
+    }
+
+    private fun progressDialog(msg: String): AlertDialog =
+        AlertDialog.Builder(this).setMessage(msg).setCancelable(false).show()
+
+    private fun showText(text: String) {
+        if (text.isBlank()) { toast("Текст на кадре не найден"); return }
+        val pad = (20 * dp).toInt()
+        val tv = EditText(this).apply {
+            setText(text)
+            setTextColor(getColor(R.color.text))
+            textSize = 15f
+            background = null
+            setTextIsSelectable(true)
+            keyListener = null
+            setPadding(pad, pad / 2, pad, pad / 2)
+        }
+        val scroll = android.widget.ScrollView(this).apply { addView(tv) }
+        AlertDialog.Builder(this)
+            .setTitle("Текст на кадре")
+            .setView(scroll)
+            .setPositiveButton("Копировать") { _, _ ->
+                (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("text", text))
+                toast("Скопировано")
+            }
+            .setNeutralButton("Поделиться") { _, _ ->
+                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Поделиться"))
+            }
+            .setNegativeButton("Закрыть", null)
+            .show()
     }
 
     // ================================================================ UI state helpers

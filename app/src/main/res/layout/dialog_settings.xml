@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:scrollbars="none">
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -123,9 +127,82 @@
             android:tint="@color/accent" />
     </LinearLayout>
 
+    <!-- File names -->
+    <TextView
+        style="@style/Label"
+        android:paddingTop="20dp"
+        android:letterSpacing="0.1"
+        android:text="ИМЕНА ФАЙЛОВ" />
+    <EditText
+        android:id="@+id/editPattern"
+        style="@style/Input"
+        android:layout_width="match_parent"
+        android:fontFamily="monospace"
+        android:gravity="center_vertical"
+        android:inputType="text"
+        android:paddingStart="12dp"
+        android:textSize="14sp" />
+    <TextView
+        android:id="@+id/txtPatternPreview"
+        style="@style/SubHint"
+        android:fontFamily="monospace"
+        android:paddingTop="6dp" />
+    <TextView
+        style="@style/SubHint"
+        android:paddingTop="4dp"
+        android:text="{video} — имя видео, {time} — время кадра, {n} — номер, {date} — дата, {ms} — миллисекунды" />
+
+    <!-- Save folder -->
+    <TextView
+        style="@style/Label"
+        android:paddingTop="20dp"
+        android:letterSpacing="0.1"
+        android:text="ПАПКА ДЛЯ СОХРАНЕНИЯ" />
+    <LinearLayout
+        android:id="@+id/rowFolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_option"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_folder"
+            android:tint="@color/accent" />
+        <TextView
+            android:id="@+id/txtFolder"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Изменить"
+            android:textColor="@color/accent"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- OCR languages -->
+    <TextView
+        style="@style/Label"
+        android:paddingTop="20dp"
+        android:letterSpacing="0.1"
+        android:text="ЯЗЫКИ РАСПОЗНАВАНИЯ ТЕКСТА" />
+    <LinearLayout
+        android:id="@+id/ocrLangs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
     <Button
         android:id="@+id/btnDone"
         style="@style/BtnPrimary"
         android:layout_marginTop="20dp"
         android:text="Готово" />
 </LinearLayout>
+</ScrollView>

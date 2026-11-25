@@ -83,6 +83,73 @@ class FrameCaptureTest {
         }
     }
 
+    @Test fun sharpness_detects_blur() {
+        FrameEngine(appCtx, clip("h264.mp4")).use { e ->
+            val sharp = e.frame(1_000_000)!!
+            val small = android.graphics.Bitmap.createScaledBitmap(sharp, sharp.width / 8, sharp.height / 8, true)
+            val blurred = android.graphics.Bitmap.createScaledBitmap(small, sharp.width, sharp.height, true)
+            val a = ImageMetrics.sharpness(ImageMetrics.small(sharp))
+            val b = ImageMetrics.sharpness(ImageMetrics.small(blurred))
+            assertTrue("sharp $a > blurred $b", a > b * 2)
+            // same frame -> identical hash, different moments -> different hash
+            assertEquals(0, ImageMetrics.hamming(ImageMetrics.dHash(sharp), ImageMetrics.dHash(sharp)))
+            val t = FrameCapture.sharpestNear(e, 2_000_000)
+            assertTrue(t in 1_500_000..2_500_000)
+        }
+    }
+
+    @Test fun gif_clip_sheet_export() {
+        val uri = clip("h264.mp4")
+        val gif = File(appCtx.cacheDir, "t.gif")
+        Exporters.gif(appCtx, uri, 500_000, 2_000_000, 10, 320, gif) { true }
+        val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(gif.path, o)
+        assertEquals(320, o.outWidth)
+        assertEquals(180, o.outHeight)
+        // all frames decode (AnimatedImageDrawable walks the whole file)
+        val d = android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(gif))
+        assertTrue(d is android.graphics.drawable.AnimatedImageDrawable)
+
+        val mp4 = File(appCtx.cacheDir, "t.mp4")
+        Exporters.clip(appCtx, uri, 1_000_000, 3_000_000, mp4) { true }
+        val r = android.media.MediaMetadataRetriever()
+        r.setDataSource(mp4.path)
+        val dur = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)!!.toLong()
+        r.release()
+        assertTrue("clip duration $dur", dur in 1500..3200)
+
+        FrameEngine(appCtx, uri).use { e ->
+            val dir = outDir("sheet")
+            val caps = (0 until 5).map { k ->
+                val s = FrameCapture.capture(e, k * 700_000L, OutputSpec(null, Fmt.JPG, 80), dir, "s")
+                Capture(s.file, s.thumb, k * 700_000L, Fmt.JPG, s.width, s.height, s.exact)
+            }
+            val sheet = ContactSheet.build(caps, "test", "5 кадров")
+            assertTrue(sheet.width > 600 && sheet.height > 300)
+        }
+    }
+
+    @Test fun ocr_reads_latin_and_cyrillic() {
+        val ok = runCatching { Ocr.download(appCtx, listOf("eng", "rus")) { _, _ -> } }.isSuccess
+        assumeTrue("no network for language files", ok)
+        val b = android.graphics.Bitmap.createBitmap(900, 260, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(b)
+        c.drawColor(android.graphics.Color.WHITE)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { textSize = 64f; color = android.graphics.Color.BLACK }
+        c.drawText("HELLO FRAMES 2026", 30f, 100f, p)
+        c.drawText("Привет мир", 30f, 200f, p)
+        val text = Ocr.recognize(appCtx, b, listOf("eng", "rus"))
+        Log.i("FrameCaptureTest", "OCR: $text")
+        assertTrue(text, text.contains("HELLO"))
+        assertTrue(text, text.contains("Привет"))
+    }
+
+    @Test fun naming_pattern() {
+        assertEquals("clip_00-01-23.500", Naming.stem("{video}_{time}", "clip", 83_500_000L, 1))
+        assertEquals("a_007", Naming.stem("a_{n}", "x", 0, 7))
+        assertEquals("a_b", Naming.stem("a/b", "x", 0, 1))
+    }
+
     @Test fun time_parse_format() {
         assertEquals(12_500_000L, TimeUtil.parse("12.5"))
         assertEquals(83_500_000L, TimeUtil.parse("1:23,5"))
