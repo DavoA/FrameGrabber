@@ -54,7 +54,7 @@ class FormatsProbeTest {
                     log("$name frames OK (${g.method})")
                 }
             }
-            r.onFailure { log("$name FAIL $it"); failed += "$name: ${it.message}" }
+            r.onFailure { log("$name FAIL $it"); failed += "$name: ${it.message}\n    " + diag(name) }
         }
         assertTrue("failed:\n" + failed.joinToString("\n"), failed.isEmpty())
     }
@@ -81,5 +81,30 @@ class FormatsProbeTest {
             val e = runCatching { Exporters.clipFormat(appCtx, asset(n)) }.exceptionOrNull()
             assertTrue("$n should explain", e?.message?.contains("GIF и кадры работают") == true)
         }
+    }
+
+    /** What each decoder returns at a few moments (for failure messages). */
+    private fun diag(name: String): String = buildString {
+        val path = File(appCtx.cacheDir, name).path
+        runCatching {
+            val f = wseemann.media.FFmpegMediaMetadataRetriever(); f.setDataSource(path)
+            append("ff dur=${f.extractMetadata("duration")} fps=${f.extractMetadata("framerate")} ")
+            for (t in listOf(0L, 500_000L, 1_000_000L, 2_000_000L, 3_000_000L)) {
+                val a = runCatching { f.getFrameAtTime(t, wseemann.media.FFmpegMediaMetadataRetriever.OPTION_CLOSEST)?.width }.getOrElse { "E" }
+                val b = runCatching { f.getFrameAtTime(t, wseemann.media.FFmpegMediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.width }.getOrElse { "E" }
+                val c = runCatching { f.getFrameAtTime(t + 1_400_000, wseemann.media.FFmpegMediaMetadataRetriever.OPTION_CLOSEST)?.width }.getOrElse { "E" }
+                append("[$t: $a/$b/+1.4s $c] ")
+            }
+            f.release()
+        }.onFailure { append("ff open: $it ") }
+        runCatching {
+            val m = android.media.MediaMetadataRetriever(); m.setDataSource(path)
+            for (t in listOf(0L, 1_000_000L, 2_000_000L)) {
+                append("{n$t: ${m.getFrameAtTime(t, android.media.MediaMetadataRetriever.OPTION_CLOSEST)?.width}/" +
+                    "${m.getFrameAtTime(t, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.width}} ")
+            }
+            m.release()
+        }.onFailure { append("native: $it") }
+        runCatching { FrameEngine(appCtx, Uri.fromFile(File(path))).use { e -> append(" engine ffmpeg=${e.viaFfmpeg}") } }
     }
 }
