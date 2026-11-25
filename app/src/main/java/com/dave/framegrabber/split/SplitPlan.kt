@@ -45,8 +45,11 @@ object SplitPlan {
         fun bytesBefore(t: Long) = cum[indexAt(t)]
     }
 
-    /** One part: [fromUs, toUs) from the start of the video. */
-    class Part(val number: Int, val fromUs: Long, val toUs: Long, val bytes: Long)
+    /**
+     * One part: [fromUs, toUs) from the start of the video (for showing), and the same in the
+     * file's own timestamps (for cutting: [startAbs] is a keyframe, [endAbs] the next part's).
+     */
+    class Part(val number: Int, val fromUs: Long, val toUs: Long, val bytes: Long, val startAbs: Long, val endAbs: Long)
 
     class Plan(val parts: List<Part>, val limit: Long) {
         val fits get() = parts.all { it.bytes <= limit }
@@ -111,13 +114,13 @@ object SplitPlan {
     }
 
     /** Container overhead of a part: index entries for its samples + headers. */
-    private fun overhead(samples: Int) = samples * 16L + 64 * 1024
+    private fun overhead(samples: Int) = samples * 16L + 16 * 1024
 
     /** [n] parts of about equal size, cut at the keyframes closest to the equal-size points. */
     fun plan(s: Scan, n: Int, limit: Long): Plan {
         val bounds = ArrayList<Long>()   // file time of each part's start
         bounds += s.base
-        var keyIdx = 0
+        var keyIdx = 1   // the first keyframe is where the video starts: never a cut
         for (i in 1 until n) {
             val target = s.mediaBytes * i / n
             // first keyframe after the previous cut
@@ -137,8 +140,8 @@ object SplitPlan {
         val parts = bounds.mapIndexed { i, from ->
             val to = if (i + 1 < bounds.size) bounds[i + 1] else end
             val a = s.indexAt(from); val b = s.indexAt(to)
-            Part(i + 1, from - s.base, if (i + 1 < bounds.size) to - s.base else s.durationUs,
-                s.cum[b] - s.cum[a] + overhead(b - a))
+            Part(i + 1, from - s.base, if (i + 1 < bounds.size) to - s.base else max(s.durationUs, end - s.base),
+                s.cum[b] - s.cum[a] + overhead(b - a), from, to)
         }
         return Plan(parts, limit)
     }

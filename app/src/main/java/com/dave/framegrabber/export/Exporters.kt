@@ -108,9 +108,9 @@ object Exporters {
         override fun toString() = "dropped=$droppedAudio samples=$samples first=$firstUs last=$lastUs"
     }
 
-    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean): ClipResult {
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, absolute: Boolean = false, progress: (Float) -> Boolean): ClipResult {
         val fmt = clipFormat(ctx, uri)
-        return clip(ctx, uri, fromUs, toUs, { MediaMuxer(dest.path, fmt.muxer) }, progress)
+        return clip(ctx, uri, fromUs, toUs, { MediaMuxer(dest.path, fmt.muxer) }, absolute, progress)
     }
 
     /**
@@ -118,7 +118,14 @@ object Exporters {
      * file descriptor. Audio the container can't hold (MP3, AC3, Vorbis in MP4…) is left out, see
      * [ClipResult.droppedAudio].
      */
-    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, makeMuxer: () -> MediaMuxer, progress: (Float) -> Boolean): ClipResult {
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, makeMuxer: () -> MediaMuxer, progress: (Float) -> Boolean): ClipResult =
+        clip(ctx, uri, fromUs, toUs, makeMuxer, absolute = false, progress = progress)
+
+    /**
+     * [absolute] = [fromUs]/[toUs] are the file's own timestamps (splitting: exact keyframe times),
+     * otherwise they count from the video's first frame (what the screen shows).
+     */
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, makeMuxer: () -> MediaMuxer, absolute: Boolean, progress: (Float) -> Boolean): ClipResult {
         val ex = MediaExtractor()
         ex.setDataSource(ctx, uri, null)
         val muxer = makeMuxer()
@@ -149,15 +156,16 @@ object Exporters {
             muxer.start()
             // Some containers (MPEG-TS) don't start at 0: the times on screen count from the first frame
             ex.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
-            val base = ex.sampleTime.coerceAtLeast(0L)
+            val base = if (absolute) 0L else ex.sampleTime.coerceAtLeast(0L)
             val from = base + fromUs
             val endUs = base + toUs
             ex.seekTo(from, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
-            if (ex.sampleTime < 0 || ex.sampleTime > from) {
+            if (!absolute && (ex.sampleTime < 0 || ex.sampleTime > from)) {
                 // seeking doesn't work in this file: start from the beginning (the clip starts earlier)
                 ex.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
             }
-            val start = ex.sampleTime.coerceAtLeast(0L)
+            // splitting: exactly from the cut (audio just before it belongs to the previous part)
+            val start = if (absolute) from else ex.sampleTime.coerceAtLeast(0L)
             val buf = ByteBuffer.allocate(maxIn)
             val info = MediaCodec.BufferInfo()
             while (true) {

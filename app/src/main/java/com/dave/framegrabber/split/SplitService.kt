@@ -105,19 +105,19 @@ class SplitService : Service() {
                 progress()
                 val name = SplitState.partName(job.videoName, i + 1, total, fmt.ext)
                 // up to the next part's first frame (exclusive), so nothing is doubled or lost
-                val to = if (i + 1 < total) job.parts[i + 1].fromUs - 1 else p.toUs + 10_000_000
+                val to = p.endAbs - 1
                 var res: Exporters.ClipResult? = null
                 val uri = Output.write(this, name, fmt.mime, Output.Kind.VIDEO, sub = job.videoName) { t ->
                     val pfd = t.fd()
                     if (pfd != null) pfd.use { fd ->
-                        res = Exporters.clip(this, job.uri, p.fromUs, to, { MediaMuxer(fd.fileDescriptor, fmt.muxer) }) { f ->
+                        res = Exporters.clip(this, job.uri, p.startAbs, to, { MediaMuxer(fd.fileDescriptor, fmt.muxer) }, absolute = true) { f ->
                             st.fraction = f; progress(); !st.cancel.get()
                         }
                     } else {
                         // a picked folder without direct access: build in app storage, then copy
                         val tmp = File(File(filesDir, "export").apply { mkdirs() }, "part.${fmt.ext}")
                         try {
-                            res = Exporters.clip(this, job.uri, p.fromUs, to, tmp) { f -> st.fraction = f; progress(); !st.cancel.get() }
+                            res = Exporters.clip(this, job.uri, p.startAbs, to, tmp, absolute = true) { f -> st.fraction = f; progress(); !st.cancel.get() }
                             t.stream().use { o -> tmp.inputStream().use { it.copyTo(o) } }
                         } finally { tmp.delete() }
                     }

@@ -32,10 +32,11 @@ class SplitTest {
         val limit = src.length() / 3 + src.length() / 10
         val plan = SplitPlan.auto(scan, limit)
         Log.i("FrameGrabber", "SPLIT plan: " + plan.parts.joinToString { "${it.fromUs}-${it.toUs}:${it.bytes}" })
-        assertTrue("parts ${plan.parts.size}", plan.parts.size in 3..4)
-        assertTrue(plan.parts.all { it.bytes <= limit })
+        assertTrue("parts ${plan.parts.size} " + plan.parts.joinToString { "${it.bytes}" }, plan.parts.size in 3..4)
+        val desc = "limit $limit media ${scan.mediaBytes} keys ${scan.keys.size}: " + plan.parts.joinToString { "${it.fromUs / 1000}-${it.toUs / 1000}ms ${it.bytes}" }
+        assertTrue(desc, plan.parts.all { it.bytes <= limit })
         // contiguous, from 0 to the end
-        assertEquals(0L, plan.parts.first().fromUs)
+        assertEquals(desc, 0L, plan.parts.first().fromUs)
         plan.parts.zipWithNext().forEach { (a, b) -> assertEquals(a.toUs, b.fromUs) }
         // about equal
         val sizes = plan.parts.map { it.bytes }
@@ -45,8 +46,7 @@ class SplitTest {
         var totalDur = 0L
         plan.parts.forEachIndexed { i, p ->
             val out = File(appCtx.cacheDir, "part$i.mp4")
-            val to = if (i + 1 < plan.parts.size) plan.parts[i + 1].fromUs - 1 else p.toUs + 10_000_000
-            Exporters.clip(appCtx, uri, p.fromUs, to, out) { true }
+            Exporters.clip(appCtx, uri, p.startAbs, p.endAbs - 1, out, absolute = true) { true }
             val real = out.length()
             Log.i("FrameGrabber", "SPLIT part ${i + 1}: planned ${p.bytes} real $real")
             assertTrue("part ${i + 1}: planned ${p.bytes}, real $real", abs(real - p.bytes) < p.bytes / 50 + 70_000)
@@ -57,8 +57,9 @@ class SplitTest {
 
         // more parts by hand
         val five = SplitPlan.plan(scan, 5, limit)
-        assertEquals(5, five.parts.size)
+        assertEquals("five: " + five.parts.joinToString { "${it.fromUs / 1000}" }, 5, five.parts.size)
         // can't cut finer than the keyframes
-        assertTrue(SplitPlan.plan(scan, 30, limit).parts.size <= scan.keys.size)
+        val fine = SplitPlan.plan(scan, 30, limit).parts.size
+        assertTrue("30 -> $fine", fine <= scan.keys.size)
     }
 }

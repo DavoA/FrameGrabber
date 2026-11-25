@@ -133,7 +133,7 @@ class ScreenshotTest {
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         // split into parts: a tiny limit so the 4 s test video needs several parts
         inst.runOnMainSync {
-            main.screen.prefs.splitLimit = 120_000
+            main.screen.prefs.splitLimit = 150_000
             main.screen.split.onVideoChanged()
             main.screen.split.onShown()
         }
