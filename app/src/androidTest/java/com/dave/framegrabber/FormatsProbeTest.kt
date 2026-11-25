@@ -33,10 +33,12 @@ class FormatsProbeTest {
                 x.release(); tracks.joinToString(",")
             }
             log("$name extractor: ${ex.getOrElse { "FAIL " + it }}")
-            val e = runCatching { FrameEngine(appCtx, uri) }.getOrElse { log("$name engine: FAIL $it"); continue }
+            val er = runCatching { FrameEngine(appCtx, uri) }
+            if (er.isFailure) { log("$name engine: FAIL ${er.exceptionOrNull()}"); continue }
+            val e = er.getOrThrow()
             e.use {
                 log("$name engine: ${e.width}x${e.height} dur=${e.durationUs} fps=${e.fps} frames=${e.frameCount}")
-                log("$name grab2s: " + runCatching { FrameCapture.grab(e, 2_000_000).let { "${it.first.width} exact=${it.second}" } }.getOrElse { "FAIL $it" })
+                log("$name grab2s: " + runCatching { FrameCapture.grab(e, 2_000_000).let { "${it.bitmap.width} ${it.method} exact=${it.exact}" } }.getOrElse { "FAIL $it" })
                 log("$name scaled: " + runCatching { e.scaledFrame(1_000_000, 200, 200, false)?.width }.getOrElse { "FAIL $it" })
                 log("$name framesAt: " + runCatching { if (e.frameCount > 0) e.framesAt(10, 3).size else "no count" }.getOrElse { "FAIL $it" })
             }
