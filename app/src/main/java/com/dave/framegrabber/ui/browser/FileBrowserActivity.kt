@@ -1,4 +1,4 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.ui.browser
 
 import android.Manifest
 import android.app.Activity
@@ -45,6 +45,14 @@ import java.util.Date
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
+import com.dave.framegrabber.core.*
+import com.dave.framegrabber.data.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ocr.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.ui.widget.*
+import com.dave.framegrabber.R
 
 /**
  * In-app file manager for picking a video (ZArchiver-style):
@@ -59,37 +67,12 @@ class FileBrowserActivity : Activity() {
         const val EXTRA_PATH = "path"
         private const val REQ_PERM = 10
         private const val REQ_OTHER = 11
-        private val VIDEO_EXT = setOf(
-            "mp4", "m4v", "mkv", "webm", "mov", "3gp", "3g2", "avi", "ts", "mts", "m2ts",
-            "flv", "wmv", "mpg", "mpeg", "ogv", "vob"
-        )
-    }
-
-    private sealed class Entry {
-        class Dir(val file: File) : Entry()
-        class Video(
-            val name: String, val size: Long, val dateMs: Long, val durationMs: Long,
-            val sub: String?, val file: File?, val uri: Uri?
-        ) : Entry() {
-            val key: String get() = file?.path ?: uri.toString()
-        }
-        class Header(val title: String) : Entry()
     }
 
     private enum class Mode { BROWSE, ALL, SEARCH }
 
     private val ui = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
-    /** Low-priority threads so thumbnail decoding never competes with scrolling. */
-    private val thumbs = Executors.newFixedThreadPool(2) { r ->
-        Thread { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND); r.run() }
-    }
-    private var flinging = false
-    private val dateFmt: DateFormat = DateFormat.getDateInstance(DateFormat.SHORT)
-    private val thumbCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Bitmap) = value.byteCount
-    }
-    private val failedThumbs = HashSet<String>()
     private val loadGen = AtomicInteger()
 
     private val storageRoot: File = Environment.getExternalStorageDirectory()
@@ -112,12 +95,11 @@ class FileBrowserActivity : Activity() {
     private lateinit var stateText: TextView
     private lateinit var stateBtn: TextView
     private lateinit var stateBtn2: View
-    private val adapter = Adapter()
+    private val adapter by lazy { BrowserAdapter(this, entries) }
 
     private val dp get() = resources.displayMetrics.density
     private val searchRunnable = Runnable { runSearch() }
 
-    private class Place(val title: String, val dir: File?, val all: Boolean = false)
     private val chipViews = mutableListOf<Pair<Place, CheckedTextView>>()
 
     // ================================================================ lifecycle
@@ -150,10 +132,10 @@ class FileBrowserActivity : Activity() {
         list.setOnScrollListener(object : android.widget.AbsListView.OnScrollListener {
             override fun onScrollStateChanged(v: android.widget.AbsListView, state: Int) {
                 bgView.scrolling = state != android.widget.AbsListView.OnScrollListener.SCROLL_STATE_IDLE
-                val wasFling = flinging
-                flinging = state == android.widget.AbsListView.OnScrollListener.SCROLL_STATE_FLING
+                val wasFling = adapter.flinging
+                adapter.flinging = state == android.widget.AbsListView.OnScrollListener.SCROLL_STATE_FLING
                 // after a fling, load thumbnails for whatever is now on screen
-                if (wasFling && !flinging) adapter.notifyDataSetChanged()
+                if (wasFling && !adapter.flinging) adapter.notifyDataSetChanged()
             }
             override fun onScroll(v: android.widget.AbsListView, first: Int, visible: Int, total: Int) {}
         })
@@ -191,7 +173,7 @@ class FileBrowserActivity : Activity() {
     override fun onPause() { bgView.running = false; super.onPause() }
 
     override fun onDestroy() {
-        io.shutdownNow(); thumbs.shutdownNow()
+        io.shutdownNow(); adapter.shutdown()
         super.onDestroy()
     }
 
@@ -262,25 +244,7 @@ class FileBrowserActivity : Activity() {
 
     private fun buildChips() {
         chipsBox.removeAllViews(); chipViews.clear()
-        val r = storageRoot
-        val candidates = listOf(
-            Place("Все видео", null, all = true),
-            Place("Память", r),
-            Place("Камера", File(r, "DCIM/Camera")),
-            Place("Загрузки", File(r, Environment.DIRECTORY_DOWNLOADS)),
-            Place("Telegram", listOf(
-                File(r, "Android/media/org.telegram.messenger/Telegram/Telegram Video"),
-                File(r, "Telegram/Telegram Video"),
-                File(r, "Download/Telegram")
-            ).firstOrNull { it.isDirectory }),
-            Place("WhatsApp", File(r, "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video")),
-            Place("Фильмы", File(r, Environment.DIRECTORY_MOVIES)),
-            Place("Записи экрана", listOf(
-                File(r, "Movies/Screen recordings"), File(r, "DCIM/Screen recordings"),
-                File(r, "DCIM/ScreenRecorder"), File(r, "Pictures/Screenshots")
-            ).firstOrNull { it.isDirectory }),
-        )
-        candidates.filter { it.all || (it.dir != null && it.dir.isDirectory) }.forEachIndexed { i, p ->
+        Places.available(storageRoot).forEachIndexed { i, p ->
             val chip = CheckedTextView(this).apply {
                 text = p.title
                 setTextColor(getColorStateList(R.color.segment_text))
@@ -325,14 +289,7 @@ class FileBrowserActivity : Activity() {
         btnUp.isEnabled = d != storageRoot
         btnUp.animate().alpha(if (d != storageRoot) 1f else 0.35f).setDuration(150).start()
         syncChips()
-        load {
-            val files = d.listFiles().orEmpty().filter { !it.name.startsWith(".") }
-            val dirs: List<Entry> = files.filter { it.isDirectory }.sortedBy { it.name.lowercase() }.map { Entry.Dir(it) }
-            val vids: List<Entry> = files.filter { it.isFile && it.extension.lowercase() in VIDEO_EXT }
-                .sortedByDescending { it.lastModified() }
-                .map { Entry.Video(it.name, it.length(), it.lastModified(), -1, null, it, null) }
-            dirs + vids
-        }
+        load { VideoSource.listFolder(d) }
     }
 
     private fun loadAll() {
@@ -341,7 +298,7 @@ class FileBrowserActivity : Activity() {
         btnUp.isEnabled = true
         btnUp.animate().alpha(1f).setDuration(150).start()
         syncChips()
-        load { queryMediaStore(null) }
+        load { VideoSource.allVideos(this) }
     }
 
     private fun runSearch() {
@@ -354,44 +311,7 @@ class FileBrowserActivity : Activity() {
         txtPath.text = "Поиск: «$q»"
         syncChips()
         val here = dir
-        load {
-            val ql = q.lowercase()
-            // folders in the current folder whose name matches + videos anywhere on the phone
-            val folders = here.listFiles().orEmpty()
-                .filter { it.isDirectory && !it.name.startsWith(".") && ql in it.name.lowercase() }
-                .sortedBy { it.name.lowercase() }.map { Entry.Dir(it) }
-            val vids = queryMediaStore(q)
-            buildList {
-                if (folders.isNotEmpty()) { add(Entry.Header("Папки здесь")); addAll(folders) }
-                if (vids.isNotEmpty()) { add(Entry.Header("Видео на телефоне")); addAll(vids) }
-            }
-        }
-    }
-
-    private fun queryMediaStore(q: String?): List<Entry> {
-        val col = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        val proj = arrayOf(
-            MediaStore.Video.Media._ID, MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.SIZE,
-            MediaStore.Video.Media.DATE_MODIFIED, MediaStore.Video.Media.DURATION, MediaStore.Video.Media.RELATIVE_PATH
-        )
-        val sel = q?.let { "${MediaStore.Video.Media.DISPLAY_NAME} LIKE ? OR ${MediaStore.Video.Media.RELATIVE_PATH} LIKE ?" }
-        val args = q?.let { arrayOf("%$it%", "%$it%") }
-        val out = mutableListOf<Entry>()
-        contentResolver.query(col, proj, sel, args, "${MediaStore.Video.Media.DATE_MODIFIED} DESC")?.use { c ->
-            while (c.moveToNext()) {
-                val id = c.getLong(0)
-                out += Entry.Video(
-                    name = c.getString(1) ?: "video",
-                    size = c.getLong(2),
-                    dateMs = c.getLong(3) * 1000,
-                    durationMs = c.getLong(4),
-                    sub = c.getString(5)?.trimEnd('/'),
-                    file = null,
-                    uri = ContentUris.withAppendedId(col, id)
-                )
-            }
-        }
-        return out
+        load { VideoSource.search(this, here, q) }
     }
 
     /** Runs [block] off the main thread; only the latest request is shown. */
@@ -491,152 +411,6 @@ class FileBrowserActivity : Activity() {
             val v = findViewById<View>(id)
             v.alpha = 0f; v.translationY = -16 * dp
             v.animate().alpha(1f).translationY(0f).setStartDelay(60L * i).setDuration(350).start()
-        }
-    }
-
-    // ================================================================ list
-
-    private fun fmtDuration(ms: Long): String {
-        val s = ms / 1000
-        return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, (s / 60) % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
-    }
-
-    private class Holder(
-        val thumb: ImageView, val icon: ImageView, val badge: TextView,
-        val name: TextView, val sub: TextView, val chevron: ImageView
-    ) { var key: String? = null }
-
-    private inner class Adapter : BaseAdapter() {
-        override fun getCount() = entries.size
-        override fun getItem(position: Int): Any = entries[position]
-        override fun getItemId(position: Int) = position.toLong()
-        override fun getViewTypeCount() = 2
-        override fun getItemViewType(position: Int) = if (entries[position] is Entry.Header) 1 else 0
-        override fun isEnabled(position: Int) = entries[position] !is Entry.Header
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val e = entries[position]
-            if (e is Entry.Header) {
-                val tv = (convertView as? TextView) ?: TextView(this@FileBrowserActivity).apply {
-                    setTextColor(getColor(R.color.accent))
-                    textSize = 12f
-                    letterSpacing = 0.08f
-                    setPadding((8 * dp).toInt(), (14 * dp).toInt(), 0, (6 * dp).toInt())
-                }
-                tv.text = e.title.uppercase()
-                return tv
-            }
-            val v = convertView ?: makeRow()
-            val h = v.tag as Holder
-            when (e) {
-                is Entry.Dir -> {
-                    h.key = null
-                    h.thumb.setImageDrawable(null)
-                    h.icon.visibility = View.VISIBLE
-                    h.icon.setImageResource(R.drawable.ic_folder)
-                    h.badge.visibility = View.GONE
-                    h.chevron.visibility = View.VISIBLE
-                    h.name.text = e.file.name
-                    h.sub.text = "Папка"
-                }
-                is Entry.Video -> {
-                    h.icon.visibility = View.VISIBLE
-                    h.icon.setImageResource(R.drawable.ic_movie)
-                    h.chevron.visibility = View.GONE
-                    h.name.text = e.name
-                    val date = dateFmt.format(Date(e.dateMs))
-                    h.sub.text = listOfNotNull(Formatter.formatShortFileSize(this@FileBrowserActivity, e.size), date, e.sub)
-                        .joinToString(" · ")
-                    if (e.durationMs > 0) { h.badge.visibility = View.VISIBLE; h.badge.text = fmtDuration(e.durationMs) }
-                    else h.badge.visibility = View.GONE
-                    bindThumb(h, e)
-                }
-                else -> {}
-            }
-            return v
-        }
-
-        private fun makeRow(): View {
-            val ctx = this@FileBrowserActivity
-            val outer = FrameLayout(ctx).apply { setPadding(0, (3 * dp).toInt(), 0, (3 * dp).toInt()) }
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setBackgroundResource(R.drawable.bg_row)
-                val p = (8 * dp).toInt()
-                setPadding(p, p, p * 2, p)
-            }
-            val box = FrameLayout(ctx).apply {
-                layoutParams = LinearLayout.LayoutParams((76 * dp).toInt(), (54 * dp).toInt())
-                setBackgroundResource(R.drawable.bg_thumb)
-                clipToOutline = true
-            }
-            val icon = ImageView(ctx).apply {
-                layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.CENTER)
-                imageTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.accent))
-            }
-            val thumb = ImageView(ctx).apply {
-                layoutParams = FrameLayout.LayoutParams(-1, -1)
-                scaleType = ImageView.ScaleType.CENTER_CROP
-            }
-            val badge = TextView(ctx).apply {
-                setBackgroundResource(R.drawable.bg_chip)
-                setTextColor(getColor(R.color.text))
-                textSize = 9f
-                typeface = android.graphics.Typeface.MONOSPACE
-                setPadding((4 * dp).toInt(), 0, (4 * dp).toInt(), 0)
-                layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply {
-                    setMargins(0, 0, (3 * dp).toInt(), (3 * dp).toInt())
-                }
-            }
-            box.addView(icon); box.addView(thumb); box.addView(badge)
-            val texts = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = (12 * dp).toInt() }
-            }
-            val name = TextView(ctx).apply {
-                setTextColor(getColor(R.color.text)); textSize = 15f
-                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-            }
-            val sub = TextView(ctx).apply {
-                setTextColor(getColor(R.color.textDim)); textSize = 12f
-                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-            }
-            texts.addView(name); texts.addView(sub)
-            val chevron = ImageView(ctx).apply {
-                setImageResource(R.drawable.ic_chev_right)
-                imageTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.textDim))
-            }
-            row.addView(box); row.addView(texts); row.addView(chevron)
-            outer.addView(row)
-            outer.tag = Holder(thumb, icon, badge, name, sub, chevron)
-            return outer
-        }
-    }
-
-    private fun bindThumb(h: Holder, e: Entry.Video) {
-        val key = e.key
-        h.key = key
-        val cached = thumbCache.get(key)
-        if (cached != null) { h.thumb.setImageBitmap(cached); h.thumb.alpha = 1f; return }
-        h.thumb.setImageDrawable(null)
-        if (key in failedThumbs || flinging) return // during a fling: load once it stops
-        thumbs.execute {
-            if (h.key != key) return@execute // row was reused for another file meanwhile
-            val b = runCatching {
-                val size = Size(256, 192)
-                if (e.file != null) ThumbnailUtils.createVideoThumbnail(e.file, size, null)
-                else contentResolver.loadThumbnail(e.uri!!, size, null)
-            }.getOrNull()
-            ui.post {
-                if (b == null) { failedThumbs += key; return@post }
-                thumbCache.put(key, b)
-                if (h.key == key) {
-                    h.thumb.setImageBitmap(b)
-                    h.thumb.alpha = 0f
-                    h.thumb.animate().alpha(1f).setDuration(220).start()
-                }
-            }
         }
     }
 }

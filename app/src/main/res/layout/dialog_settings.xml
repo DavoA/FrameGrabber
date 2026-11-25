@@ -94,7 +94,7 @@
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:background="@drawable/bg_thumb">
-            <com.dave.framegrabber.SynthwaveView
+            <com.dave.framegrabber.ui.widget.SynthwaveView
                 android:id="@+id/wavePreview"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />

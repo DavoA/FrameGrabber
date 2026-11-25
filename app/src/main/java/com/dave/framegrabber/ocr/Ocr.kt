@@ -1,4 +1,4 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.ocr
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -6,6 +6,13 @@ import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import com.dave.framegrabber.core.*
+import com.dave.framegrabber.data.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.ui.widget.*
+import com.dave.framegrabber.R
 
 /**
  * Text recognition with Tesseract (works offline once the language files are downloaded).

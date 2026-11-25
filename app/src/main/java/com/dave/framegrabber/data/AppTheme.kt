@@ -1,8 +1,15 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.data
 
 import android.app.Activity
 import android.content.Context
 import android.view.View
+import com.dave.framegrabber.core.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ocr.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.ui.widget.*
+import com.dave.framegrabber.R
 
 /** Visual theme of the app, chosen in "Общие настройки". Classic green is the default. */
 enum class AppTheme(val key: String) {

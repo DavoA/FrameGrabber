@@ -1,4 +1,4 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.ui.widget
 
 import android.content.Context
 import android.graphics.Canvas
@@ -16,6 +16,13 @@ import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
+import com.dave.framegrabber.core.*
+import com.dave.framegrabber.data.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ocr.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.R
 
 /**
  * Animated synthwave background:

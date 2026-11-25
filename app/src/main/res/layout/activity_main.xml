@@ -7,7 +7,7 @@
     android:background="@color/bg">
 
     <!-- Animated synthwave background (sky, sun, green triangle waves, palms) -->
-    <com.dave.framegrabber.SynthwaveView
+    <com.dave.framegrabber.ui.widget.SynthwaveView
         android:id="@+id/bgView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -105,7 +105,7 @@
                 android:visibility="gone" />
 
             <!-- A captured frame opened from the grid (pinch to zoom, swipe to flip) -->
-            <com.dave.framegrabber.ZoomImageView
+            <com.dave.framegrabber.ui.widget.ZoomImageView
                 android:id="@+id/imgCapture"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

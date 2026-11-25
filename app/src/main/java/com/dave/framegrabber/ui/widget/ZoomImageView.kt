@@ -1,4 +1,4 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.ui.widget
 
 import android.animation.ValueAnimator
 import android.content.Context
@@ -14,6 +14,13 @@ import android.widget.ImageView
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import com.dave.framegrabber.core.*
+import com.dave.framegrabber.data.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ocr.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.R
 
 /**
  * ImageView with pinch-to-zoom, pan and double-tap zoom.

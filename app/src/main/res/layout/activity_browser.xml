@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg">
 
-    <com.dave.framegrabber.SynthwaveView
+    <com.dave.framegrabber.ui.widget.SynthwaveView
         android:id="@+id/bgView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

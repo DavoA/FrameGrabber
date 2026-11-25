@@ -1,7 +1,14 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.core
 
 import android.graphics.Bitmap
 import kotlin.math.max
+import com.dave.framegrabber.data.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ocr.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.ui.widget.*
+import com.dave.framegrabber.R
 
 /** Cheap image measurements for "sharpest frame" and "skip blurry / duplicate" features. */
 object ImageMetrics {

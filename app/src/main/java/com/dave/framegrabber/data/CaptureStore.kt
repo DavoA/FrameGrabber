@@ -1,8 +1,15 @@
-package com.dave.framegrabber
+package com.dave.framegrabber.data
 
 import android.graphics.Bitmap
 import android.net.Uri
 import java.io.File
+import com.dave.framegrabber.core.*
+import com.dave.framegrabber.export.*
+import com.dave.framegrabber.batch.*
+import com.dave.framegrabber.ocr.*
+import com.dave.framegrabber.ui.*
+import com.dave.framegrabber.ui.widget.*
+import com.dave.framegrabber.R
 
 class Capture(
     val file: File, val thumb: Bitmap, val timeUs: Long, val fmt: Fmt,
