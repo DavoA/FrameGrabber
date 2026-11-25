@@ -93,7 +93,13 @@ class ScreenshotTest {
 
         // general settings dialog, switch to the wave theme
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnSettings).performClick() }
-        Thread.sleep(1200); shot("9_general_settings")
+        Thread.sleep(3000); shot("9_general_settings")
+        // control: a plain AlertDialog with the same theme
+        inst.runOnMainSync { a.window.decorView.rootView.let { } }
+        inst.runOnMainSync {
+            android.app.AlertDialog.Builder(a).setTitle("Контроль").setMessage("Обычный диалог").setPositiveButton("OK", null).show()
+        }
+        Thread.sleep(2000); shot("10_plain_dialog")
         AppTheme.set(appCtx, AppTheme.WAVE)
         a.finish(); Thread.sleep(800)
 
