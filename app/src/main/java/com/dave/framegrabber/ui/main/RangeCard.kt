@@ -10,21 +10,23 @@ import com.dave.framegrabber.ui.bump
 import com.dave.framegrabber.ui.onTextChanged
 import com.dave.framegrabber.ui.toast
 
-/** «Отрезок»: the start/end used by batch mode and by GIF/clip export. Empty = the whole video. */
-class RangeCard(private val s: MainScreen) {
+/**
+ * «Отрезок»: start/end (empty = the whole video). One card per page (range_card.xml is included in
+ * «Клипы» and «Инструменты»), so each page keeps its own range. [onChange] runs when it's edited.
+ */
+class RangeCard(private val s: MainScreen, val card: View, private val onChange: () -> Unit = {}) {
 
-    val card = s.h<View>(R.id.cardRange)
-    private val editFrom = s.h<EditText>(R.id.editFrom)
-    private val editTo = s.h<EditText>(R.id.editTo)
-    private val txtLen = s.h<TextView>(R.id.txtRangeLen)
+    private val editFrom = card.findViewById<EditText>(R.id.editFrom)
+    private val editTo = card.findViewById<EditText>(R.id.editTo)
+    private val txtLen = card.findViewById<TextView>(R.id.txtRangeLen)
 
     init {
         // ⏮ / ⏭ take the current frame
-        s.h<View>(R.id.btnMarkIn).setOnClickListener {
+        card.findViewById<View>(R.id.btnMarkIn).setOnClickListener {
             if (s.video.requireEngine() == null) return@setOnClickListener
             editFrom.setText(TimeUtil.format(s.video.currentUs)); editFrom.bump()
         }
-        s.h<View>(R.id.btnMarkOut).setOnClickListener {
+        card.findViewById<View>(R.id.btnMarkOut).setOnClickListener {
             if (s.video.requireEngine() == null) return@setOnClickListener
             editTo.setText(TimeUtil.format(s.video.currentUs)); editTo.bump()
         }
@@ -34,7 +36,7 @@ class RangeCard(private val s: MainScreen) {
 
     private fun changed() {
         updateLength()
-        s.batch.updateHint()
+        onChange()
     }
 
     /** New video: forget the old range. */

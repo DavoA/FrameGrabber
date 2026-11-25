@@ -58,6 +58,9 @@ class Prefs(ctx: Context) {
     var folderTreeName: String? get() = sp.getString("treeName", null); set(v) = put { putString("treeName", v) }
     var ocrLangs: String get() = str("ocr", "eng+rus"); set(v) = put { putString("ocr", v) }
 
+    // GIFs and clips made so far (JSON array, newest first)
+    var madeJson: String get() = str("made", "[]"); set(v) = put { putString("made", v) }
+
     // recent videos (JSON array, newest first)
     var recentJson: String get() = str("recent", "[]"); set(v) = put { putString("recent", v) }
 

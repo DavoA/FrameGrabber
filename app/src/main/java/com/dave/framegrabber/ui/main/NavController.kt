@@ -10,10 +10,10 @@ import com.dave.framegrabber.ui.bump
 import com.dave.framegrabber.ui.popIn
 import com.dave.framegrabber.ui.switchPanel
 
-/** Bottom bar: «Съёмка» / «Кадры» / «Инструменты», with a frame counter on «Кадры». */
+/** Bottom bar: «Съёмка» / «Кадры» / «Клипы» / «Инструменты», with a frame counter on «Кадры». */
 class NavController(private val s: MainScreen) {
 
-    enum class Page { CAPTURE, FRAMES, TOOLS }
+    enum class Page { CAPTURE, FRAMES, CLIPS, TOOLS }
 
     var page = Page.CAPTURE
         private set
@@ -23,11 +23,13 @@ class NavController(private val s: MainScreen) {
     private val pages = mapOf(
         Page.CAPTURE to s.pinned<View>(R.id.pageCapture),
         Page.FRAMES to s.pinned<View>(R.id.list),
+        Page.CLIPS to s.pinned<View>(R.id.pageClips),
         Page.TOOLS to s.pinned<View>(R.id.pageTools),
     )
     private val items = mapOf(
         Page.CAPTURE to item(R.id.navCapture, R.id.navCapturePill, R.id.navCaptureIcon, R.id.navCaptureLabel),
         Page.FRAMES to item(R.id.navFrames, R.id.navFramesPill, R.id.navFramesIcon, R.id.navFramesLabel),
+        Page.CLIPS to item(R.id.navClips, R.id.navClipsPill, R.id.navClipsIcon, R.id.navClipsLabel),
         Page.TOOLS to item(R.id.navTools, R.id.navToolsPill, R.id.navToolsIcon, R.id.navToolsLabel),
     )
     private val badge = s.pinned<TextView>(R.id.navBadge)

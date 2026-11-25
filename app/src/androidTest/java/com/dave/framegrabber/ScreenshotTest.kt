@@ -89,6 +89,17 @@ class ScreenshotTest {
         inst.runOnMainSync { main.screen.viewer.close() }
         Thread.sleep(800)
 
+        // 6a. «Клипы» page (make a GIF so «Готовые» has something)
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navClips).performClick() }
+        Thread.sleep(800)
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnGif).performClick() }
+        Thread.sleep(6000)
+        inst.runOnMainSync {   // close the "GIF готов" dialog
+            (a.window.decorView.rootView as? ViewGroup)?.let { }
+        }
+        inst.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+        Thread.sleep(1200); shot("6a_clips")
+
         // 6. «Инструменты» page
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(1500); shot("6_tools")

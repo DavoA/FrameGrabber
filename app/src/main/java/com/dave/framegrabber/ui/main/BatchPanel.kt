@@ -84,7 +84,7 @@ class BatchPanel(private val s: MainScreen) {
     /** Frame times for the batch, or null (with a message unless [quiet]). */
     private fun times(e: FrameEngine, quiet: Boolean): List<Long>? {
         fun fail(msg: String): List<Long>? { if (!quiet) s.act.toast(msg); return null }
-        val (from, to) = s.range.bounds(e)
+        val (from, to) = s.rangeBatch.bounds(e)
         if (to < from) return fail("Конец отрезка должен быть позже начала")
         val value = editValue.text.toString().replace(',', '.').toDoubleOrNull()
         return if (!byCount) {

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Page «Клипы»: GIF and MP4 clips from a range, and the ones already made. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pageClips"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:scrollbars="none"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
+
+        <include
+            android:id="@+id/rangeClips"
+            layout="@layout/range_card" />
+
+        <LinearLayout
+            android:id="@+id/cardGif"
+            style="@style/Card">
+            <TextView
+                style="@style/CardTitle"
+                android:text="GIF" />
+            
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioGroup
+                    android:id="@+id/radioGifFps"
+                    style="@style/SegmentGroup"
+                    android:layout_width="0dp"
+                    android:layout_weight="1">
+                    <RadioButton android:id="@+id/fps5" style="@style/Segment" android:text="5 к/с" />
+                    <RadioButton android:id="@+id/fps10" style="@style/Segment" android:checked="true" android:text="10" />
+                    <RadioButton android:id="@+id/fps15" style="@style/Segment" android:text="15" />
+                </RadioGroup>
+                <RadioGroup
+                    android:id="@+id/radioGifW"
+                    style="@style/SegmentGroup"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp">
+                    <RadioButton android:id="@+id/gw320" style="@style/Segment" android:text="320" />
+                    <RadioButton android:id="@+id/gw480" style="@style/Segment" android:checked="true" android:text="480" />
+                    <RadioButton android:id="@+id/gw720" style="@style/Segment" android:text="720" />
+                </RadioGroup>
+            </LinearLayout>
+            <Button
+                android:id="@+id/btnGif"
+                style="@style/BtnPrimary"
+                android:drawableStart="@drawable/ic_gif"
+                android:drawableTint="#FFFFFFFF"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Сделать GIF" />
+
+            
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/cardClip"
+            style="@style/Card">
+            <TextView
+                style="@style/CardTitle"
+                android:text="Видео-клип" />
+            <TextView
+                style="@style/SubHint"
+                android:text="MP4 со звуком, без потери качества. Начало сдвигается к ближайшему ключевому кадру." />
+            <Button
+                android:id="@+id/btnClip"
+                style="@style/BtnPrimary"
+                android:drawableStart="@drawable/ic_cut"
+                android:drawableTint="#FFFFFFFF"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Вырезать клип" />
+            <ProgressBar
+                android:id="@+id/progressClips"
+                style="@android:style/Widget.Material.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:max="1000"
+                android:progressBackgroundTint="@color/stroke"
+                android:progressTint="@color/accent"
+                android:visibility="gone" />
+            <TextView
+                android:id="@+id/txtClips"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingTop="6dp"
+                android:textColor="@color/textDim"
+                android:textSize="13sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Made so far -->
+        <LinearLayout
+            android:id="@+id/cardMade"
+            style="@style/Card"
+            android:layout_marginBottom="16dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView
+                    style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:paddingBottom="0dp"
+                    android:text="Готовые" />
+                <TextView
+                    android:id="@+id/txtMadeCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_count"
+                    android:gravity="center"
+                    android:minWidth="28dp"
+                    android:paddingStart="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="2dp"
+                    android:text="0"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/txtMadeEmpty"
+                style="@style/SubHint"
+                android:paddingTop="12dp"
+                android:gravity="center"
+                android:text="Здесь появятся GIF и клипы, которые ты сделаешь" />
+            <LinearLayout
+                android:id="@+id/madeList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

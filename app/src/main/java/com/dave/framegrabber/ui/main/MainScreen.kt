@@ -20,9 +20,10 @@ import java.util.concurrent.Executors
  *  - [video]   — the opened video: loading, preview, timeline, frame stepping, playback with sound
  *  - [viewer]  — a captured frame opened full screen (zoom, flip, share/save/delete/text)
  *  - [grid]    — page «Кадры»: the frames grid + "Галерея / ZIP / Очистить"
- *  - [range]   — the «Отрезок» card used by batch and export
- *  - [batch]   — «Пачка кадров»: many frames at once (runs in the background service)
- *  - [export]  — «Экспорт»: GIF, MP4 clip, contact sheet
+ *  - [clips]   — page «Клипы»: GIF and MP4 clip from a range + the ones made so far
+ *  - [batch]   — «Пачка кадров» (page «Инструменты»): many frames at once (background service)
+ *  - [sheet]   — «Лист кадров» (page «Инструменты»): all frames in one image
+ *  - [rangeClips] / [rangeBatch] — the «Отрезок» card of each page
  *  - [format]  — size, format, quality, "sharpest frame" (edited in ⚙ settings)
  *  - [recent]  — recently opened videos on the start screen
  *  - [shutter] — the 📷 button (take the current frame)
@@ -60,10 +61,12 @@ class MainScreen(val act: MainActivity) {
     val video = VideoController(this)
     val viewer = ViewerController(this)
     val grid = CapturesController(this)
-    val range = RangeCard(this)
+    val rangeClips = RangeCard(this, h(R.id.rangeClips))
+    val rangeBatch = RangeCard(this, h(R.id.rangeBatch)) { batch.updateHint() }
     val format = CaptureFormat(this)
     val batch = BatchPanel(this)
-    val export = ExportPanel(this)
+    val clips = ClipsPanel(this)
+    val sheet = SheetPanel(this)
     val recent = RecentStrip(this)
     val shutter = Shutter(this)
     val ocr = TextRecognition(this)
@@ -75,6 +78,7 @@ class MainScreen(val act: MainActivity) {
         effects.playEntrance()
         effects.startIdle()
         freezeBackgroundWhileScrolling(h(R.id.pageTools))
+        freezeBackgroundWhileScrolling(h(R.id.pageClips))
     }
 
     /** The animated background pauses while a page scrolls (smoother scrolling). */

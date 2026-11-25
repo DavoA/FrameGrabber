@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- «Отрезок»: start / end (empty = whole video). Included in «Клипы» and «Инструменты». -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Card"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Отрезок"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/txtRangeLen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:text="всё видео"
+            android:textColor="@color/textDim"
+            android:textSize="12sp" />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="8dp">
+        <ImageButton
+            android:id="@+id/btnMarkIn"
+            style="@style/IconBtn"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:contentDescription="Начало = текущий кадр"
+            android:src="@drawable/ic_mark_in" />
+        <EditText
+            android:id="@+id/editFrom"
+            style="@style/Input"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:fontFamily="monospace"
+            android:hint="0:00"
+            android:inputType="text"
+            android:textSize="14sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:text="—"
+            android:textColor="@color/textDim" />
+        <EditText
+            android:id="@+id/editTo"
+            style="@style/Input"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:fontFamily="monospace"
+            android:hint="конец"
+            android:inputType="text"
+            android:textSize="14sp" />
+        <ImageButton
+            android:id="@+id/btnMarkOut"
+            style="@style/IconBtn"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:contentDescription="Конец = текущий кадр"
+            android:src="@drawable/ic_mark_out" />
+    </LinearLayout>
+</LinearLayout>

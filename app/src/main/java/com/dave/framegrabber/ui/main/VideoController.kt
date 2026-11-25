@@ -156,7 +156,8 @@ class VideoController(private val s: MainScreen) {
         txtInfo.text = "$baseName · ${e.width}×${e.height} · %.0f fps".format(e.fps)
         txtDuration.text = TimeUtil.format(e.durationUs)
         showTime()
-        s.range.onVideoChanged()
+        s.rangeBatch.onVideoChanged()
+        s.rangeClips.onVideoChanged()
         s.batch.updateHint()
         // timeline and −1f / 📷 / +1f appear once there's a video
         if (cardTimeline.visibility != View.VISIBLE) cardTimeline.riseIn(150, 20f)
