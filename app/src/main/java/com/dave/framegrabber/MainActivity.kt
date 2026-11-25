@@ -965,6 +965,7 @@ class MainActivity : Activity() {
         // real file resolution, so it's obvious the original quality was saved
         val size = android.text.format.Formatter.formatShortFileSize(this, c.file.length())
         txtTimeBadge.text = buildString {
+            if (c.sharpened) append("★ ")   // the sharper neighbour was taken
             append("${c.width}×${c.height} · ${c.fmt.name} · $size")
             append("  ")
             if (!c.exact) append("≈")
@@ -975,6 +976,7 @@ class MainActivity : Activity() {
     }
 
     private fun enterViewerChrome() {
+        btnPlay.anim().alpha(0f).setDuration(150).withEndAction { btnPlay.visibility = View.GONE }.start()
         listOf(btnCloseCap, btnCapPrev, btnCapNext).forEachIndexed { i, v -> popIn(v, 60L * i) }
         if (chipMode.visibility != View.VISIBLE) popIn(chipMode, 0)
         if (txtTimeBadge.visibility != View.VISIBLE) popIn(txtTimeBadge, 0)
@@ -988,6 +990,7 @@ class MainActivity : Activity() {
                 .withEndAction { v.visibility = View.GONE }.start()
         }
         swapBars(out = captureBar, into = videoBar)
+        if (playerReady) popIn(btnPlay, 150)
     }
 
     private fun decodeSampled(file: File, maxSide: Int): Bitmap? {
@@ -1583,7 +1586,6 @@ class MainActivity : Activity() {
             emptyBox.visibility = View.GONE
             if (capActions.visibility != View.VISIBLE) {
                 if (animate) showAnimated(capActions) else capActions.visibility = View.VISIBLE
-                txtTapHint.visibility = View.VISIBLE
             }
         }
     }

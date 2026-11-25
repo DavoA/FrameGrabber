@@ -46,15 +46,16 @@
                 android:orientation="vertical"
                 android:paddingStart="12dp">
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="26dp"
+                    android:autoSizeMaxTextSize="19sp"
+                    android:autoSizeMinTextSize="13sp"
+                    android:autoSizeTextType="uniform"
                     android:fontFamily="sans-serif-medium"
                     android:letterSpacing="0.01"
-                    android:ellipsize="end"
                     android:maxLines="1"
                     android:text="Кадры из видео"
-                    android:textColor="@color/text"
-                    android:textSize="19sp" />
+                    android:textColor="@color/text" />
                 <TextView
                     android:id="@+id/txtInfo"
                     android:layout_width="wrap_content"
