@@ -185,15 +185,18 @@ class GifEncoder(private val out: OutputStream, private val w: Int, private val 
 
 object Exporters {
     /** GIF from [fromUs]..[toUs] at [fps], [width] px wide. Calls [progress] (0..1). */
-    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, fps: Int, width: Int, dest: File, progress: (Float) -> Boolean) {
+    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, fps: Int, width: Int, dest: File, progress: (Float) -> Boolean) =
+        BufferedOutputStream(dest.outputStream()).use { gif(ctx, uri, fromUs, toUs, fps, width, it, progress) }
+
+    /** Writes the GIF straight into [os] (e.g. the gallery file) — no temp file. */
+    fun gif(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, fps: Int, width: Int, os: OutputStream, progress: (Float) -> Boolean) {
         FrameEngine(ctx, uri).use { e ->
             val w = min(width, max(e.width, 16)) and 1.inv()
             val h = (w * e.height / max(1, e.width).toFloat()).roundToInt().coerceAtLeast(2) and 1.inv()
             val step = 1_000_000L / fps
             val count = ((toUs - fromUs) / step + 1).toInt().coerceAtLeast(1)
-            dest.parentFile?.mkdirs()
             var frames = 0
-            BufferedOutputStream(dest.outputStream()).use { os ->
+            run {
                 val g = GifEncoder(os, w, h, 1000 / fps)
                 for (i in 0 until count) {
                     val t = fromUs + i * step
@@ -211,11 +214,14 @@ object Exporters {
      * MP4 clip by remuxing (no re-encoding = original quality and sound). Starts at the keyframe
      * at or before [fromUs] (that's how video files work without re-encoding).
      */
-    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean) {
-        dest.parentFile?.mkdirs()
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean) =
+        clip(ctx, uri, fromUs, toUs, { MediaMuxer(dest.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4) }, progress)
+
+    /** [makeMuxer] lets the clip be written straight into the destination file descriptor. */
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, makeMuxer: () -> MediaMuxer, progress: (Float) -> Boolean) {
         val ex = MediaExtractor()
         ex.setDataSource(ctx, uri, null)
-        val muxer = MediaMuxer(dest.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        val muxer = makeMuxer()
         try {
             val map = HashMap<Int, Int>()
             var maxIn = 1 shl 20
