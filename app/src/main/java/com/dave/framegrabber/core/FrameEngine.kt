@@ -41,7 +41,8 @@ data class OutputSpec(val size: Pair<Int, Int>?, val format: Fmt, val quality: I
  *    frames from it — AVI, FLV, MPG/VOB, WMV, some TS/M2TS…
  * NOT thread-safe: use one instance per thread (the screen has one engine thread; batch opens its own).
  */
-class FrameEngine(context: Context, uri: Uri) : Closeable {
+class FrameEngine(context: Context, private val uri: Uri) : Closeable {
+    private val ctx: Context = context.applicationContext
     private var r: MediaMetadataRetriever? = null
     private var ff: FFmpegMediaMetadataRetriever? = null
 
@@ -51,8 +52,9 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
     val fps: Double
     /** Number of frames in the video (0 = unknown). */
     val frameCount: Int
-    /** Opened with FFmpeg (Android itself can't read this file): no playback, clips may not work. */
-    val viaFfmpeg: Boolean
+    /** Decoding with FFmpeg (Android itself can't read this file): playback and clips may not work. */
+    var viaFfmpeg: Boolean
+        private set
 
     init {
         val native = runCatching { openNative(context, uri) }.getOrNull()
@@ -166,8 +168,25 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
     private fun ffOption(exact: Boolean) =
         if (exact) FFmpegMediaMetadataRetriever.OPTION_CLOSEST else FFmpegMediaMetadataRetriever.OPTION_CLOSEST_SYNC
 
+    /**
+     * Android's decoder gave nothing where it should have (happens with some MPEG-TS files):
+     * switch to FFmpeg for the rest of this video. True if switched.
+     */
+    private fun switchToFfmpeg(): Boolean {
+        if (ff != null) return false
+        val f = runCatching { openFfmpeg(ctx, uri).first }.getOrNull() ?: return false
+        ff = f
+        runCatching { r?.release() }
+        r = null
+        viaFfmpeg = true
+        return true
+    }
+
     /** Full-resolution frame. exact=true decodes the precise frame (slower). */
-    fun frame(us: Long, exact: Boolean = true): Bitmap? {
+    fun frame(us: Long, exact: Boolean = true): Bitmap? =
+        frameOnce(us, exact) ?: if (exact && switchToFfmpeg()) frameOnce(us, exact) else null
+
+    private fun frameOnce(us: Long, exact: Boolean): Bitmap? {
         val t = us.coerceIn(0L, lastUs)
         ff?.let { f ->
             return argb(runCatching { f.getFrameAtTime(t, ffOption(exact)) }.getOrNull()
@@ -194,7 +213,10 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
     }
 
     /** Downscaled frame (fits in maxW×maxH, keeps the aspect ratio) for previews / filmstrip. */
-    fun scaledFrame(us: Long, maxW: Int, maxH: Int, exact: Boolean): Bitmap? {
+    fun scaledFrame(us: Long, maxW: Int, maxH: Int, exact: Boolean): Bitmap? =
+        scaledOnce(us, maxW, maxH, exact) ?: if (switchToFfmpeg()) scaledOnce(us, maxW, maxH, exact) else null
+
+    private fun scaledOnce(us: Long, maxW: Int, maxH: Int, exact: Boolean): Bitmap? {
         val t = us.coerceIn(0L, lastUs)
         ff?.let { f ->
             val k = min(maxW.toDouble() / max(1, width), maxH.toDouble() / max(1, height)).coerceAtMost(1.0)
@@ -203,7 +225,7 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
             // exact frame, and scale it here if FFmpeg's own scaling fails
             val b = runCatching { f.getScaledFrameAtTime(t, ffOption(exact), w, h) }.getOrNull()
                 ?: runCatching { f.getScaledFrameAtTime(t, ffOption(true), w, h) }.getOrNull()
-                ?: frame(t, exact = true)?.let { full -> Bitmap.createScaledBitmap(full, w, h, true) }
+                ?: frameOnce(t, exact = true)?.let { full -> Bitmap.createScaledBitmap(full, w, h, true) }
             return argb(b)
         }
         return r?.getScaledFrameAtTime(t, option(exact), maxW, maxH)
