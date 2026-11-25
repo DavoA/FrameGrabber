@@ -297,8 +297,8 @@ class PostActivity : Activity() {
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
                     setBackgroundColor(getColor(R.color.warn))
                     setPadding((6 * d).toInt(), (1 * d).toInt(), (6 * d).toInt(), (1 * d).toInt())
-                    layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END)
-                        .apply { setMargins(0, (5 * d).toInt(), (5 * d).toInt(), 0) }
+                    layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START)
+                        .apply { setMargins((5 * d).toInt(), 0, 0, (5 * d).toInt()) }
                 })
                 tile.setOnClickListener { tapPhoto(i) }
             }
@@ -514,8 +514,11 @@ class PostActivity : Activity() {
             append('\n')
         }
         if (dup.sameFrames.isNotEmpty()) {
+            // grouped by post: "фото 1, 3, 4 — в посте от 5 нояб."
             append("• Такие же кадры уже были: ")
-            append(dup.sameFrames.entries.joinToString("; ") { (n, p) -> "фото $n — пост от ${date(p.time)}" })
+            append(dup.sameFrames.entries.groupBy({ it.value }, { it.key }).entries.joinToString("; ") { (p, nums) ->
+                "фото " + nums.sorted().joinToString(", ") + " — в посте от ${date(p.time)}"
+            })
             append('\n')
         }
         if (withNames && dup.sameNames.isNotEmpty() && dup.sameVideo.isEmpty()) {
