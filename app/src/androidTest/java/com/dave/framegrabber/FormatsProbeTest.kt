@@ -54,9 +54,9 @@ class FormatsProbeTest {
                     log("$name frames OK (${g.method})")
                 }
             }
-            r.onFailure { log("$name FAIL $it"); failed += "$name: ${it.message}\n    " + diag(name) }
+            r.onFailure { log("$name FAIL $it"); failed += "$name: ${it.message} || " + diag(name) }
         }
-        assertTrue("failed:\n" + failed.joinToString("\n"), failed.isEmpty())
+        assertTrue("failed: " + failed.joinToString(" ## "), failed.isEmpty())
     }
 
     @Test fun clips_where_possible() {
