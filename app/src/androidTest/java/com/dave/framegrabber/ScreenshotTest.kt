@@ -131,6 +131,25 @@ class ScreenshotTest {
 
         // 6. «Инструменты» page
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
+        // split into parts: a tiny limit so the 4 s test video needs several parts
+        inst.runOnMainSync {
+            main.screen.prefs.splitLimit = 120_000
+            main.screen.split.onVideoChanged()
+            main.screen.split.onShown()
+        }
+        Thread.sleep(2500)
+        inst.runOnMainSync { a.findViewById<android.widget.ScrollView>(R.id.pageTools).scrollTo(0, 0) }
+        Thread.sleep(800); shot("6c_split")
+        val partsShown = a.findViewById<android.widget.LinearLayout>(R.id.splitParts).childCount
+        check(partsShown >= 3) { "split parts shown: $partsShown" }
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnSplit).performClick() }
+        val ts = System.currentTimeMillis()
+        Thread.sleep(500)
+        while (com.dave.framegrabber.split.SplitState.running && System.currentTimeMillis() - ts < 60_000) Thread.sleep(300)
+        Thread.sleep(800); shot("6d_split_done")
+        check(com.dave.framegrabber.split.SplitState.error == null) { "split error: ${com.dave.framegrabber.split.SplitState.error}" }
+        check(com.dave.framegrabber.split.SplitState.saved.size == partsShown) { "saved ${com.dave.framegrabber.split.SplitState.saved.size} of $partsShown" }
+        inst.runOnMainSync { main.screen.prefs.splitLimit = com.dave.framegrabber.split.SplitPlan.TELEGRAM_LIMIT; main.screen.split.onVideoChanged() }
         Thread.sleep(1500); shot("6_tools")
 
         // 6b. several videos at once (background service), saved to their projects + gallery
@@ -162,7 +181,7 @@ class ScreenshotTest {
         inst.runOnMainSync { listOf(2, 0, 1, 3, 4).forEach { main.screen.tgPick.toggle(CaptureStore.captures[it]) } }
         Thread.sleep(1200); shot("11_tg_pick")
         inst.runOnMainSync { main.screen.tgPick.toggle(CaptureStore.captures[5]) }
-        // earlier posts: one of this very video (with the same 1st picture), others for the statistics
+        // an earlier post of this very video (with the same 1st picture)
         File(appCtx.filesDir, "tg_posts.json").delete()
         com.dave.framegrabber.telegram.PostLog(appCtx).apply {
             val now = System.currentTimeMillis(); val day = 86_400_000L
@@ -170,15 +189,6 @@ class ScreenshotTest {
             val h = com.dave.framegrabber.telegram.PostLog.hashOf(CaptureStore.captures[2].file)!!
             add(com.dave.framegrabber.telegram.PostLog.Post(now - 20 * day, "@my_channel", 10, "https://t.me/my_channel/10",
                 "Studio name", listOf("Model A", "Model B"), listOf("натуральные", "hd"), "h264", key, listOf(h)))
-            listOf(
-                Triple("Alpha Studio", listOf("Model C"), listOf("блондинки", "догги", "hd")),
-                Triple("Alpha Studio", listOf("Model D", "Model C"), listOf("брюнетки", "4k")),
-                Triple("Beta Films", listOf("Model E"), listOf("блондинки", "hd", "раздевание")),
-                Triple("Alpha Studio", listOf("Model C"), listOf("блондинки", "hd")),
-            ).forEachIndexed { i, (st, m, t) ->
-                add(com.dave.framegrabber.telegram.PostLog.Post(now - (12 - i * 3) * day, "@my_channel", 20L + i,
-                    "https://t.me/my_channel/${20 + i}", st, m, t, "v$i", "k$i", listOf(i.toLong() * 7919)))
-            }
         }
         val mon = inst.addMonitor(com.dave.framegrabber.ui.telegram.PostActivity::class.java.name, null, false)
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnTgPickNext).performClick() }
@@ -223,19 +233,7 @@ class ScreenshotTest {
         Thread.sleep(1000); shot("13_hashtags")
         tags.finish()
         Thread.sleep(800)
-        val smon = inst.addMonitor(com.dave.framegrabber.ui.telegram.StatsActivity::class.java.name, null, false)
-        inst.runOnMainSync { post.findViewById<android.view.View>(R.id.btnStats).performClick() }
-        val stats = inst.waitForMonitorWithTimeout(smon, 8000)
-        check(stats != null) { "stats didn't open" }
-        Thread.sleep(1500); shot("14_stats")
-        inst.runOnMainSync { (stats.window.decorView as android.view.ViewGroup).let { root ->
-            fun find(v: android.view.View): android.widget.ScrollView? = v as? android.widget.ScrollView
-                ?: (v as? android.view.ViewGroup)?.let { g -> (0 until g.childCount).firstNotNullOfOrNull { find(g.getChildAt(it)) } }
-            find(root)?.scrollTo(0, 1400)
-        } }
-        Thread.sleep(1000); shot("14b_stats")
-        stats.finish()
-        Thread.sleep(800)
+
         post.finish(); Thread.sleep(800)
         inst.runOnMainSync { main.screen.tgPick.cancel(); a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)

@@ -21,6 +21,7 @@ import java.util.concurrent.Executors
  *  - [video]   — the opened video: loading, preview, timeline, frame stepping, playback with sound
  *  - [viewer]  — a captured frame opened full screen (zoom, flip, share/save/delete/text)
  *  - [grid]    — page «Кадры»: the frames grid + "Галерея / ZIP / Очистить"
+ *  - [split]   — «Инструменты» → «Разделить на части» (by size, for Telegram's 2 GB limit)
  *  - [tgPick]  — «Пост в Telegram»: picking 6 frames, then the post editor (ui/telegram)
  *  - [marks]   — marks on the timeline (🔖), "take a frame at every mark"
  *  - [project] — project history: each video keeps its frames, marks, ranges (🕘 in the top bar)
@@ -72,6 +73,7 @@ class MainScreen(val act: MainActivity) {
     val marks = MarksPanel(this)
     val project = ProjectController(this)
     val tgPick = TelegramPick(this)
+    val split = SplitPanel(this)
     val rangeClips = RangeCard(this, h(R.id.rangeClips)) { clips.updateGifInfo() }
     val rangeBatch = RangeCard(this, h(R.id.rangeBatch)) { batch.updateHint() }
     val format = CaptureFormat(this)

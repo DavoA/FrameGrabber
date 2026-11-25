@@ -47,6 +47,8 @@ class Prefs(ctx: Context) {
     var gifFps: Int get() = sp.getInt("gifFps", 15); set(v) = put { putInt("gifFps", v) }
     /** 0 = original width. */
     var gifWidth: Int get() = sp.getInt("gifW", 480); set(v) = put { putInt("gifW", v) }
+    /** «Разделить на части»: max bytes per part (Telegram 2 GB by default). */
+    var splitLimit: Long get() = sp.getLong("splitLimit", com.dave.framegrabber.split.SplitPlan.TELEGRAM_LIMIT); set(v) = put { putLong("splitLimit", v) }
     var gifQuality: String get() = str("gifQ", "HIGH"); set(v) = put { putString("gifQ", v) }
     var gifSpeed: Float get() = sp.getFloat("gifSpeed", 1f); set(v) = put { putFloat("gifSpeed", v) }
     var gifBoomerang: Boolean get() = sp.getBoolean("gifBoom", false); set(v) = put { putBoolean("gifBoom", v) }

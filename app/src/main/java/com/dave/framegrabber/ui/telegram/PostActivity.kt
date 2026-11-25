@@ -151,7 +151,6 @@ class PostActivity : Activity() {
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressed() }
         findViewById<View>(R.id.btnSetup).setOnClickListener { setup() }
-        findViewById<View>(R.id.btnStats).setOnClickListener { startActivity(Intent(this, StatsActivity::class.java)) }
         findViewById<View>(R.id.btnSetupNow).setOnClickListener { setup() }
         tags = TagPicker(this, findViewById(R.id.tagArea), editTagSearch) { updatePreview() }
         findViewById<View>(R.id.btnEditTags).setOnClickListener { startActivity(Intent(this, TagsActivity::class.java)) }
