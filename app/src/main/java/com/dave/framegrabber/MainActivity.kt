@@ -171,6 +171,12 @@ class MainActivity : Activity() {
         list.adapter = grid
         list.itemsCanFocus = true
         list.selector = ColorDrawable(Color.TRANSPARENT)
+        list.setOnScrollListener(object : android.widget.AbsListView.OnScrollListener {
+            override fun onScrollStateChanged(v: android.widget.AbsListView, state: Int) {
+                bgView.scrolling = state != android.widget.AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+            }
+            override fun onScroll(v: android.widget.AbsListView, first: Int, visible: Int, total: Int) {}
+        })
 
         applyInsets()
         setupListeners()

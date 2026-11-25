@@ -80,7 +80,12 @@ class FileBrowserActivity : Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
-    private val thumbs = Executors.newFixedThreadPool(2)
+    /** Low-priority threads so thumbnail decoding never competes with scrolling. */
+    private val thumbs = Executors.newFixedThreadPool(2) { r ->
+        Thread { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND); r.run() }
+    }
+    private var flinging = false
+    private val dateFmt: DateFormat = DateFormat.getDateInstance(DateFormat.SHORT)
     private val thumbCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
@@ -141,6 +146,16 @@ class FileBrowserActivity : Activity() {
         list.selector = ColorDrawable(Color.TRANSPARENT)
         list.layoutAnimation = LayoutAnimationController(AnimationUtils.loadAnimation(this, R.anim.item_in), 0.06f)
         list.setOnItemClickListener { _, _, pos, _ -> onEntryClick(entries[pos]) }
+        list.setOnScrollListener(object : android.widget.AbsListView.OnScrollListener {
+            override fun onScrollStateChanged(v: android.widget.AbsListView, state: Int) {
+                bgView.scrolling = state != android.widget.AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+                val wasFling = flinging
+                flinging = state == android.widget.AbsListView.OnScrollListener.SCROLL_STATE_FLING
+                // after a fling, load thumbnails for whatever is now on screen
+                if (wasFling && !flinging) adapter.notifyDataSetChanged()
+            }
+            override fun onScroll(v: android.widget.AbsListView, first: Int, visible: Int, total: Int) {}
+        })
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressedCompat() }
         findViewById<View>(R.id.btnOther).setOnClickListener { pickWithOtherApp() }
@@ -525,7 +540,7 @@ class FileBrowserActivity : Activity() {
                     h.icon.setImageResource(R.drawable.ic_movie)
                     h.chevron.visibility = View.GONE
                     h.name.text = e.name
-                    val date = DateFormat.getDateInstance(DateFormat.SHORT).format(Date(e.dateMs))
+                    val date = dateFmt.format(Date(e.dateMs))
                     h.sub.text = listOfNotNull(Formatter.formatShortFileSize(this@FileBrowserActivity, e.size), date, e.sub)
                         .joinToString(" · ")
                     if (e.durationMs > 0) { h.badge.visibility = View.VISIBLE; h.badge.text = fmtDuration(e.durationMs) }
@@ -601,8 +616,9 @@ class FileBrowserActivity : Activity() {
         val cached = thumbCache.get(key)
         if (cached != null) { h.thumb.setImageBitmap(cached); h.thumb.alpha = 1f; return }
         h.thumb.setImageDrawable(null)
-        if (key in failedThumbs) return
+        if (key in failedThumbs || flinging) return // during a fling: load once it stops
         thumbs.execute {
+            if (h.key != key) return@execute // row was reused for another file meanwhile
             val b = runCatching {
                 val size = Size(256, 192)
                 if (e.file != null) ThumbnailUtils.createVideoThumbnail(e.file, size, null)

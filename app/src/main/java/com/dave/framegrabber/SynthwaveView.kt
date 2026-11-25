@@ -69,9 +69,26 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
     private val leaf = Path()
 
     private var horizon = 0f
-    private val startNs = System.nanoTime()
+    /** Animation clock: only advances while animating, so pausing/resuming doesn't jump. */
+    private var animTime = 0f
+    private var lastFrameNs = 0L
+
+    /** False while the screen is paused. */
     var running = true
-        set(v) { field = v; if (v) postInvalidateOnAnimation() }
+        set(v) { field = v; lastFrameNs = 0L; if (v) postInvalidateOnAnimation() }
+
+    /**
+     * True while a list on top is scrolling: the background freezes so all the GPU time goes to the
+     * scroll (the frozen picture is just re-composited, which is nearly free).
+     */
+    var scrolling = false
+        set(v) {
+            if (field == v) return
+            field = v; lastFrameNs = 0L
+            if (!v) postInvalidateOnAnimation()
+        }
+
+    private val animating get() = running && !scrolling && android.animation.ValueAnimator.areAnimatorsEnabled()
 
     init {
         // triangle indices: two triangles per quad
@@ -126,7 +143,10 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         if (w == 0f) return
-        val t = (System.nanoTime() - startNs) / 1e9f
+        val now = System.nanoTime()
+        if (animating && lastFrameNs != 0L) animTime += ((now - lastFrameNs) / 1e9f).coerceAtMost(0.05f)
+        lastFrameNs = now
+        val t = animTime
 
         // ---- sky
         c.drawRect(0f, 0f, w, horizon, skyPaint)
@@ -204,7 +224,7 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
         for (p in palms) drawPalm(c, w * p.xFrac, h, h * p.hFrac, p.lean, t + p.phase)
 
         // Respect the system "remove animations" / battery saver setting: then it's a still picture.
-        if (running && android.animation.ValueAnimator.areAnimatorsEnabled()) postInvalidateOnAnimation()
+        if (animating) postInvalidateOnAnimation()
     }
 
     /** Curved trunk + drooping fronds that sway a little. */
