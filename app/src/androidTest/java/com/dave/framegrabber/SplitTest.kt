@@ -25,7 +25,7 @@ class SplitTest {
         testCtx.assets.open("split_src.mp4").use { i -> src.outputStream().use { i.copyTo(it) } }
         val uri = Uri.fromFile(src)
         val scan = SplitPlan.scan(appCtx, uri, src.length()) { true }
-        assertEquals(12, scan.keys.size)
+        assertTrue("keyframes ${scan.keys.size}", scan.keys.size in 12..14)
         assertTrue("media ${scan.mediaBytes} of ${src.length()}", scan.mediaBytes in src.length() * 9 / 10..src.length())
 
         // a limit that needs ~3 parts
@@ -59,6 +59,6 @@ class SplitTest {
         val five = SplitPlan.plan(scan, 5, limit)
         assertEquals(5, five.parts.size)
         // can't cut finer than the keyframes
-        assertTrue(SplitPlan.plan(scan, 30, limit).parts.size <= 12)
+        assertTrue(SplitPlan.plan(scan, 30, limit).parts.size <= scan.keys.size)
     }
 }

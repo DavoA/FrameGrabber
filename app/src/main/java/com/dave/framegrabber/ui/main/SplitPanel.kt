@@ -199,7 +199,7 @@ class SplitPanel(private val s: MainScreen) {
             SplitState.start(s.act, SplitJob(uri, s.video.baseName, p.parts))
             showRunning()
         }
-        if (free < need + 200L * 1_048_576) {
+        if (free < need + 20L * 1_048_576) {
             AlertDialog.Builder(s.act)
                 .setTitle("Мало места")
                 .setMessage("Для частей нужно ${size(need)}, а свободно ${size(free)}. Освободи место или выбери другую папку в ⚙.")

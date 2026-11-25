@@ -147,8 +147,9 @@ class ScreenshotTest {
         Thread.sleep(500)
         while (com.dave.framegrabber.split.SplitState.running && System.currentTimeMillis() - ts < 60_000) Thread.sleep(300)
         Thread.sleep(800); shot("6d_split_done")
+        val splitHint = a.findViewById<android.widget.TextView>(R.id.txtSplitHint).text
         check(com.dave.framegrabber.split.SplitState.error == null) { "split error: ${com.dave.framegrabber.split.SplitState.error}" }
-        check(com.dave.framegrabber.split.SplitState.saved.size == partsShown) { "saved ${com.dave.framegrabber.split.SplitState.saved.size} of $partsShown" }
+        check(com.dave.framegrabber.split.SplitState.saved.size == partsShown) { "saved ${com.dave.framegrabber.split.SplitState.saved.size} of $partsShown; hint: $splitHint" }
         inst.runOnMainSync { main.screen.prefs.splitLimit = com.dave.framegrabber.split.SplitPlan.TELEGRAM_LIMIT; main.screen.split.onVideoChanged() }
         Thread.sleep(1500); shot("6_tools")
 
