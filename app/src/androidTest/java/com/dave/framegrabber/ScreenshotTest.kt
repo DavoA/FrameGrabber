@@ -173,8 +173,8 @@ class ScreenshotTest {
             m.setText("Model A"); post.findViewById<android.view.View>(R.id.btnAddModel).performClick()
             m.setText("Model B"); post.findViewById<android.view.View>(R.id.btnAddModel).performClick()
             // chosen in any order; the caption keeps the library order
-            listOf("hd", "догги", "блондинки", "натуральные").forEach { post.tags.toggle(it) }
-            post.tags.openCategory("Позы и виды секса")
+            listOf("hd", "догги", "блондинки", "натуральные").forEach { (post as com.dave.framegrabber.ui.telegram.PostActivity).tags.toggle(it) }
+            (post as com.dave.framegrabber.ui.telegram.PostActivity).tags.openCategory("Позы и виды секса")
             post.currentFocus?.clearFocus()
         }
         Thread.sleep(1500); shot("12_post")
