@@ -188,7 +188,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
-        capDir = File(cacheDir, "captures").apply {
+        // filesDir, not cacheDir: the system or cleaner apps may wipe the cache while the app is open
+        capDir = File(filesDir, "captures").apply {
             // keep frames if this screen is re-created while frames exist / a batch runs in the background
             if (CaptureStore.captures.isEmpty() && !BatchState.running) deleteRecursively()
             mkdirs()
@@ -1254,6 +1255,16 @@ class MainActivity : Activity() {
 
     private var exporting = false
 
+    /**
+     * Temp file for an export. The folder is (re)created every time: on some phones the app's cache
+     * folder gets wiped by the system or a cleaner app while the app is open.
+     */
+    private fun tempFile(name: String): File {
+        val dir = File(cacheDir, "export")
+        if (!dir.isDirectory && !dir.mkdirs()) error("Не удалось создать временную папку: ${dir.path}")
+        return File(dir, name).also { it.delete() }
+    }
+
     private fun startExport(title: String): Boolean {
         if (exporting) { toast("Подожди, идёт экспорт"); return false }
         exporting = true
@@ -1297,7 +1308,7 @@ class MainActivity : Activity() {
         if (!startExport("Делаю GIF…")) return
         Thread {
             val r = runCatching {
-                val tmp = File(cacheDir, "export.gif")
+                val tmp = tempFile("export.gif")
                 Exporters.gif(this, uri, from, to, fps, width, tmp) { exportProgress(it, "GIF"); true }
                 val name = Naming.stem(prefs.namePattern, baseName, from, 1) + ".gif"
                 Output.save(this, tmp, name, "image/gif", Output.Kind.IMAGE).also { tmp.delete() } to "image/gif"
@@ -1313,7 +1324,7 @@ class MainActivity : Activity() {
         if (!startExport("Вырезаю клип…")) return
         Thread {
             val r = runCatching {
-                val tmp = File(cacheDir, "export.mp4")
+                val tmp = tempFile("export.mp4")
                 Exporters.clip(this, uri, from, to, tmp) { exportProgress(it, "Клип"); true }
                 val name = Naming.stem(prefs.namePattern, baseName, from, 1) + "_clip.mp4"
                 Output.save(this, tmp, name, "video/mp4", Output.Kind.VIDEO).also { tmp.delete() } to "video/mp4"
@@ -1336,7 +1347,7 @@ class MainActivity : Activity() {
                 exportProgress(0.3f, "Лист")
                 val bmp = ContactSheet.build(snapshot, baseName, sub)
                 exportProgress(0.8f, "Лист")
-                val tmp = File(cacheDir, "sheet.jpg")
+                val tmp = tempFile("sheet.jpg")
                 tmp.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
                 bmp.recycle()
                 val name = Naming.stem(prefs.namePattern, baseName, 0, 1) + "_sheet.jpg"

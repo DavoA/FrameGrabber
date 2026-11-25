@@ -191,16 +191,19 @@ object Exporters {
             val h = (w * e.height / max(1, e.width).toFloat()).roundToInt().coerceAtLeast(2) and 1.inv()
             val step = 1_000_000L / fps
             val count = ((toUs - fromUs) / step + 1).toInt().coerceAtLeast(1)
+            dest.parentFile?.mkdirs()
+            var frames = 0
             BufferedOutputStream(dest.outputStream()).use { os ->
                 val g = GifEncoder(os, w, h, 1000 / fps)
                 for (i in 0 until count) {
                     val t = fromUs + i * step
                     val b = e.scaledFrame(t, w, h, exact = true) ?: e.scaledFrame(t, w, h, exact = false) ?: continue
-                    g.addFrame(b)
+                    g.addFrame(b); frames++
                     if (!progress((i + 1f) / count)) break
                 }
                 g.finish()
             }
+            if (frames == 0) error("Не удалось получить ни одного кадра из этого отрезка")
         }
     }
 
@@ -209,6 +212,7 @@ object Exporters {
      * at or before [fromUs] (that's how video files work without re-encoding).
      */
     fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean) {
+        dest.parentFile?.mkdirs()
         val ex = MediaExtractor()
         ex.setDataSource(ctx, uri, null)
         val muxer = MediaMuxer(dest.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
