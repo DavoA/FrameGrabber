@@ -19,9 +19,24 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
+    // One fixed key for every build: a new version installs over the old one (keeps settings and projects).
+    // The key is in the repo on purpose (personal app, chosen by Dave).
+    signingConfigs {
+        create("fixed") {
+            storeFile = file("signing/framegrabber.jks")
+            storePassword = "framegrabber"
+            keyAlias = "framegrabber"
+            keyPassword = "framegrabber"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("fixed")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("fixed")
         }
     }
 
