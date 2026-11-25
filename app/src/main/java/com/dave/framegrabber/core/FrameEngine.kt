@@ -182,6 +182,13 @@ class FrameEngine(context: Context, private val uri: Uri) : Closeable {
         return true
     }
 
+    private fun reopenFfmpeg(): FFmpegMediaMetadataRetriever? {
+        val fresh = runCatching { openFfmpeg(ctx, uri).first }.getOrNull() ?: return null
+        runCatching { ff?.release() }
+        ff = fresh
+        return fresh
+    }
+
     /** Full-resolution frame. exact=true decodes the precise frame (slower). */
     fun frame(us: Long, exact: Boolean = true): Bitmap? =
         frameOnce(us, exact) ?: if (exact && switchToFfmpeg()) frameOnce(us, exact) else null
@@ -189,8 +196,10 @@ class FrameEngine(context: Context, private val uri: Uri) : Closeable {
     private fun frameOnce(us: Long, exact: Boolean): Bitmap? {
         val t = us.coerceIn(0L, lastUs)
         ff?.let { f ->
-            return argb(runCatching { f.getFrameAtTime(t, ffOption(exact)) }.getOrNull()
-                ?: if (!exact) runCatching { f.getFrameAtTime(t, ffOption(true)) }.getOrNull() else null)
+            fun get(x: FFmpegMediaMetadataRetriever) = runCatching { x.getFrameAtTime(t, ffOption(exact)) }.getOrNull()
+                ?: if (!exact) runCatching { x.getFrameAtTime(t, ffOption(true)) }.getOrNull() else null
+            // FFmpeg sometimes loses its place after a far seek: once, start over with a fresh decoder
+            return argb(get(f) ?: reopenFfmpeg()?.let { get(it) })
         }
         val r = r ?: return null
         return if (Build.VERSION.SDK_INT >= 30) {
