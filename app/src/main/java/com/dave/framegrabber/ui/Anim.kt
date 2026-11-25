@@ -78,8 +78,9 @@ fun View.pulse(low: Float, ms: Long): ObjectAnimator =
         duration = ms; repeatMode = ValueAnimator.REVERSE; repeatCount = ValueAnimator.INFINITE; start()
     }
 
-/** Rise from below, used for staggered screen entrances. */
+/** Appear rising from below (also makes the view visible). Used for staggered entrances. */
 fun View.riseIn(delay: Long, distDp: Float = 36f) {
+    visibility = View.VISIBLE
     alpha = 0f
     translationY = distDp * dp
     anim().alpha(1f).translationY(0f).setStartDelay(delay).setDuration(480)
