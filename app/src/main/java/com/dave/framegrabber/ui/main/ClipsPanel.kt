@@ -148,22 +148,35 @@ class ClipsPanel(private val s: MainScreen) {
         val e = s.video.requireEngine() ?: return
         val uri = s.video.uri ?: return
         val (from, to) = s.rangeClips.require(e) ?: return
-        val name = Naming.stem(s.prefs.namePattern, s.video.baseName, from, 1) + "_clip.mp4"
-        clipJob.launch("Клип", "Вырезаю клип…", "video/mp4", onDone = { made(it, "video/mp4", name, to - from) }) {
-            Output.write(s.act, name, "video/mp4", Output.Kind.VIDEO) { t ->
+        // MP4, or WebM for VP8/VP9 video; formats Android can't read get a clear message here
+        val fmt = runCatching { Exporters.clipFormat(s.act, uri) }.getOrElse {
+            AlertDialog.Builder(s.act).setTitle("Клип не получится").setMessage(it.message)
+                .setPositiveButton("Сделать GIF") { _, _ -> gif() }
+                .setNegativeButton("OK", null).show()
+            return
+        }
+        val name = Naming.stem(s.prefs.namePattern, s.video.baseName, from, 1) + "_clip." + fmt.ext
+        var result: Exporters.ClipResult? = null
+        clipJob.launch("Клип", "Вырезаю клип…", fmt.mime, onDone = {
+            made(it, fmt.mime, name, to - from)
+            result?.droppedAudio?.takeIf { d -> d.isNotEmpty() }?.let { d ->
+                s.act.toast("Клип без звука: звук ${d.joinToString()} нельзя сохранить в ${fmt.ext.uppercase()} без перекодирования")
+            }
+        }) {
+            Output.write(s.act, name, fmt.mime, Output.Kind.VIDEO) { t ->
                 val pfd = t.fd()
                 if (pfd != null) {
                     // MediaMuxer writes straight into the destination file
                     pfd.use { fd ->
-                        Exporters.clip(s.act, uri, from, to,
-                            { MediaMuxer(fd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4) }
+                        result = Exporters.clip(s.act, uri, from, to,
+                            { MediaMuxer(fd.fileDescriptor, fmt.muxer) }
                         ) { clipJob.report(it, "Клип"); true }
                     }
                 } else {
                     // folder without read/write access: build in the app's permanent storage, then copy
-                    val tmp = File(File(s.act.filesDir, "export").apply { mkdirs() }, "clip.mp4")
+                    val tmp = File(File(s.act.filesDir, "export").apply { mkdirs() }, "clip." + fmt.ext)
                     try {
-                        Exporters.clip(s.act, uri, from, to, tmp) { clipJob.report(it, "Клип"); true }
+                        result = Exporters.clip(s.act, uri, from, to, tmp) { clipJob.report(it, "Клип"); true }
                         t.stream().use { o -> tmp.inputStream().use { it.copyTo(o) } }
                     } finally { tmp.delete() }
                 }

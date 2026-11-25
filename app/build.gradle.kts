@@ -52,6 +52,11 @@ android {
 dependencies {
     // OCR ("copy text from a frame"): Tesseract, works offline, reads Latin, Cyrillic and Armenian
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.8.0")
+    // FFmpeg frame decoder for files Android can't open itself (AVI, FLV, MPG, WMV, some TS)
+    implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-core:1.0.19")
+    implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-native-arm64-v8a:1.0.19")
+    implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-native-armeabi-v7a:1.0.19")
+    implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-native-x86_64:1.0.19")
     // on-emulator tests only
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

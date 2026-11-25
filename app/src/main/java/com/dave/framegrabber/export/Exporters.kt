@@ -84,14 +84,43 @@ object Exporters {
      * MP4 clip by remuxing (no re-encoding = original quality and sound). Starts at the keyframe
      * at or before [fromUs] (that's how video files work without re-encoding).
      */
-    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean) =
-        clip(ctx, uri, fromUs, toUs, { MediaMuxer(dest.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4) }, progress)
+    /** Clip container: WebM for VP8/VP9 video (MP4 can't hold them), MP4 for everything else. */
+    class ClipFormat(val ext: String, val mime: String, val muxer: Int)
 
-    /** [makeMuxer] lets the clip be written straight into the destination file descriptor. */
-    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, makeMuxer: () -> MediaMuxer, progress: (Float) -> Boolean) {
+    /** Which container the clip will be; throws a clear error if Android can't read the file. */
+    fun clipFormat(ctx: Context, uri: Uri): ClipFormat {
+        val ex = MediaExtractor()
+        try {
+            runCatching { ex.setDataSource(ctx, uri, null) }.onFailure {
+                throw IllegalStateException("Клип из этого формата сделать нельзя: Android не умеет читать такой файл. GIF и кадры работают.")
+            }
+            val video = (0 until ex.trackCount).map { ex.getTrackFormat(it).getString(MediaFormat.KEY_MIME) ?: "" }
+                .firstOrNull { it.startsWith("video/") }
+                ?: throw IllegalStateException("Клип из этого файла сделать нельзя: Android не видит в нём видеодорожку. GIF и кадры работают.")
+            return if (video == MediaFormat.MIMETYPE_VIDEO_VP8 || video == MediaFormat.MIMETYPE_VIDEO_VP9)
+                ClipFormat("webm", "video/webm", MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM)
+            else ClipFormat("mp4", "video/mp4", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        } finally { ex.release() }
+    }
+
+    /** What happened to the sound. */
+    class ClipResult(val droppedAudio: List<String>)
+
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean): ClipResult {
+        val fmt = clipFormat(ctx, uri)
+        return clip(ctx, uri, fromUs, toUs, { MediaMuxer(dest.path, fmt.muxer) }, progress)
+    }
+
+    /**
+     * Cuts without re-encoding. [makeMuxer] lets the clip be written straight into the destination
+     * file descriptor. Audio the container can't hold (MP3, AC3, Vorbis in MP4…) is left out, see
+     * [ClipResult.droppedAudio].
+     */
+    fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, makeMuxer: () -> MediaMuxer, progress: (Float) -> Boolean): ClipResult {
         val ex = MediaExtractor()
         ex.setDataSource(ctx, uri, null)
         val muxer = makeMuxer()
+        val dropped = mutableListOf<String>()
         try {
             val map = HashMap<Int, Int>()
             var maxIn = 1 shl 20
@@ -102,9 +131,15 @@ object Exporters {
                 if (mime.startsWith("video/") && f.containsKey(MediaFormat.KEY_ROTATION)) {
                     muxer.setOrientationHint(f.getInteger(MediaFormat.KEY_ROTATION))
                 }
+                val added = runCatching { muxer.addTrack(f) }
+                if (added.isFailure) {
+                    if (mime.startsWith("audio/")) { dropped += mime.removePrefix("audio/"); continue }
+                    throw IllegalStateException("Видео в кодеке ${mime.removePrefix("video/")} нельзя сохранить клипом без перекодирования. GIF и кадры работают.")
+                }
+                val out = added.getOrThrow()
                 if (f.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) maxIn = max(maxIn, f.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE))
                 ex.selectTrack(i)
-                map[i] = muxer.addTrack(f)
+                map[i] = out
             }
             require(map.isNotEmpty()) { "Нет дорожек для экспорта" }
             val active = map.keys.toMutableSet()
@@ -136,5 +171,6 @@ object Exporters {
             runCatching { muxer.release() }
             ex.release()
         }
+        return ClipResult(dropped)
     }
 }

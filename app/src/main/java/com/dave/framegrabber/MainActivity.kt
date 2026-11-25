@@ -28,6 +28,11 @@ class MainActivity : Activity() {
         private const val REQ_TREE = 2
         private const val REQ_MULTI = 3
         private const val REQ_POST = 4
+        /** What the pickers ask other apps for. */
+        val VIDEO_MIME_TYPES = arrayOf(
+            "video/*", "application/x-matroska", "application/mp4", "application/x-mpegts",
+            "application/vnd.rn-realmedia", "application/x-flash-video", "application/ogg"
+        )
     }
 
     lateinit var bgView: SynthwaveView
@@ -147,7 +152,9 @@ class MainActivity : Activity() {
     private fun pickWithOtherApp() {
         val get = Intent(Intent.ACTION_GET_CONTENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "video/*"
+            // some apps label MKV/AVI/TS files as "application/…", so ask for those too
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, VIDEO_MIME_TYPES)
         }
         @Suppress("DEPRECATION")
         startActivityForResult(Intent.createChooser(get, "Выбрать видео через…"), REQ_PICK)

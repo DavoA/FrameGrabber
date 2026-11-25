@@ -424,7 +424,8 @@ class FileBrowserActivity : Activity() {
 
     private fun pickWithOtherApp() {
         val get = Intent(Intent.ACTION_GET_CONTENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE); type = "video/*"
+            addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, com.dave.framegrabber.MainActivity.VIDEO_MIME_TYPES)
         }
         @Suppress("DEPRECATION")
         startActivityForResult(Intent.createChooser(get, "Выбрать видео через…"), REQ_OTHER)

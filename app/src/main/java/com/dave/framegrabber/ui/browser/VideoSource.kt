@@ -23,7 +23,8 @@ sealed class Entry {
 object VideoSource {
     private val VIDEO_EXT = setOf(
         "mp4", "m4v", "mkv", "webm", "mov", "3gp", "3g2", "avi", "ts", "mts", "m2ts",
-        "flv", "wmv", "mpg", "mpeg", "ogv", "vob"
+        "flv", "wmv", "mpg", "mpeg", "ogv", "vob", "m2t", "m2v", "mpe", "divx", "xvid", "asf", "rm", "rmvb",
+        "f4v", "mxf", "dv", "y4m", "hevc", "h264", "264", "265", "av1", "ivf"
     )
 
     /** Sub-folders (A→Z) and videos (newest first) in [dir]; hidden files skipped. */
