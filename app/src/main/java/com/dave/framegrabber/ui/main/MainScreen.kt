@@ -8,6 +8,7 @@ import com.dave.framegrabber.R
 import com.dave.framegrabber.batch.BatchState
 import com.dave.framegrabber.data.CaptureStore
 import com.dave.framegrabber.data.Prefs
+import com.dave.framegrabber.data.Projects
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -20,6 +21,8 @@ import java.util.concurrent.Executors
  *  - [video]   — the opened video: loading, preview, timeline, frame stepping, playback with sound
  *  - [viewer]  — a captured frame opened full screen (zoom, flip, share/save/delete/text)
  *  - [grid]    — page «Кадры»: the frames grid + "Галерея / ZIP / Очистить"
+ *  - [marks]   — marks on the timeline (🔖), "take a frame at every mark"
+ *  - [project] — project history: each video keeps its frames, marks, ranges (🕘 in the top bar)
  *  - [clips]   — page «Клипы»: GIF and MP4 clip from a range + the ones made so far
  *  - [batch]   — «Пачка кадров» (page «Инструменты»): many frames at once (background service)
  *  - [sheet]   — «Лист кадров» (page «Инструменты»): all frames in one image
@@ -42,12 +45,16 @@ class MainScreen(val act: MainActivity) {
     val io: ExecutorService = Executors.newSingleThreadExecutor()
 
     /**
-     * Where captured frames are kept until saved. filesDir, not cacheDir: some phones wipe the
-     * cache while the app is open. Cleared on start unless frames exist / a batch is running.
+     * Where new frames go: the open video's project folder (filesDir, not cacheDir: some phones
+     * wipe the cache while the app is open). See [ProjectController].
      */
-    val capDir: File = File(act.filesDir, "captures").apply {
-        if (CaptureStore.captures.isEmpty() && !BatchState.running) deleteRecursively()
-        mkdirs()
+    val capDir: File
+        get() = CaptureStore.project?.let { Projects.dir(act, it.id) }?.apply { mkdirs() }
+            ?: File(act.filesDir, "captures").apply { mkdirs() }
+
+    init {
+        // frames of older versions (before projects) lived here and were temporary
+        if (CaptureStore.project == null && !BatchState.running) File(act.filesDir, "captures").deleteRecursively()
     }
 
     /** Find a view on the screen (any page). */
@@ -61,6 +68,8 @@ class MainScreen(val act: MainActivity) {
     val video = VideoController(this)
     val viewer = ViewerController(this)
     val grid = CapturesController(this)
+    val marks = MarksPanel(this)
+    val project = ProjectController(this)
     val rangeClips = RangeCard(this, h(R.id.rangeClips)) { clips.updateGifInfo() }
     val rangeBatch = RangeCard(this, h(R.id.rangeBatch)) { batch.updateHint() }
     val format = CaptureFormat(this)
@@ -79,6 +88,8 @@ class MainScreen(val act: MainActivity) {
         effects.startIdle()
         freezeBackgroundWhileScrolling(h(R.id.pageTools))
         freezeBackgroundWhileScrolling(h(R.id.pageClips))
+        // the screen was recreated while the app kept running: reopen the project's video
+        CaptureStore.project?.let { video.load(it.uri) }
     }
 
     /** The animated background pauses while a page scrolls (smoother scrolling). */
@@ -98,6 +109,7 @@ class MainScreen(val act: MainActivity) {
 
     fun onPause() {
         video.pausePlayback()
+        project.saveNow()
         grid.onPause()
         batch.onPause()
     }

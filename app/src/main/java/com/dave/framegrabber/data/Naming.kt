@@ -35,4 +35,14 @@ object Naming {
             .replace("{date}", date)
         return s.replace(bad, "_").trim().take(120).ifEmpty { "frame_${us / 1000}" }
     }
+
+    /** Video file name without extension, safe for file names ("My clip (2).mp4" -> "My_clip_2_"). */
+    fun videoName(ctx: android.content.Context, uri: android.net.Uri): String {
+        val name = runCatching {
+            ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment ?: "video"
+        return name.substringBeforeLast('.').replace(Regex("[^\\p{L}\\p{N}._-]+"), "_").take(60).ifEmpty { "video" }
+    }
 }

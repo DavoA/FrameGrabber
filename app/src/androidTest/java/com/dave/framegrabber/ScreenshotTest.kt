@@ -71,6 +71,35 @@ class ScreenshotTest {
         }
         Thread.sleep(800); shot("3_captured")
 
+        // 3b. marks on the timeline
+        listOf(500_000L, 2_500_000L, 3_200_000L).forEach { t ->
+            inst.runOnMainSync { main.screen.video.seekTo(t) }
+            Thread.sleep(400)
+            inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnMark).performClick() }
+            Thread.sleep(500)
+        }
+        Thread.sleep(800); shot("3b_marks")
+
+        // project history: open another video, then come back — frames and marks are restored
+        val f2 = File(appCtx.cacheDir, "h264_rot.mp4")
+        inst.context.assets.open("h264_rot.mp4").use { i -> f2.outputStream().use { i.copyTo(it) } }
+        inst.runOnMainSync { main.screen.video.load(Uri.fromFile(f2)) }
+        Thread.sleep(3000)
+        inst.runOnMainSync {
+            check(CaptureStore.captures.isEmpty()) { "other video should start empty" }
+            check(main.screen.marks.marks.isEmpty())
+            main.screen.video.load(Uri.fromFile(f))
+        }
+        Thread.sleep(4000)
+        inst.runOnMainSync {
+            check(CaptureStore.captures.size == 4) { "restored frames: ${CaptureStore.captures.size}" }
+            check(main.screen.marks.marks.size == 3) { "restored marks: ${main.screen.marks.marks}" }
+        }
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnHistory).performClick() }
+        Thread.sleep(2500); shot("3c_history")
+        inst.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+        Thread.sleep(1000)
+
         // 4. «Кадры» page
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navFrames).performClick() }
         Thread.sleep(1500); shot("4_grid")
@@ -103,6 +132,23 @@ class ScreenshotTest {
         // 6. «Инструменты» page
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(1500); shot("6_tools")
+
+        // 6b. several videos at once (background service), saved to their projects + gallery
+        val job = BatchJob(
+            listOf(BatchVideo(Uri.fromFile(f), "h264", null), BatchVideo(Uri.fromFile(f2), "h264_rot", null)),
+            BatchRule(byCount = true, value = 3.0), OutputSpec(null, Fmt.JPG, 90), Prefs(appCtx).namePattern,
+            skipBlurry = false, skipDupes = false, sharpest = false, toGallery = true
+        )
+        inst.runOnMainSync { BatchState.start(a, job) }
+        val t0 = System.currentTimeMillis()
+        while (BatchState.running && System.currentTimeMillis() - t0 < 90_000) Thread.sleep(500)
+        Thread.sleep(1500); shot("6b_multi_batch")
+        check(!BatchState.running) { "multi batch didn't finish" }
+        check(BatchState.done == 6) { "multi batch: ${BatchState.summary}" }
+        inst.runOnMainSync { check(CaptureStore.captures.size == 7) { "open project got ${CaptureStore.captures.size}" } }
+        Thread.sleep(2000)   // the other project's file is written on the disk thread
+        val other = Projects.load(appCtx, Projects.idOf(f2.path))
+        check(other?.frames?.size == 3) { "other project frames: ${other?.frames?.size}" }
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navCapture).performClick() }
         Thread.sleep(800)
 
@@ -133,6 +179,23 @@ class ScreenshotTest {
         Thread.sleep(3000); shot("7_browser")
         inst.runOnMainSync { b.findViewById<android.widget.EditText>(R.id.editSearch).setText("synth") }
         Thread.sleep(3000); shot("8_search")
-        b.finish()
+        b.finish(); Thread.sleep(800)
+
+        // 8b. multi-select (for «Несколько видео сразу»)
+        val m = launch(Intent().setClassName(appCtx, FileBrowserActivity::class.java.name)
+            .putExtra(FileBrowserActivity.EXTRA_MULTI, true))
+        Thread.sleep(2500)
+        inst.runOnMainSync { m.findViewById<android.widget.EditText>(R.id.editSearch).setText("synth") }
+        Thread.sleep(3000)
+        inst.runOnMainSync {
+            val list = m.findViewById<ListView>(R.id.list)
+            for (i in 0 until list.adapter.count) {
+                if (list.adapter.getItem(i) is com.dave.framegrabber.ui.browser.Entry.Video) {
+                    list.performItemClick(list.getChildAt(i - list.firstVisiblePosition), i, i.toLong()); break
+                }
+            }
+        }
+        Thread.sleep(1500); shot("8b_multi_select")
+        m.finish()
     }
 }

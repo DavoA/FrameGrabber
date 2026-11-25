@@ -83,6 +83,17 @@
                 android:paddingEnd="20dp"
                 android:text="Снять пачку кадров" />
 
+            <!-- the same settings over several videos at once -->
+            <Button
+                android:id="@+id/btnBatchMulti"
+                style="@style/BtnSecondary"
+                android:layout_marginTop="10dp"
+                android:drawableStart="@drawable/ic_video_library"
+                android:drawableTint="@color/accent"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Несколько видео сразу…" />
+
             <ProgressBar
                 android:id="@+id/progressBatch"
                 style="@android:style/Widget.Material.ProgressBar.Horizontal"

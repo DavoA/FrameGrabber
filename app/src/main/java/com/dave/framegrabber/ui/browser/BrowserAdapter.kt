@@ -30,7 +30,11 @@ import java.util.concurrent.Executors
  * Rows of the file browser: folders, videos (with thumbnail, duration, size, date) and section titles.
  * Thumbnails are made on low-priority threads, cached, and not made during a fling.
  */
-class BrowserAdapter(private val act: Activity, private val entries: List<Entry>) : BaseAdapter() {
+class BrowserAdapter(
+    private val act: Activity, private val entries: List<Entry>,
+    /** Multi-select: keys ([Entry.Video.key]) of the chosen videos; null = single pick. */
+    private val selected: Set<String>? = null,
+) : BaseAdapter() {
 
     /** True while the list is flinging: thumbnails wait until it stops. */
     var flinging = false
@@ -46,7 +50,7 @@ class BrowserAdapter(private val act: Activity, private val entries: List<Entry>
     private val dateFmt: DateFormat = DateFormat.getDateInstance(DateFormat.SHORT)
 
     private class Holder(
-        val thumb: ImageView, val icon: ImageView, val badge: TextView,
+        val row: View, val thumb: ImageView, val icon: ImageView, val badge: TextView,
         val name: TextView, val sub: TextView, val chevron: ImageView
     ) { var key: String? = null }
 
@@ -79,6 +83,9 @@ class BrowserAdapter(private val act: Activity, private val entries: List<Entry>
                 h.key = null
                 h.thumb.setImageDrawable(null)
                 h.icon.setImageResource(R.drawable.ic_folder)
+                h.chevron.setImageResource(R.drawable.ic_chev_right)
+                h.chevron.imageTintList = ColorStateList.valueOf(act.getColor(R.color.textDim))
+                h.row.foreground = null
                 h.badge.visibility = View.GONE
                 h.chevron.visibility = View.VISIBLE
                 h.name.text = e.file.name
@@ -86,7 +93,11 @@ class BrowserAdapter(private val act: Activity, private val entries: List<Entry>
             }
             is Entry.Video -> {
                 h.icon.setImageResource(R.drawable.ic_movie)
-                h.chevron.visibility = View.GONE
+                val on = selected?.contains(e.key) == true
+                h.chevron.setImageResource(R.drawable.ic_check)
+                h.chevron.imageTintList = ColorStateList.valueOf(act.getColor(R.color.accent))
+                h.chevron.visibility = if (on) View.VISIBLE else View.GONE
+                h.row.foreground = if (on) act.getDrawable(R.drawable.fg_selected) else null
                 h.name.text = e.name
                 h.sub.text = listOfNotNull(Formatter.formatShortFileSize(act, e.size), dateFmt.format(Date(e.dateMs)), e.sub)
                     .joinToString(" · ")
@@ -184,7 +195,7 @@ class BrowserAdapter(private val act: Activity, private val entries: List<Entry>
         }
         row.addView(box); row.addView(texts); row.addView(chevron)
         outer.addView(row)
-        outer.tag = Holder(thumb, icon, badge, name, sub, chevron)
+        outer.tag = Holder(row, thumb, icon, badge, name, sub, chevron)
         return outer
     }
 }

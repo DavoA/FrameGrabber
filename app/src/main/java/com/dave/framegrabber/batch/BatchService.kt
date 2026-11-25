@@ -61,7 +61,7 @@ class BatchService : Service() {
         }
         val job = BatchState.pending
         BatchState.pending = null
-        val n = progressNotification(0, job?.times?.size ?: 0)
+        val n = progressNotification(0, BatchState.total)
         if (Build.VERSION.SDK_INT >= 35) {
             startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING)
         } else if (Build.VERSION.SDK_INT >= 29) {
@@ -85,7 +85,11 @@ class BatchService : Service() {
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_burst)
             .setContentTitle("Снимаю кадры…")
-            .setContentText(if (total > 0) "Кадр $i из $total" else "Подготовка")
+            .setContentText(buildString {
+                val st = BatchState
+                if (st.videos > 1) append("Видео ${st.video} из ${st.videos} · ")
+                append(if (total > 0) "кадр $i из $total" else "подготовка")
+            }.replaceFirstChar { it.uppercase() })
             .setProgress(total, i, total == 0)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -96,15 +100,33 @@ class BatchService : Service() {
 
     private fun run(job: BatchJob) {
         val st = BatchState
-        val engine = runCatching { FrameEngine(this, job.uri) }.getOrElse {
-            st.firstError = it.message ?: it.javaClass.simpleName
-            finish(); return
+        for ((vi, v) in job.videos.withIndex()) {
+            if (st.cancel.get()) break
+            st.video = vi + 1; st.videoName = v.name
+            st.index = 0
+            runCatching { runVideo(job, v) }.onFailure {
+                // a broken video doesn't stop the others
+                st.failed++
+                if (st.firstError == null) st.firstError = "${v.name}: ${it.message ?: it.javaClass.simpleName}"
+            }
         }
-        val sharpHistory = ArrayList<Double>()
-        var lastHash: Long? = null
-        var shotIndex = CaptureStore.captures.size
+        finish()
+    }
+
+    private fun runVideo(job: BatchJob, v: BatchVideo) {
+        val st = BatchState
+        val engine = FrameEngine(this, v.uri)
         try {
-            for ((i, t0) in job.times.withIndex()) {
+            val times = v.times ?: job.rule.times(0, engine.lastUs, engine.frameUs).getOrThrow()
+            st.total = times.size
+            progress(0)
+            val pid = v.projectId
+            val dir = Projects.dir(this, pid).apply { mkdirs() }
+            val sharpHistory = ArrayList<Double>()
+            var lastHash: Long? = null
+            var shotIndex = if (CaptureStore.project?.id == pid) CaptureStore.captures.size
+                            else Projects.load(this, pid)?.frames?.size ?: 0
+            for ((i, t0) in times.withIndex()) {
                 if (st.cancel.get()) break
                 var t = t0
                 // filters work on a small probe frame (fast)
@@ -128,22 +150,23 @@ class BatchService : Service() {
                 }
                 if (job.sharpest) {
                     // stay inside this frame's slot so neighbours don't collapse onto the same moment
-                    val gap = if (job.times.size > 1) (job.times[1] - job.times[0]) / 3 else 500_000L
+                    val gap = if (times.size > 1) (times[1] - times[0]) / 3 else 500_000L
                     t = FrameCapture.sharpestNear(engine, t, windowUs = gap.coerceIn(0L, 500_000L), steps = 5)
                 }
                 val r = runCatching {
-                    val stem = Naming.stem(job.pattern, job.videoName, t, ++shotIndex)
-                    val shot = FrameCapture.capture(engine, t, job.spec, job.dir, job.videoName, stem)
-                    Capture(shot.file, shot.thumb, t, job.spec.format, shot.width, shot.height, shot.exact, t != t0)
+                    val stem = Naming.stem(job.pattern, v.name, t, ++shotIndex)
+                    val shot = FrameCapture.capture(engine, t, job.spec, dir, v.name, stem)
+                    val c = Capture(shot.file, shot.thumb, t, job.spec.format, shot.width, shot.height, shot.exact, t != t0)
+                    if (job.toGallery) c.galleryUri = Output.save(this, c.file, c.file.name, c.fmt.mime, Output.Kind.IMAGE, sub = v.name)
+                    c
                 }
-                r.onSuccess { c -> st.done++; ui.post { CaptureStore.add(c) } }
+                r.onSuccess { c -> st.done++; ui.post { CaptureStore.addTo(this, pid, v.ref, v.isPath, v.name, c) } }
                     .onFailure { st.failed++; if (st.firstError == null) st.firstError = it.message ?: it.javaClass.simpleName }
                 progress(i + 1)
             }
         } finally {
             engine.close()
         }
-        finish()
     }
 
     private fun progress(i: Int) {
@@ -160,6 +183,7 @@ class BatchService : Service() {
         val st = BatchState
         val text = buildString {
             append(if (st.cancel.get()) "Остановлено: снято ${st.done}" else "Готово: снято ${st.done}")
+            if (st.videos > 1) append(" из ${st.videos} видео")
             if (st.blurry > 0) append(", размытых пропущено ${st.blurry}")
             if (st.dupes > 0) append(", повторов пропущено ${st.dupes}")
             if (st.failed > 0) append(", ошибок ${st.failed}")

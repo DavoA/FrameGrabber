@@ -39,6 +39,9 @@ class SettingsDialog(private val s: MainScreen) {
 
     fun show() {
         val v = s.act.layoutInflater.inflate(R.layout.dialog_settings, null)
+        v.findViewById<android.widget.TextView>(R.id.txtVersion).text = runCatching {
+            "Кадры из видео · версия " + s.act.packageManager.getPackageInfo(s.act.packageName, 0).versionName
+        }.getOrDefault("")
         bindTheme(v)
         bindQuality(v)
         bindNames(v)

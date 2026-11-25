@@ -50,14 +50,15 @@ object Output {
      * Creates the output file directly in the destination (picked folder or MediaStore), so nothing
      * has to go through the app's cache folder (which some phones wipe while the app is running).
      */
-    fun create(ctx: Context, name: String, mime: String, kind: Kind): Target {
+    fun create(ctx: Context, name: String, mime: String, kind: Kind, sub: String? = null): Target {
         val prefs = Prefs(ctx)
         val tree = prefs.folderTree
         val cr = ctx.contentResolver
         if (tree != null && kind != Kind.DOWNLOAD) {
             val made = runCatching {
                 val treeUri = Uri.parse(tree)
-                val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
+                val top = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
+                val parent = if (sub == null) top else subFolder(ctx, treeUri, top, sub)
                 DocumentsContract.createDocument(cr, parent, mime, name)
             }.getOrNull()
             if (made != null) return Target(ctx, made, mediaStore = false)
@@ -71,7 +72,7 @@ object Output {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "$dir/${Prefs.ALBUM}")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "$dir/${Prefs.ALBUM}" + (sub?.let { "/$it" } ?: ""))
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = cr.insert(col, values) ?: error("Не удалось создать файл в $dir/${Prefs.ALBUM}")
@@ -79,15 +80,41 @@ object Output {
     }
 
     /** Writes into a new destination file; cleans up if [write] fails. */
-    inline fun write(ctx: Context, name: String, mime: String, kind: Kind, write: (Target) -> Unit): Uri {
-        val t = create(ctx, name, mime, kind)
+    inline fun write(ctx: Context, name: String, mime: String, kind: Kind, sub: String? = null, write: (Target) -> Unit): Uri {
+        val t = create(ctx, name, mime, kind, sub)
         try { write(t); t.finish() } catch (e: Throwable) { t.abort(); throw e }
         return t.uri
     }
 
     /** Copies [src] to the destination, returns its Uri. */
-    fun save(ctx: Context, src: File, name: String, mime: String, kind: Kind): Uri =
-        write(ctx, name, mime, kind) { t -> t.stream().use { o -> src.inputStream().use { it.copyTo(o) } } }
+    fun save(ctx: Context, src: File, name: String, mime: String, kind: Kind, sub: String? = null): Uri =
+        write(ctx, name, mime, kind, sub) { t -> t.stream().use { o -> src.inputStream().use { it.copyTo(o) } } }
+
+    /** Picked folder + "/sub" (found or created once, then remembered). */
+    private val subCache = HashMap<String, Uri>()
+
+    @Synchronized
+    private fun subFolder(ctx: Context, treeUri: Uri, top: Uri, sub: String): Uri {
+        val key = "$treeUri|$sub"
+        subCache[key]?.let { return it }
+        val cr = ctx.contentResolver
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, DocumentsContract.getDocumentId(top))
+        val found = cr.query(children, arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE), null, null, null)?.use { c ->
+            var r: Uri? = null
+            while (c.moveToNext()) {
+                if (c.getString(1) == sub && c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) {
+                    r = DocumentsContract.buildDocumentUriUsingTree(treeUri, c.getString(0)); break
+                }
+            }
+            r
+        }
+        val dir = found ?: DocumentsContract.createDocument(cr, top, DocumentsContract.Document.MIME_TYPE_DIR, sub)
+            ?: error("Не удалось создать папку $sub")
+        subCache[key] = dir
+        return dir
+    }
 
     /** Human description of where images go. */
     fun describe(ctx: Context): String {

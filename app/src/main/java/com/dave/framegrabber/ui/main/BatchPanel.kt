@@ -13,7 +13,12 @@ import android.widget.RadioGroup
 import android.widget.Switch
 import android.widget.TextView
 import com.dave.framegrabber.R
+import android.net.Uri
 import com.dave.framegrabber.batch.BatchJob
+import com.dave.framegrabber.batch.BatchRule
+import com.dave.framegrabber.batch.BatchVideo
+import com.dave.framegrabber.data.Naming
+import com.dave.framegrabber.data.Output
 import com.dave.framegrabber.batch.BatchState
 import com.dave.framegrabber.core.FrameEngine
 import com.dave.framegrabber.ui.anim
@@ -32,10 +37,6 @@ import kotlin.math.max
  */
 class BatchPanel(private val s: MainScreen) {
 
-    companion object {
-        private const val MAX_BATCH = 2000
-    }
-
     private val radioMode = s.h<RadioGroup>(R.id.radioBatch)
     private val lblValue = s.h<TextView>(R.id.lblBatch)
     private val editValue = s.h<EditText>(R.id.editBatch)
@@ -43,6 +44,7 @@ class BatchPanel(private val s: MainScreen) {
     private val swSkipDup = s.h<Switch>(R.id.swSkipDup)
     private val txtHint = s.h<TextView>(R.id.txtBatchHint)
     private val btnStart = s.h<Button>(R.id.btnBatch)
+    private val btnMulti = s.h<Button>(R.id.btnBatchMulti)
     private val progress = s.h<ProgressBar>(R.id.progressBatch)
     private val txtProgress = s.h<TextView>(R.id.txtProgress)
     private var pulse: ObjectAnimator? = null
@@ -73,6 +75,11 @@ class BatchPanel(private val s: MainScreen) {
         btnStart.setOnClickListener {
             if (BatchState.running) { BatchState.stop(s.act); btnStart.text = "Останавливаю…" } else start()
         }
+        btnMulti.setOnClickListener {
+            if (BatchState.running) { s.act.toast("Дождись, пока закончится текущая пачка"); return@setOnClickListener }
+            if (rule(quiet = false) == null) return@setOnClickListener
+            s.act.openBrowserMulti()
+        }
         if (BatchState.running) showRunning()
     }
 
@@ -81,24 +88,21 @@ class BatchPanel(private val s: MainScreen) {
         else { lblValue.text = "Интервал, сек"; editValue.setText(s.prefs.batchInterval) }
     }
 
+    /** "Every N sec" / "N frames" from the fields, or null (with a message unless [quiet]). */
+    private fun rule(quiet: Boolean): BatchRule? {
+        val value = editValue.text.toString().replace(',', '.').toDoubleOrNull()
+        if (value == null || value <= 0) {
+            if (!quiet) s.act.toast(if (byCount) "Укажи, сколько кадров" else "Укажи интервал больше 0")
+            return null
+        }
+        return BatchRule(byCount, value)
+    }
+
     /** Frame times for the batch, or null (with a message unless [quiet]). */
     private fun times(e: FrameEngine, quiet: Boolean): List<Long>? {
-        fun fail(msg: String): List<Long>? { if (!quiet) s.act.toast(msg); return null }
+        val r = rule(quiet) ?: return null
         val (from, to) = s.rangeBatch.bounds(e)
-        if (to < from) return fail("Конец отрезка должен быть позже начала")
-        val value = editValue.text.toString().replace(',', '.').toDoubleOrNull()
-        return if (!byCount) {
-            if (value == null || value <= 0) return fail("Укажи интервал больше 0")
-            val step = (value * 1_000_000).toLong().coerceAtLeast(e.frameUs)
-            val count = (to - from) / step + 1
-            if (count > MAX_BATCH) return fail("Получится $count кадров — максимум $MAX_BATCH. Увеличь интервал.")
-            (0 until count).map { from + it * step }
-        } else {
-            val n = value?.toInt() ?: 0
-            if (n < 1 || n > MAX_BATCH) return fail("Количество: от 1 до $MAX_BATCH")
-            if (n == 1) listOf(from + (to - from) / 2)
-            else (0 until n).map { from + (to - from) * it / (n - 1) }
-        }
+        return r.times(from, to, e.frameUs).getOrElse { if (!quiet) s.act.toast(it.message ?: "Проверь значения"); null }
     }
 
     /** "Будет снято кадров: N" under the settings. */
@@ -117,8 +121,8 @@ class BatchPanel(private val s: MainScreen) {
         val go = {
             askNotificationPermission()
             BatchState.start(s.act, BatchJob(
-                uri, s.video.baseName, times, spec, s.capDir, s.prefs.namePattern,
-                swSkipBlur.isChecked, swSkipDup.isChecked, s.format.sharpest
+                listOf(BatchVideo(uri, s.video.baseName, times)), rule(quiet = true)!!, spec, s.prefs.namePattern,
+                swSkipBlur.isChecked, swSkipDup.isChecked, s.format.sharpest, toGallery = false
             ))
             showRunning()
         }
@@ -129,6 +133,35 @@ class BatchPanel(private val s: MainScreen) {
                 .setNegativeButton("Отмена", null)
                 .show()
         } else go()
+    }
+
+    /** Videos chosen for «Несколько видео сразу»: confirm, then run the same settings over each whole video. */
+    fun onVideosPicked(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        val rule = rule(quiet = false) ?: return
+        val spec = s.format.readSpec() ?: return
+        val videos = uris.map { BatchVideo(it, Naming.videoName(s.act, it), times = null) }
+        val what = if (rule.byCount) "по ${rule.value.toInt()} кадров с каждого" else "каждые ${editValue.text} сек"
+        val where = Output.describe(s.act)
+        AlertDialog.Builder(s.act)
+            .setTitle("${videos.size} видео")
+            .setMessage(buildString {
+                append(videos.joinToString("\n") { "• " + it.name })
+                append("\n\nКадры: $what, всё видео целиком.")
+                append("\nСохранятся в $where — своя папка на каждое видео, и в историю проектов.")
+                append("\n\nМожно свернуть приложение, работа идёт в фоне.")
+            })
+            .setPositiveButton("Начать") { _, _ ->
+                askNotificationPermission()
+                BatchState.start(s.act, BatchJob(
+                    videos, rule, spec, s.prefs.namePattern,
+                    swSkipBlur.isChecked, swSkipDup.isChecked, s.format.sharpest, toGallery = true
+                ))
+                s.nav.show(NavController.Page.TOOLS)
+                showRunning()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     /** Android 13+: the progress notification needs permission. */
@@ -156,6 +189,7 @@ class BatchPanel(private val s: MainScreen) {
             progress.max = max(1, st.total)
             progress.setProgress(st.index, true)
             txtProgress.text = buildString {
+                if (st.videos > 1) append("Видео ${st.video} из ${st.videos}: ${st.videoName}\n")
                 append("Кадр ${st.index} из ${st.total}")
                 if (st.blurry + st.dupes > 0) append(" · пропущено ${st.blurry + st.dupes}")
             }

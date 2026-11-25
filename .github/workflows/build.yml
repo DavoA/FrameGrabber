@@ -16,14 +16,37 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
       - name: Build
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
           cp app/build/outputs/apk/debug/app-debug.apk FrameGrabber.apk
+          cp FrameGrabber.apk FrameGrabber-v1.${{ github.run_number }}.apk
+      - name: Release notes
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          # the commit message without the attribution lines
+          printf '%s\n' "$MSG" | grep -v -e '^Co-Authored-By:' -e '^Claude-Session:' > notes.md
+          echo "" >> notes.md
+          echo "Коммит: ${{ github.sha }}" >> notes.md
+      # every build: its own release v1.N (kept forever, the history of versions)
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: Версия 1.${{ github.run_number }}
+          body_path: notes.md
+          target_commitish: ${{ github.sha }}
+          files: FrameGrabber-v1.${{ github.run_number }}.apk
+      # and the same APK under the old fixed link
+      - name: Move "latest" to this build
+        run: git push -f origin HEAD:refs/tags/latest
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Последняя сборка
+          name: Последняя сборка (1.${{ github.run_number }})
+          body_path: notes.md
           prerelease: true
           files: FrameGrabber.apk
 

@@ -11,8 +11,10 @@ android {
         applicationId = "com.dave.framegrabber"
         minSdk = 29          // Android 10+: saving to gallery without storage permission
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // CI passes the build number: every build gets its own version (1.42 → code 42)
+        val build = (System.getenv("BUILD_NUMBER") ?: "0").toInt()
+        versionCode = maxOf(1, build)
+        versionName = "1.$build"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }

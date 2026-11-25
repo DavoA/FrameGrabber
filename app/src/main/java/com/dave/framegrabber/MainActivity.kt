@@ -26,6 +26,7 @@ class MainActivity : Activity() {
     companion object {
         private const val REQ_PICK = 1
         private const val REQ_TREE = 2
+        private const val REQ_MULTI = 3
     }
 
     lateinit var bgView: SynthwaveView
@@ -151,6 +152,13 @@ class MainActivity : Activity() {
         startActivityForResult(Intent.createChooser(get, "Выбрать видео через…"), REQ_PICK)
     }
 
+    /** In-app browser in multi-select mode (batch over several videos). */
+    fun openBrowserMulti() {
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(this, FileBrowserActivity::class.java).putExtra(FileBrowserActivity.EXTRA_MULTI, true), REQ_MULTI)
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     /** System folder picker for "save folder" in general settings. */
     fun pickFolder() {
         @Suppress("DEPRECATION")
@@ -164,6 +172,10 @@ class MainActivity : Activity() {
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
+            REQ_MULTI -> data.getStringArrayListExtra(FileBrowserActivity.EXTRA_REFS)?.let { refs ->
+                val uris = refs.map { if (it.startsWith("/")) Uri.fromFile(File(it)) else Uri.parse(it) }
+                screen.batch.onVideosPicked(uris)
+            }
             REQ_PICK -> {
                 // the browser returns a file path (a file:// Uri can't pass through setResult)
                 val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)

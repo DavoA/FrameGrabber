@@ -65,6 +65,9 @@ class FileBrowserActivity : Activity() {
 
     companion object {
         const val EXTRA_PATH = "path"
+        /** Ask: pick several videos. Result: [EXTRA_REFS] (file paths or content:// Uris). */
+        const val EXTRA_MULTI = "multi"
+        const val EXTRA_REFS = "refs"
         private const val REQ_PERM = 10
         private const val REQ_OTHER = 11
     }
@@ -95,7 +98,10 @@ class FileBrowserActivity : Activity() {
     private lateinit var stateText: TextView
     private lateinit var stateBtn: TextView
     private lateinit var stateBtn2: View
-    private val adapter by lazy { BrowserAdapter(this, entries) }
+    private val multi by lazy { intent.getBooleanExtra(EXTRA_MULTI, false) }
+    /** Multi-select: chosen videos in tap order (key -> ref). */
+    private val chosen = LinkedHashMap<String, String>()
+    private val adapter by lazy { BrowserAdapter(this, entries, if (multi) chosen.keys else null) }
 
     private val dp get() = resources.displayMetrics.density
     private val searchRunnable = Runnable { runSearch() }
@@ -142,6 +148,11 @@ class FileBrowserActivity : Activity() {
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressedCompat() }
         findViewById<View>(R.id.btnOther).setOnClickListener { pickWithOtherApp() }
+        if (multi) {
+            findViewById<View>(R.id.btnOther).visibility = View.GONE   // other apps give one video
+            findViewById<View>(R.id.btnDone).setOnClickListener { finishMulti() }
+            updateDone()
+        }
         stateBtn2.setOnClickListener { pickWithOtherApp() }
         btnUp.setOnClickListener { goUp() }
         btnClearSearch.setOnClickListener { editSearch.setText("") }
@@ -196,7 +207,12 @@ class FileBrowserActivity : Activity() {
             val bars = insets.getInsets(WindowInsets.Type.systemBars())
             val ime = insets.getInsets(WindowInsets.Type.ime())
             v.setPadding(bars.left, bars.top, bars.right, 0)
-            list.setPadding(list.paddingLeft, list.paddingTop, list.paddingRight, max(bars.bottom, ime.bottom) + (12 * dp).toInt())
+            val extra = if (multi) 76 else 12   // room for "Готово (N)"
+            list.setPadding(list.paddingLeft, list.paddingTop, list.paddingRight, max(bars.bottom, ime.bottom) + (extra * dp).toInt())
+            findViewById<View>(R.id.btnDone).let { b ->
+                (b.layoutParams as android.widget.FrameLayout.LayoutParams).bottomMargin = max(bars.bottom, ime.bottom) + (16 * dp).toInt()
+                b.requestLayout()
+            }
             insets
         }
     }
@@ -365,7 +381,11 @@ class FileBrowserActivity : Activity() {
     private fun onEntryClick(e: Entry) {
         when (e) {
             is Entry.Dir -> { editSearch.setText(""); openDir(e.file) }
-            is Entry.Video -> {
+            is Entry.Video -> if (multi) {
+                if (chosen.remove(e.key) == null) chosen[e.key] = e.file?.path ?: e.uri.toString()
+                adapter.notifyDataSetChanged()
+                updateDone()
+            } else {
                 val data = Intent()
                 if (e.file != null) data.putExtra(EXTRA_PATH, e.file.path) else data.data = e.uri
                 setResult(RESULT_OK, data)
@@ -374,6 +394,25 @@ class FileBrowserActivity : Activity() {
             }
             is Entry.Header -> {}
         }
+    }
+
+    /** Multi-select: title and the "Готово (N)" button. */
+    private fun updateDone() {
+        val n = chosen.size
+        findViewById<TextView>(R.id.txtTitle).text = if (n == 0) "Выбери видео" else "Выбрано: $n"
+        val b = findViewById<android.widget.Button>(R.id.btnDone)
+        b.text = "Готово ($n)"
+        if (n > 0 && b.visibility != View.VISIBLE) {
+            b.visibility = View.VISIBLE
+            b.translationY = 80 * dp
+            b.animate().translationY(0f).setDuration(250).start()
+        } else if (n == 0) b.visibility = View.GONE
+    }
+
+    private fun finishMulti() {
+        setResult(RESULT_OK, Intent().putStringArrayListExtra(EXTRA_REFS, ArrayList(chosen.values)))
+        finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     private fun goUp() {

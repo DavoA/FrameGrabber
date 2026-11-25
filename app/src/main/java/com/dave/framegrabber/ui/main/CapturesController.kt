@@ -54,6 +54,7 @@ class CapturesController(private val s: MainScreen) {
     /** New frames from single capture and from the background batch arrive here. */
     private val storeListener = object : CaptureStore.Listener {
         override fun onAdded(c: Capture) = added(c, scroll = !BatchState.running)
+        override fun onReplaced() { pendingAnim.clear(); refresh(); updateUi(animate = false); s.viewer.updateChrome() }
     }
 
     init {
@@ -91,6 +92,7 @@ class CapturesController(private val s: MainScreen) {
         refresh()
         updateUi()
         s.viewer.updateChrome()
+        s.project.dirty()
         if (scroll && list.visibility == View.VISIBLE) list.post { list.smoothScrollToPosition(adapter.count) }
     }
 
@@ -100,6 +102,7 @@ class CapturesController(private val s: MainScreen) {
         c.file.delete()
         refresh()
         updateUi()
+        s.project.dirty()
     }
 
     /** Counter, empty state, action buttons. */
@@ -131,6 +134,7 @@ class CapturesController(private val s: MainScreen) {
         c.galleryUri?.let { return it }
         val uri = Output.save(s.act, c.file, c.file.name, c.fmt.mime, Output.Kind.IMAGE)
         c.galleryUri = uri
+        s.project.dirty()   // remember it's saved
         return uri
     }
 
@@ -198,6 +202,7 @@ class CapturesController(private val s: MainScreen) {
                 s.viewer.close()
                 captures.forEach { it.file.delete() }
                 captures.clear()
+                s.project.dirty()
                 pendingAnim.clear()
                 refresh()
                 updateUi()

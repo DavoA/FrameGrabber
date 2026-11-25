@@ -143,6 +143,7 @@ class VideoController(private val s: MainScreen) {
     }
 
     private fun onLoaded(e: FrameEngine, uri: Uri) {
+        s.project.saveNow()   // the previous video's project, while the screen still shows it
         engine?.let { old -> s.exec.execute { old.close() } }
         engine = e
         this.uri = uri
@@ -158,6 +159,7 @@ class VideoController(private val s: MainScreen) {
         showTime()
         s.rangeBatch.onVideoChanged()
         s.rangeClips.onVideoChanged()
+        s.project.onVideoLoaded(uri, e)
         s.clips.updateGifInfo()
         s.batch.updateHint()
         // timeline and −1f / 📷 / +1f appear once there's a video
@@ -181,14 +183,7 @@ class VideoController(private val s: MainScreen) {
         buildFilmstrip(e)
     }
 
-    private fun displayName(uri: Uri): String {
-        val name = runCatching {
-            s.act.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-                if (c.moveToFirst()) c.getString(0) else null
-            }
-        }.getOrNull() ?: uri.lastPathSegment ?: "video"
-        return name.substringBeforeLast('.').replace(Regex("[^\\p{L}\\p{N}._-]+"), "_").take(60).ifEmpty { "video" }
-    }
+    private fun displayName(uri: Uri): String = com.dave.framegrabber.data.Naming.videoName(s.act, uri)
 
     /** Thumbnails fill the timeline track; the seek bar sits on top of them. */
     private fun buildFilmstrip(e: FrameEngine) {

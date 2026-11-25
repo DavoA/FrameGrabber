@@ -204,6 +204,23 @@
                 android:text="—"
                 android:textColor="@color/textDim"
                 android:textSize="12sp" />
+            <!-- 🔖 put a mark at the current moment -->
+            <TextView
+                android:id="@+id/btnMark"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_chip"
+                android:drawableStart="@drawable/ic_bookmark"
+                android:drawablePadding="4dp"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:gravity="center"
+                android:paddingStart="8dp"
+                android:paddingEnd="12dp"
+                android:stateListAnimator="@animator/press_scale"
+                android:text="Метка"
+                android:textColor="@color/text"
+                android:textSize="13sp" />
         </LinearLayout>
 
         <FrameLayout
@@ -228,7 +245,28 @@
                 android:splitTrack="false"
                 android:thumb="@drawable/seek_thumb_bar"
                 android:thumbOffset="3dp" />
+
+            <!-- marks drawn over the timeline (touches pass through to the seek bar) -->
+            <com.dave.framegrabber.ui.widget.MarksOverlay
+                android:id="@+id/marksOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
         </FrameLayout>
+
+        <!-- marks: tap = go there, hold = remove; last chip takes a frame at every mark -->
+        <HorizontalScrollView
+            android:id="@+id/marksScroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+            <LinearLayout
+                android:id="@+id/marksRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
     </LinearLayout>
 
     <!-- −1f  (📷)  +1f -->

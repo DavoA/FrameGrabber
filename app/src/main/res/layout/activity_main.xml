@@ -72,6 +72,13 @@
             </LinearLayout>
 
             <ImageButton
+                android:id="@+id/btnHistory"
+                style="@style/IconBtn"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="История проектов"
+                android:src="@drawable/ic_history" />
+
+            <ImageButton
                 android:id="@+id/btnSettings"
                 style="@style/IconBtn"
                 android:layout_marginEnd="8dp"

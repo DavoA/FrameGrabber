@@ -39,6 +39,14 @@ class RangeCard(private val s: MainScreen, val card: View, private val onChange:
         onChange()
     }
 
+    /** The typed values (saved with the project). */
+    val fromText: String get() = editFrom.text.toString()
+    val toText: String get() = editTo.text.toString()
+
+    fun restore(from: String, to: String) {
+        editFrom.setText(from); editTo.setText(to)
+    }
+
     /** New video: forget the old range. */
     fun onVideoChanged() {
         editFrom.setText("")
