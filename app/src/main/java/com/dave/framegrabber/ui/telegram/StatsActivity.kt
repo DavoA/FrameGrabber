@@ -17,7 +17,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.dave.framegrabber.R
 import com.dave.framegrabber.data.AppTheme
+import com.dave.framegrabber.telegram.ChannelImport
 import com.dave.framegrabber.telegram.PostLog
+import com.dave.framegrabber.telegram.TgStore
+import com.dave.framegrabber.ui.toast
 import com.dave.framegrabber.telegram.TagLibrary
 import com.dave.framegrabber.ui.widget.SynthwaveView
 import java.text.SimpleDateFormat
@@ -60,7 +63,7 @@ class StatsActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding((12 * d).toInt(), 0, 0, 0)
             addView(text("Статистика канала", 20f, R.color.text, bold = true))
-            addView(text("по постам, опубликованным из приложения", 12f, R.color.textDim))
+            addView(text("по всем постам канала", 12f, R.color.textDim))
         })
         content.addView(bar)
 
@@ -76,17 +79,94 @@ class StatsActivity : Activity() {
         }
 
         val posts = PostLog(this).posts
-        if (posts.isEmpty()) {
-            body.addView(card("Пока пусто").apply {
-                addView(text("Здесь появится статистика после первого поста, опубликованного из приложения.", 14f, R.color.textDim))
-            })
-            return
-        }
+        body.addView(importCard(posts))
+        if (posts.isEmpty()) return
         body.addView(totals(posts))
         body.addView(tags(posts))
         body.addView(names("Студии", group(posts) { listOf(it.studio) }))
         body.addView(names("Модели", group(posts) { it.models }))
         body.addView(recent(posts))
+    }
+
+    // ================================================================ reading the channel
+
+    private var importing = false
+
+    /** «Посты канала»: read the public channel page (all posts, then only new ones). */
+    private fun importCard(posts: List<PostLog.Post>): View = card("Посты канала").apply {
+        val store = TgStore(this@StatsActivity)
+        val fromChannel = posts.count { it.source == "channel" }
+        val fromApp = posts.size - fromChannel
+        val sp = getSharedPreferences("telegram", MODE_PRIVATE)
+        val at = sp.getLong("importAt", 0)
+        val status = text(
+            if (at == 0L) "Статистика пока только по постам из приложения ($fromApp). Загрузи посты канала, чтобы посчитать всё, что уже есть в канале."
+            else "Из канала: $fromChannel · из приложения: $fromApp\nОбновлено: ${SimpleDateFormat("d MMM, HH:mm", Locale("ru")).format(Date(at))}",
+            13f, R.color.textDim)
+        addView(status)
+        val btn = android.widget.Button(this@StatsActivity, null, 0, R.style.BtnPrimary).apply {
+            text = if (at == 0L) "Загрузить все посты канала" else "Обновить"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * d).toInt() }
+        }
+        addView(btn)
+        btn.setOnClickListener {
+            if (importing) return@setOnClickListener
+            val name = store.chatUsername.ifEmpty { sp.getString("importChannel", "") ?: "" }
+            if (name.isEmpty()) askChannel { n -> sp.edit().putString("importChannel", n).apply(); runImport(n, at == 0L, btn, status) }
+            else runImport(name, at == 0L, btn, status)
+        }
+    }
+
+    private fun askChannel(onOk: (String) -> Unit) {
+        val edit = android.widget.EditText(this).apply { hint = "@канал или t.me/канал"; isSingleLine = true; setTextColor(getColor(R.color.text)) }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Какой канал?")
+            .setMessage("Нужен публичный канал (со ссылкой t.me/…).")
+            .setView(FrameLayout(this).apply { setPadding((20 * d).toInt(), 0, (20 * d).toInt(), 0); addView(edit) })
+            .setPositiveButton("OK") { _, _ ->
+                val n = ChannelImport.channelName(edit.text.toString())
+                if (n == null) toast("Не похоже на имя канала") else onOk(n)
+            }
+            .setNegativeButton("Отмена", null).show()
+    }
+
+    private fun runImport(channel: String, full: Boolean, btn: android.widget.Button, status: TextView) {
+        importing = true
+        btn.isEnabled = false; btn.alpha = 0.5f
+        btn.text = "Загружаю…"
+        status.setTextColor(getColor(R.color.text))
+        status.text = "Читаю t.me/$channel…"
+        val app = applicationContext
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        Thread {
+            val log = PostLog(app)
+            val r = runCatching {
+                val stop = if (full) 0L else log.lastChannelId()
+                val msgs = ChannelImport(channel).readAll(stop) { total, oldest ->
+                    runOnUiThread { if (!isDestroyed) status.text = "Прочитано сообщений: $total (дошёл до №$oldest)…" }
+                    true
+                }
+                log.addFromChannel(ChannelImport.toPosts(channel, msgs))
+            }
+            runOnUiThread {
+                importing = false
+                if (isDestroyed) return@runOnUiThread
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                r.onSuccess { added ->
+                    getSharedPreferences("telegram", MODE_PRIVATE).edit().putLong("importAt", System.currentTimeMillis()).apply()
+                    toast(if (added == 0) "Новых постов нет" else "Добавлено постов: $added")
+                    recreate()
+                }.onFailure {
+                    btn.isEnabled = true; btn.alpha = 1f; btn.text = "Попробовать снова"
+                    status.setTextColor(getColor(R.color.danger))
+                    status.text = when (it) {
+                        is java.net.UnknownHostException, is java.net.SocketTimeoutException, is java.net.ConnectException ->
+                            "Нет связи с t.me. Проверь интернет."
+                        else -> it.message ?: it.javaClass.simpleName
+                    }
+                }
+            }
+        }.start()
     }
 
     // ================================================================ sections
@@ -156,7 +236,16 @@ class StatsActivity : Activity() {
         sorted.take(30).forEach { (name, list) ->
             addView(barRow(name, list.size, maxN, "${list.size} · ${dateFmt.format(Date(list.last().time))}"))
         }
-        if (sorted.size > 30) addView(text("…и ещё ${sorted.size - 30}", 12f, R.color.textDim))
+        if (sorted.size > 30) {
+            val more = text("Показать все (${sorted.size}) ›", 14f, R.color.accent).apply { setPadding(0, (10 * d).toInt(), 0, (4 * d).toInt()) }
+            more.setOnClickListener {
+                removeView(more)
+                sorted.drop(30).forEach { (name, list) ->
+                    addView(barRow(name, list.size, maxN, "${list.size} · ${dateFmt.format(Date(list.last().time))}"))
+                }
+            }
+            addView(more)
+        }
     }
 
     private fun recent(posts: List<PostLog.Post>): View = card("Последние посты").apply {

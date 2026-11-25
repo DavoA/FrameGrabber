@@ -20,6 +20,8 @@ class PostLog(ctx: Context) {
         val time: Long, val chat: String, val messageId: Long, val link: String?,
         val studio: String, val models: List<String>, val tags: List<String>,
         val videoName: String, val videoKey: String, val frameHashes: List<Long>,
+        /** "app" = published from the app; "channel" = read from the channel's public page. */
+        val source: String = "app",
     )
 
     /** What the check found; empty = nothing posted before. */
@@ -36,10 +38,33 @@ class PostLog(ctx: Context) {
 
     private val file = File(ctx.filesDir, "tg_posts.json")
 
-    val posts: List<Post> get() = load()
+    /** All posts, oldest first. */
+    val posts: List<Post> get() = load().sortedBy { it.time }
 
-    fun add(p: Post) {
-        val list = load() + p
+    fun add(p: Post) = write(load() + p)
+
+    /**
+     * Posts read from the channel: skips ones already known (same message id, or the same text
+     * published by the app within minutes). Returns how many were added.
+     */
+    @Synchronized
+    fun addFromChannel(list: List<Post>): Int {
+        val old = load()
+        val ids = old.map { it.messageId }.toHashSet()
+        val fresh = list.filter { p ->
+            p.messageId !in ids && old.none { o ->
+                o.source == "app" && kotlin.math.abs(o.time - p.time) < 10 * 60_000 &&
+                    o.studio.equals(p.studio, true) && o.models.map { it.lowercase() } == p.models.map { it.lowercase() }
+            }
+        }
+        if (fresh.isNotEmpty()) write(old + fresh)
+        return fresh.size
+    }
+
+    /** Highest message id seen in the channel (for "update": read only newer posts). */
+    fun lastChannelId(): Long = load().maxOfOrNull { it.messageId } ?: 0
+
+    private fun write(list: List<Post>) {
         val a = JSONArray()
         list.forEach { a.put(toJson(it)) }
         val tmp = File(file.path + ".tmp")
@@ -73,6 +98,7 @@ class PostLog(ctx: Context) {
         .put("studio", p.studio).put("models", JSONArray(p.models)).put("tags", JSONArray(p.tags))
         .put("video", p.videoName).put("vkey", p.videoKey)
         .put("hashes", JSONArray().apply { p.frameHashes.forEach { put(java.lang.Long.toHexString(it)) } })
+        .put("src", p.source)
 
     private fun fromJson(o: JSONObject): Post {
         fun strs(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
@@ -80,6 +106,7 @@ class PostLog(ctx: Context) {
             o.optLong("t"), o.optString("chat"), o.optLong("id"), o.optString("link").ifEmpty { null },
             o.optString("studio"), strs("models"), strs("tags"), o.optString("video"), o.optString("vkey"),
             strs("hashes").mapNotNull { java.lang.Long.parseUnsignedLong(it, 16) },
+            o.optString("src", "app"),
         )
     }
 
