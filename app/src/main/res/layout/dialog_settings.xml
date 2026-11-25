@@ -272,6 +272,71 @@
             android:textSize="13sp" />
     </LinearLayout>
 
+    <!-- Telegram: bot + channel, hashtag library -->
+    <TextView
+        style="@style/Label"
+        android:paddingTop="20dp"
+        android:letterSpacing="0.1"
+        android:text="TELEGRAM-КАНАЛ" />
+    <LinearLayout
+        android:id="@+id/rowTgSetup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_option"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_send"
+            android:tint="@color/accent" />
+        <TextView
+            android:id="@+id/txtTgSetup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Изменить"
+            android:textColor="@color/accent"
+            android:textSize="13sp" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/rowTags"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_option"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_text"
+            android:tint="@color/accent" />
+        <TextView
+            android:id="@+id/txtTags"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Изменить"
+            android:textColor="@color/accent"
+            android:textSize="13sp" />
+    </LinearLayout>
+
     <!-- OCR languages -->
     <TextView
         style="@style/Label"

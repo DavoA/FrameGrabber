@@ -46,6 +46,7 @@ class NavController(private val s: MainScreen) {
     }
 
     fun show(target: Page) {
+        if (target != Page.FRAMES) s.tgPick.cancel()
         if (target == page) return
         val from = page
         page = target

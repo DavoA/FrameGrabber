@@ -82,6 +82,18 @@
             android:textColor="@color/danger" />
     </LinearLayout>
 
+    <!-- pick 6 frames and post them to the Telegram channel -->
+    <Button
+        android:id="@+id/btnTgPost"
+        style="@style/BtnPrimary"
+        android:layout_marginBottom="10dp"
+        android:drawableStart="@drawable/ic_send"
+        android:drawableTint="#FFFFFFFF"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="Пост в Telegram"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/emptyBox"
         android:layout_width="match_parent"

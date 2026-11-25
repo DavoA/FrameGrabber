@@ -27,6 +27,7 @@ class MainActivity : Activity() {
         private const val REQ_PICK = 1
         private const val REQ_TREE = 2
         private const val REQ_MULTI = 3
+        private const val REQ_POST = 4
     }
 
     lateinit var bgView: SynthwaveView
@@ -152,6 +153,12 @@ class MainActivity : Activity() {
         startActivityForResult(Intent.createChooser(get, "Выбрать видео через…"), REQ_PICK)
     }
 
+    /** The Telegram post editor for the picked frames. */
+    fun openPostEditor(i: Intent) {
+        @Suppress("DEPRECATION")
+        startActivityForResult(i, REQ_POST)
+    }
+
     /** In-app browser in multi-select mode (batch over several videos). */
     fun openBrowserMulti() {
         @Suppress("DEPRECATION")
@@ -172,6 +179,7 @@ class MainActivity : Activity() {
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
+            REQ_POST -> screen.tgPick.onPosted()
             REQ_MULTI -> data.getStringArrayListExtra(FileBrowserActivity.EXTRA_REFS)?.let { refs ->
                 val uris = refs.map { if (it.startsWith("/")) Uri.fromFile(File(it)) else Uri.parse(it) }
                 screen.batch.onVideosPicked(uris)

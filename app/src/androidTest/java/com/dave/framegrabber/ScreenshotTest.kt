@@ -149,6 +149,49 @@ class ScreenshotTest {
         Thread.sleep(2000)   // the other project's file is written on the disk thread
         val other = Projects.load(appCtx, Projects.idOf(f2.path))
         check(other?.frames?.size == 3) { "other project frames: ${other?.frames?.size}" }
+
+        // 11-13. Telegram post: pick 6 frames, then the editor (fake bot settings, nothing is sent)
+        com.dave.framegrabber.telegram.TgStore(appCtx).apply {
+            token = "123:fake"; chat = "@my_channel"; chatTitle = "My Channel"; botName = "@my_bot"
+            hashtags = listOf("hashtag1", "hashtag2", "hashtag3", "studio_shots", "4K", "new")
+            clearDraft()
+        }
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navFrames).performClick() }
+        Thread.sleep(800)
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnTgPost).performClick() }
+        Thread.sleep(600)
+        inst.runOnMainSync { listOf(2, 0, 1, 3, 4).forEach { main.screen.tgPick.toggle(CaptureStore.captures[it]) } }
+        Thread.sleep(1200); shot("11_tg_pick")
+        inst.runOnMainSync { main.screen.tgPick.toggle(CaptureStore.captures[5]) }
+        val mon = inst.addMonitor(com.dave.framegrabber.ui.telegram.PostActivity::class.java.name, null, false)
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.btnTgPickNext).performClick() }
+        val post = inst.waitForMonitorWithTimeout(mon, 8000)
+        check(post != null) { "post editor didn't open" }
+        Thread.sleep(1500)
+        inst.runOnMainSync {
+            post.findViewById<android.widget.EditText>(R.id.editStudio).setText("Studio name")
+            val m = post.findViewById<android.widget.EditText>(R.id.editModel)
+            m.setText("Model A"); post.findViewById<android.view.View>(R.id.btnAddModel).performClick()
+            m.setText("Model B"); post.findViewById<android.view.View>(R.id.btnAddModel).performClick()
+            // tap #hashtag3, then #hashtag1: the caption keeps the library order
+            val chips = post.findViewById<android.view.ViewGroup>(R.id.tagChips)
+            listOf(2, 0, 3).forEach { chips.getChildAt(it).performClick() }
+            post.currentFocus?.clearFocus()
+        }
+        Thread.sleep(1500); shot("12_post")
+        inst.runOnMainSync {
+            val txt = post.findViewById<android.widget.TextView>(R.id.txtPreview).text.toString()
+            check(txt == "Studio name - Model A & Model B\n------------------------------\n#hashtag1 #hashtag3 #studio_shots") { "caption: $txt" }
+            post.findViewById<android.widget.ScrollView>(R.id.scroll).fullScroll(android.view.View.FOCUS_DOWN)
+        }
+        Thread.sleep(1200); shot("12b_post_preview")
+        inst.runOnMainSync { post.findViewById<android.view.View>(R.id.btnEditTags).performClick() }
+        Thread.sleep(1500); shot("13_hashtags")
+        inst.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+        Thread.sleep(600)
+        post.finish(); Thread.sleep(800)
+        inst.runOnMainSync { main.screen.tgPick.cancel(); a.findViewById<android.view.View>(R.id.navTools).performClick() }
+        Thread.sleep(600)
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navCapture).performClick() }
         Thread.sleep(800)
 

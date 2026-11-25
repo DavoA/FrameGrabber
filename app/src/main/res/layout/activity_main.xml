@@ -114,6 +114,44 @@
             <include layout="@layout/page_clips" />
 
             <include layout="@layout/page_tools" />
+
+            <!-- «Пост в Telegram»: picking 6 frames on the «Кадры» page -->
+            <LinearLayout
+                android:id="@+id/tgPickBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:layout_margin="12dp"
+                android:background="@drawable/bg_card"
+                android:elevation="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:visibility="gone">
+                <TextView
+                    android:id="@+id/txtTgPick"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingStart="6dp"
+                    android:textColor="@color/text"
+                    android:textSize="14sp" />
+                <Button
+                    android:id="@+id/btnTgPickCancel"
+                    style="@style/BtnSecondary"
+                    android:layout_width="wrap_content"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:text="Отмена" />
+                <Button
+                    android:id="@+id/btnTgPickNext"
+                    style="@style/BtnPrimary"
+                    android:layout_width="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:text="Далее" />
+            </LinearLayout>
         </FrameLayout>
 
         <!-- Bottom bar -->

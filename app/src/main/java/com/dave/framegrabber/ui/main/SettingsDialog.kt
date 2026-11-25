@@ -47,6 +47,7 @@ class SettingsDialog(private val s: MainScreen) {
         bindNames(v)
         bindFolder(v)
         bindOcr(v)
+        bindTelegram(v)
         val preview = v.findViewById<SynthwaveView>(R.id.wavePreview)
         val dlg = AlertDialog.Builder(s.act).setView(v).create()
         v.findViewById<View>(R.id.btnDone).setOnClickListener { dlg.dismiss() }
@@ -198,6 +199,24 @@ class SettingsDialog(private val s: MainScreen) {
                     s.prefs.ocrLangs = Ocr.LANGS.keys.filter { it in chosen }.joinToString("+")
                 }
             })
+        }
+    }
+
+    /** Bot + channel (with a real check) and the hashtag library. */
+    private fun bindTelegram(v: View) {
+        val setup = v.findViewById<TextView>(R.id.txtTgSetup)
+        val tags = v.findViewById<TextView>(R.id.txtTags)
+        fun refresh() {
+            val st = com.dave.framegrabber.telegram.TgStore(s.act)
+            setup.text = if (st.configured) "${st.chatTitle.ifEmpty { st.chat }}\nбот ${st.botName}" else "Бот и канал не настроены"
+            tags.text = "Хэштеги: ${st.hashtags.size}"
+        }
+        refresh()
+        v.findViewById<View>(R.id.rowTgSetup).setOnClickListener {
+            com.dave.framegrabber.ui.telegram.TgSetupDialog(s.act) { refresh() }.show()
+        }
+        v.findViewById<View>(R.id.rowTags).setOnClickListener {
+            com.dave.framegrabber.ui.telegram.HashtagsDialog(s.act) { refresh() }.show()
         }
     }
 }

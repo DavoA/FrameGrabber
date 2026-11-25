@@ -50,6 +50,7 @@ class CapturesController(private val s: MainScreen) {
     private val txtCount = header.findViewById<TextView>(R.id.txtCount)
     private val capActions = header.findViewById<View>(R.id.capActions)
     private val emptyBox = header.findViewById<View>(R.id.emptyBox)
+    private val btnTgPost = header.findViewById<View>(R.id.btnTgPost)
 
     /** New frames from single capture and from the background batch arrive here. */
     private val storeListener = object : CaptureStore.Listener {
@@ -72,6 +73,7 @@ class CapturesController(private val s: MainScreen) {
         header.findViewById<View>(R.id.btnSaveAll).setOnClickListener { saveAll() }
         header.findViewById<View>(R.id.btnZip).setOnClickListener { makeZip() }
         header.findViewById<View>(R.id.btnClear).setOnClickListener { confirmClear() }
+        btnTgPost.setOnClickListener { s.tgPick.start() }
         header.findViewById<View>(R.id.emptyIcon).floatLoop(6f, 1700)
         updateUi(animate = false)
     }
@@ -98,6 +100,7 @@ class CapturesController(private val s: MainScreen) {
 
     fun remove(c: Capture) {
         captures.remove(c)
+        s.tgPick.forget(c)
         pendingAnim.remove(c)
         c.file.delete()
         refresh()
@@ -116,7 +119,9 @@ class CapturesController(private val s: MainScreen) {
         if (n == 0) {
             if (emptyBox.visibility != View.VISIBLE) { if (animate) emptyBox.showAnimated() else emptyBox.visibility = View.VISIBLE }
             capActions.visibility = View.GONE
+            btnTgPost.visibility = View.GONE
         } else {
+            btnTgPost.visibility = View.VISIBLE
             emptyBox.visibility = View.GONE
             if (capActions.visibility != View.VISIBLE) {
                 if (animate) capActions.showAnimated() else capActions.visibility = View.VISIBLE
@@ -202,6 +207,7 @@ class CapturesController(private val s: MainScreen) {
                 s.viewer.close()
                 captures.forEach { it.file.delete() }
                 captures.clear()
+                s.tgPick.cancel()
                 s.project.dirty()
                 pendingAnim.clear()
                 refresh()
@@ -234,8 +240,21 @@ class CapturesController(private val s: MainScreen) {
                 cell.visibility = View.VISIBLE
                 (cell.getChildAt(0) as ImageView).setImageBitmap(c.thumb)
                 (cell.getChildAt(1) as TextView).text = TimeUtil.format(c.timeUs)
-                cell.foreground = if (c === s.viewer.selected) s.act.getDrawable(R.drawable.fg_selected) else null
-                cell.setOnClickListener { if (s.viewer.selected === c) s.viewer.close() else s.viewer.open(c) }
+                val badge = cell.getChildAt(2) as TextView
+                if (s.tgPick.active) {
+                    // picking frames for a Telegram post: numbered in tap order
+                    val n = s.tgPick.number(c)
+                    cell.foreground = if (n > 0) s.act.getDrawable(R.drawable.fg_selected) else null
+                    badge.visibility = if (n > 0) View.VISIBLE else View.GONE
+                    badge.text = n.toString()
+                    (cell.getChildAt(0) as ImageView).alpha = if (n > 0) 1f else 0.6f
+                    cell.setOnClickListener { s.tgPick.toggle(c) }
+                } else {
+                    badge.visibility = View.GONE
+                    (cell.getChildAt(0) as ImageView).alpha = 1f
+                    cell.foreground = if (c === s.viewer.selected) s.act.getDrawable(R.drawable.fg_selected) else null
+                    cell.setOnClickListener { if (s.viewer.selected === c) s.viewer.close() else s.viewer.open(c) }
+                }
                 if (pendingAnim.remove(c)) {
                     cell.alpha = 0f
                     cell.scaleX = 0.5f; cell.scaleY = 0.5f
@@ -275,6 +294,17 @@ class CapturesController(private val s: MainScreen) {
                         setPadding((6 * d).toInt(), (1 * d).toInt(), (6 * d).toInt(), (1 * d).toInt())
                         layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END)
                             .apply { setMargins(0, 0, (5 * d).toInt(), (5 * d).toInt()) }
+                    })
+                    // number in a Telegram post (1 = cover)
+                    cell.addView(TextView(ctx).apply {
+                        setTextColor(ctx.getColor(R.color.text))
+                        setBackgroundResource(R.drawable.bg_count)
+                        textSize = 13f
+                        typeface = Typeface.DEFAULT_BOLD
+                        gravity = Gravity.CENTER
+                        layoutParams = FrameLayout.LayoutParams((26 * d).toInt(), (26 * d).toInt(), Gravity.TOP or Gravity.START)
+                            .apply { setMargins((5 * d).toInt(), (5 * d).toInt(), 0, 0) }
+                        visibility = View.GONE
                     })
                     addView(cell)
                 }
