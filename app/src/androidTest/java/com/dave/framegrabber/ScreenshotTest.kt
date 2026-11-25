@@ -153,7 +153,6 @@ class ScreenshotTest {
         // 11-13. Telegram post: pick 6 frames, then the editor (fake bot settings, nothing is sent)
         com.dave.framegrabber.telegram.TgStore(appCtx).apply {
             token = "123:fake"; chat = "@my_channel"; chatTitle = "My Channel"; botName = "@my_bot"
-            hashtags = listOf("hashtag1", "hashtag2", "hashtag3", "studio_shots", "4K", "new")
             clearDraft()
         }
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navFrames).performClick() }
@@ -173,22 +172,35 @@ class ScreenshotTest {
             val m = post.findViewById<android.widget.EditText>(R.id.editModel)
             m.setText("Model A"); post.findViewById<android.view.View>(R.id.btnAddModel).performClick()
             m.setText("Model B"); post.findViewById<android.view.View>(R.id.btnAddModel).performClick()
-            // tap #hashtag3, then #hashtag1: the caption keeps the library order
-            val chips = post.findViewById<android.view.ViewGroup>(R.id.tagChips)
-            listOf(2, 0, 3).forEach { chips.getChildAt(it).performClick() }
+            // chosen in any order; the caption keeps the library order
+            listOf("hd", "догги", "блондинки", "натуральные").forEach { post.tags.toggle(it) }
+            post.tags.openCategory("Позы и виды секса")
             post.currentFocus?.clearFocus()
         }
         Thread.sleep(1500); shot("12_post")
         inst.runOnMainSync {
             val txt = post.findViewById<android.widget.TextView>(R.id.txtPreview).text.toString()
-            check(txt == "Studio name - Model A & Model B\n------------------------------\n#hashtag1 #hashtag3 #studio_shots") { "caption: $txt" }
+            check(txt == "Studio name - Model A & Model B\n------------------------------\n#натуральные #блондинки #догги #hd") { "caption: $txt" }
             post.findViewById<android.widget.ScrollView>(R.id.scroll).fullScroll(android.view.View.FOCUS_DOWN)
         }
         Thread.sleep(1200); shot("12b_post_preview")
+        // the picker part of the editor
+        inst.runOnMainSync {
+            val sc = post.findViewById<android.widget.ScrollView>(R.id.scroll)
+            val area = post.findViewById<android.view.View>(R.id.tagArea)
+            sc.scrollTo(0, (area.parent as android.view.View).top)
+        }
+        Thread.sleep(1000); shot("12c_tag_picker")
+        val tmon = inst.addMonitor(com.dave.framegrabber.ui.telegram.TagsActivity::class.java.name, null, false)
         inst.runOnMainSync { post.findViewById<android.view.View>(R.id.btnEditTags).performClick() }
-        Thread.sleep(1500); shot("13_hashtags")
-        inst.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
-        Thread.sleep(600)
+        val tags = inst.waitForMonitorWithTimeout(tmon, 8000)
+        check(tags != null) { "tag manager didn't open" }
+        Thread.sleep(1200)
+        // open the first category
+        inst.runOnMainSync { (tags.findViewById<android.view.ViewGroup>(R.id.catsBox).getChildAt(0) as android.view.ViewGroup).getChildAt(0).performClick() }
+        Thread.sleep(1000); shot("13_hashtags")
+        tags.finish()
+        Thread.sleep(800)
         post.finish(); Thread.sleep(800)
         inst.runOnMainSync { main.screen.tgPick.cancel(); a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)

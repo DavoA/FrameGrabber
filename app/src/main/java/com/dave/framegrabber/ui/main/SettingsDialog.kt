@@ -209,14 +209,15 @@ class SettingsDialog(private val s: MainScreen) {
         fun refresh() {
             val st = com.dave.framegrabber.telegram.TgStore(s.act)
             setup.text = if (st.configured) "${st.chatTitle.ifEmpty { st.chat }}\nбот ${st.botName}" else "Бот и канал не настроены"
-            tags.text = "Хэштеги: ${st.hashtags.size}"
+            val lib = com.dave.framegrabber.telegram.TagLibrary(s.act)
+            tags.text = "Хэштеги: ${lib.all.size} в ${lib.categories.size} категориях"
         }
         refresh()
         v.findViewById<View>(R.id.rowTgSetup).setOnClickListener {
             com.dave.framegrabber.ui.telegram.TgSetupDialog(s.act) { refresh() }.show()
         }
         v.findViewById<View>(R.id.rowTags).setOnClickListener {
-            com.dave.framegrabber.ui.telegram.HashtagsDialog(s.act) { refresh() }.show()
+            s.act.startActivity(android.content.Intent(s.act, com.dave.framegrabber.ui.telegram.TagsActivity::class.java))
         }
     }
 }

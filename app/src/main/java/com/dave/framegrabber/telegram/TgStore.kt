@@ -8,7 +8,7 @@ import org.json.JSONArray
  * Telegram settings: bot token, channel, the hashtag library (in the user's order) and the
  * studios / models used before (for suggestions). SharedPreferences "telegram".
  */
-class TgStore(ctx: Context) {
+class TgStore(private val ctx: Context) {
     private val sp: SharedPreferences = ctx.getSharedPreferences("telegram", Context.MODE_PRIVATE)
 
     var token: String get() = sp.getString("token", "") ?: ""; set(v) = sp.edit().putString("token", v.trim()).apply()
@@ -22,10 +22,8 @@ class TgStore(ctx: Context) {
 
     val configured get() = token.isNotEmpty() && chat.isNotEmpty()
 
-    /** Hashtags without '#', in the order they appear in posts. */
-    var hashtags: List<String>
-        get() = list("tags")
-        set(v) = putList("tags", v)
+    /** All hashtags (without '#') in post order — see [TagLibrary] for categories. */
+    val hashtags: List<String> get() = TagLibrary(ctx).all
     var studios: List<String>
         get() = list("studios")
         set(v) = putList("studios", v)

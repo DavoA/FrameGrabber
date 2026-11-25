@@ -87,7 +87,8 @@ class PostActivity : Activity() {
     private var swapFrom = -1
 
     private val models = mutableListOf<String>()
-    private val chosenTags = LinkedHashSet<String>()
+    /** Hashtag choice (public for tests). */
+    lateinit var tags: TagPicker
     private var posting = false
 
     private lateinit var photoGrid: GridLayout
@@ -96,7 +97,6 @@ class PostActivity : Activity() {
     private lateinit var editModel: AutoCompleteTextView
     private lateinit var modelChips: FlowLayout
     private lateinit var editTagSearch: EditText
-    private lateinit var tagChips: FlowLayout
     private lateinit var txtTagCount: TextView
     private lateinit var txtPreview: TextView
     private lateinit var txtCounter: TextView
@@ -124,7 +124,6 @@ class PostActivity : Activity() {
         editModel = findViewById(R.id.editModel)
         modelChips = findViewById(R.id.modelChips)
         editTagSearch = findViewById(R.id.editTagSearch)
-        tagChips = findViewById(R.id.tagChips)
         txtTagCount = findViewById(R.id.txtTagCount)
         txtPreview = findViewById(R.id.txtPreview)
         txtCounter = findViewById(R.id.txtCounter)
@@ -137,15 +136,15 @@ class PostActivity : Activity() {
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressed() }
         findViewById<View>(R.id.btnSetup).setOnClickListener { setup() }
         findViewById<View>(R.id.btnSetupNow).setOnClickListener { setup() }
-        findViewById<View>(R.id.btnEditTags).setOnClickListener {
-            HashtagsDialog(this) { buildTagChips(); updatePreview() }.show()
-        }
+        tags = TagPicker(this, findViewById(R.id.tagArea), editTagSearch) { updatePreview() }
+        findViewById<View>(R.id.btnEditTags).setOnClickListener { startActivity(Intent(this, TagsActivity::class.java)) }
         btnPublish.setOnClickListener { publish() }
 
         // the draft from last time (if it wasn't published)
         editStudio.setText(store.draftStudio)
         models += store.draftModels
-        chosenTags += store.draftTags.filter { t -> store.hashtags.any { it == t } }
+        val lib = com.dave.framegrabber.telegram.TagLibrary(this)
+        tags.selected += store.draftTags.filter { lib.contains(it) }
 
         editStudio.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, store.studios))
         editModel.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, store.models))
@@ -155,15 +154,11 @@ class PostActivity : Activity() {
         }
         editModel.setOnItemClickListener { _, _, _, _ -> addModel() }
         findViewById<View>(R.id.btnAddModel).setOnClickListener { addModel() }
-        editTagSearch.addTextChangedListener(watcher { buildTagChips() })
-        editTagSearch.setOnEditorActionListener { _, id, _ ->
-            if (id == EditorInfo.IME_ACTION_DONE) { createTagFromSearch(); true } else false
-        }
 
         applyInsets()
         loadThumbs()
         buildModelChips()
-        buildTagChips()
+        tags.render()
         updateSetup()
         updatePreview()
     }
@@ -183,7 +178,7 @@ class PostActivity : Activity() {
     private fun saveDraft() {
         store.draftStudio = editStudio.text.toString()
         store.draftModels = models.toList()
-        store.draftTags = chosenTags.toList()
+        store.draftTags = tags.selected.toList()
     }
 
     private fun applyInsets() {
@@ -316,57 +311,16 @@ class PostActivity : Activity() {
 
     // ================================================================ hashtags
 
-    private fun buildTagChips() {
-        val all = store.hashtags
-        chosenTags.retainAll(all.toSet())
-        tagChips.removeAllViews()
-        val q = editTagSearch.text.toString().trim().trimStart('#').lowercase()
-        val shown = if (q.isEmpty()) all else all.filter { it.lowercase().contains(q) }
-        shown.forEach { t ->
-            tagChips.addView(Chips.make(this, "#$t", on = t in chosenTags).apply {
-                setOnClickListener {
-                    if (!chosenTags.remove(t)) chosenTags += t
-                    setOn(t in chosenTags)
-                    updatePreview()
-                }
-            })
-        }
-        // nothing like that yet: offer to create it
-        val norm = PostCaption.normalizeTag(q)
-        if (norm != null && all.none { it.equals(norm, ignoreCase = true) }) {
-            tagChips.addView(Chips.make(this, "＋ создать #$norm").apply {
-                setTextColor(getColor(R.color.accent))
-                setOnClickListener { createTagFromSearch() }
-            })
-        }
-        if (all.isEmpty() && norm == null) {
-            tagChips.addView(TextView(this).apply {
-                text = "Список хэштегов пуст. Напиши тег в поле выше, чтобы создать, или открой «Изменить список»."
-                setTextColor(getColor(R.color.textDim)); textSize = 13f
-            })
-        }
-        txtTagCount.text = if (chosenTags.isEmpty()) "" else "выбрано ${chosenTags.size}"
-    }
-
-    /** The search text becomes a new tag in the library, already selected. */
-    private fun createTagFromSearch() {
-        val t = PostCaption.normalizeTag(editTagSearch.text.toString()) ?: return
-        val all = store.hashtags
-        val existing = all.firstOrNull { it.equals(t, ignoreCase = true) }
-        if (existing == null) store.hashtags = all + t
-        chosenTags += existing ?: t
-        editTagSearch.setText("")
-        buildTagChips()
+    /** Back from the tag manager: the library may have changed. */
+    override fun onRestart() {
+        super.onRestart()
+        tags.reload()
         updatePreview()
-        toast("#${existing ?: t} " + if (existing == null) "добавлен в список" else "выбран")
     }
-
-    /** Chosen tags in the library's order (the order set in ⚙ → Хэштеги). */
-    private fun orderedTags() = store.hashtags.filter { it in chosenTags }
 
     // ================================================================ preview
 
-    private fun caption() = PostCaption.build(editStudio.text.toString(), models, orderedTags())
+    private fun caption() = PostCaption.build(editStudio.text.toString(), models, tags.ordered())
 
     private fun updatePreview() {
         val text = caption()
@@ -378,7 +332,7 @@ class PostActivity : Activity() {
         val n = PostCaption.length(text)
         txtCounter.text = "$n / ${PostCaption.MAX}"
         txtCounter.setTextColor(getColor(if (n > PostCaption.MAX) R.color.danger else R.color.textDim))
-        txtTagCount.text = if (chosenTags.isEmpty()) "" else "выбрано ${chosenTags.size}"
+        txtTagCount.text = if (tags.selected.isEmpty()) "" else "выбрано ${tags.selected.size}"
     }
 
     // ================================================================ publishing
@@ -403,7 +357,7 @@ class PostActivity : Activity() {
             return
         }
         val text = caption()
-        val withoutTags = chosenTags.isEmpty()
+        val withoutTags = tags.selected.isEmpty()
         AlertDialog.Builder(this)
             .setTitle("Опубликовать в «${store.chatTitle.ifEmpty { store.chat }}»?")
             .setMessage(text + if (withoutTags) "\n\n(без хэштегов)" else "")
@@ -453,6 +407,7 @@ class PostActivity : Activity() {
         posted = true
         setBusy(false, null, 0)
         store.rememberUsed(studio, models)
+        com.dave.framegrabber.telegram.TagLibrary(this).countUse(tags.selected)
         store.clearDraft()
         setResult(RESULT_OK, Intent())
         val link = when {

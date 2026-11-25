@@ -42,6 +42,24 @@ class TelegramTest {
         assertNull(PostCaption.normalizeTag("2026"))
     }
 
+    @Test fun tag_library() {
+        ctx.getSharedPreferences("telegram", 0).edit().clear().commit()
+        val lib = com.dave.framegrabber.telegram.TagLibrary(ctx)
+        assertEquals(9, lib.categories.size)
+        assertEquals("Тело и внешность", lib.categories[0].name)
+        // each tag once, valid for Telegram
+        assertEquals(lib.all.size, lib.all.map { it.lowercase() }.toSet().size)
+        lib.all.forEach { assertEquals(it, PostCaption.normalizeTag(it)) }
+        assertTrue(lib.add("новый_тег", com.dave.framegrabber.telegram.TagLibrary.MINE))
+        assertTrue(!lib.add("сквирт", "Другое"))
+        lib.save()
+        lib.countUse(listOf("сквирт", "hd")); lib.countUse(listOf("hd"))
+        val again = com.dave.framegrabber.telegram.TagLibrary(ctx)
+        assertEquals("Мои", again.categoryOf("новый_тег")?.name)
+        assertEquals(listOf("hd", "сквирт"), again.frequent(5))
+        assertEquals(0, again.restoreDefaults())
+    }
+
     @Test fun photo_prep_makes_small_jpeg() {
         val big = Bitmap.createBitmap(3840, 2160, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.rgb(20, 140, 80)) }
         val f = File(ctx.cacheDir, "big.png")
