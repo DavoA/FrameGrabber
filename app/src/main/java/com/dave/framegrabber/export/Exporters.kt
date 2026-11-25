@@ -104,7 +104,9 @@ object Exporters {
     }
 
     /** What happened to the sound. */
-    class ClipResult(val droppedAudio: List<String>)
+    class ClipResult(val droppedAudio: List<String>, val samples: Int = 0, val firstUs: Long = 0, val lastUs: Long = 0) {
+        override fun toString() = "dropped=$droppedAudio samples=$samples first=$firstUs last=$lastUs"
+    }
 
     fun clip(ctx: Context, uri: Uri, fromUs: Long, toUs: Long, dest: File, progress: (Float) -> Boolean): ClipResult {
         val fmt = clipFormat(ctx, uri)
@@ -121,6 +123,7 @@ object Exporters {
         ex.setDataSource(ctx, uri, null)
         val muxer = makeMuxer()
         val dropped = mutableListOf<String>()
+        var samples = 0; var first = -1L; var last = -1L
         try {
             val map = HashMap<Int, Int>()
             var maxIn = 1 shl 20
@@ -144,7 +147,16 @@ object Exporters {
             require(map.isNotEmpty()) { "Нет дорожек для экспорта" }
             val active = map.keys.toMutableSet()
             muxer.start()
-            ex.seekTo(fromUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            // Some containers (MPEG-TS) don't start at 0: the times on screen count from the first frame
+            ex.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            val base = ex.sampleTime.coerceAtLeast(0L)
+            val from = base + fromUs
+            val endUs = base + toUs
+            ex.seekTo(from, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            if (ex.sampleTime < 0 || ex.sampleTime > from) {
+                // seeking doesn't work in this file: start from the beginning (the clip starts earlier)
+                ex.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            }
             val start = ex.sampleTime.coerceAtLeast(0L)
             val buf = ByteBuffer.allocate(maxIn)
             val info = MediaCodec.BufferInfo()
@@ -152,7 +164,7 @@ object Exporters {
                 val track = ex.sampleTrackIndex
                 if (track < 0) break
                 val t = ex.sampleTime
-                if (t > toUs) {                    // this track is done; others may still have samples
+                if (t > endUs) {                    // this track is done; others may still have samples
                     ex.unselectTrack(track); active.remove(track)
                     if (active.isEmpty()) break else continue
                 }
@@ -162,8 +174,8 @@ object Exporters {
                 info.offset = 0
                 info.presentationTimeUs = (t - start).coerceAtLeast(0L)
                 info.flags = if (ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0
-                map[track]?.let { muxer.writeSampleData(it, buf, info) }
-                if (!progress(((t - start).toFloat() / max(1L, toUs - start)).coerceIn(0f, 1f))) break
+                map[track]?.let { muxer.writeSampleData(it, buf, info); samples++; if (first < 0) first = t; last = t }
+                if (!progress(((t - start).toFloat() / max(1L, endUs - start)).coerceIn(0f, 1f))) break
                 if (!ex.advance()) break
             }
         } finally {
@@ -171,6 +183,6 @@ object Exporters {
             runCatching { muxer.release() }
             ex.release()
         }
-        return ClipResult(dropped)
+        return ClipResult(dropped, samples, first, last)
     }
 }

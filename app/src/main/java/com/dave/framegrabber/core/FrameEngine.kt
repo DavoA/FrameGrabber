@@ -169,7 +169,10 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
     /** Full-resolution frame. exact=true decodes the precise frame (slower). */
     fun frame(us: Long, exact: Boolean = true): Bitmap? {
         val t = us.coerceIn(0L, lastUs)
-        ff?.let { return argb(it.getFrameAtTime(t, ffOption(exact))) }
+        ff?.let { f ->
+            return argb(runCatching { f.getFrameAtTime(t, ffOption(exact)) }.getOrNull()
+                ?: if (!exact) runCatching { f.getFrameAtTime(t, ffOption(true)) }.getOrNull() else null)
+        }
         val r = r ?: return null
         return if (Build.VERSION.SDK_INT >= 30) {
             // Ask explicitly for 8-bit ARGB: HDR / 10-bit videos may otherwise come back in formats
@@ -196,7 +199,12 @@ class FrameEngine(context: Context, uri: Uri) : Closeable {
         ff?.let { f ->
             val k = min(maxW.toDouble() / max(1, width), maxH.toDouble() / max(1, height)).coerceAtMost(1.0)
             val w = max(2, (width * k).roundToInt()); val h = max(2, (height * k).roundToInt())
-            return argb(f.getScaledFrameAtTime(t, ffOption(exact), w, h))
+            // some files (FLV without an index) give nothing at "nearest keyframe": fall back to the
+            // exact frame, and scale it here if FFmpeg's own scaling fails
+            val b = runCatching { f.getScaledFrameAtTime(t, ffOption(exact), w, h) }.getOrNull()
+                ?: runCatching { f.getScaledFrameAtTime(t, ffOption(true), w, h) }.getOrNull()
+                ?: frame(t, exact = true)?.let { full -> Bitmap.createScaledBitmap(full, w, h, true) }
+            return argb(b)
         }
         return r?.getScaledFrameAtTime(t, option(exact), maxW, maxH)
     }

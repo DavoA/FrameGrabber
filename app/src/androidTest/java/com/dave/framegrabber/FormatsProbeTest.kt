@@ -43,7 +43,8 @@ class FormatsProbeTest {
                     assertTrue("$name fps ${e.fps}", e.fps in 29.0..31.0)
                     val g = FrameCapture.grab(e, 2_000_000)
                     assertEquals("$name frame width", 640, g.bitmap.width)
-                    assertTrue("$name preview", (e.scaledFrame(1_000_000, 200, 200, false)?.width ?: 0) in 100..200)
+                    val pw = e.scaledFrame(1_000_000, 200, 200, false)?.width ?: 0
+                    assertTrue("$name preview width $pw", pw in 100..200)
                     // a few frames like the batch does
                     val dir = File(appCtx.cacheDir, "fmt_out").apply { deleteRecursively(); mkdirs() }
                     listOf(0L, 1_500_000L, 3_000_000L).forEach { FrameCapture.capture(e, it, OutputSpec(null, Fmt.JPG, 90), dir, "x") }
@@ -64,7 +65,7 @@ class FormatsProbeTest {
             val fmt = Exporters.clipFormat(appCtx, uri)
             val out = File(appCtx.cacheDir, "$name.clip.${fmt.ext}")
             val res = Exporters.clip(appCtx, uri, 1_000_000, 3_000_000, out) { true }
-            assertTrue("$name clip size", out.length() > 10_000)
+            assertTrue("$name clip size ${out.length()} $res", out.length() > 10_000)
             FrameEngine(appCtx, Uri.fromFile(out)).use { e -> assertTrue("$name clip dur ${e.durationUs}", e.durationUs in 1_500_000..3_200_000) }
             log("$name clip ${fmt.ext} dropped=${res.droppedAudio}")
             return fmt to res
