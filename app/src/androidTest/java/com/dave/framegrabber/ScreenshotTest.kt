@@ -180,7 +180,7 @@ class ScreenshotTest {
         Thread.sleep(1500); shot("12_post")
         inst.runOnMainSync {
             val txt = post.findViewById<android.widget.TextView>(R.id.txtPreview).text.toString()
-            check(txt == "Studio name - Model A & Model B\n------------------------------\n#натуральные #блондинки #догги #hd") { "caption: $txt" }
+            check(txt == "Studio name - Model A & Model B\n${com.dave.framegrabber.telegram.PostCaption.SEPARATOR}\n#натуральные #блондинки #догги #hd") { "caption: $txt" }
             post.findViewById<android.widget.ScrollView>(R.id.scroll).fullScroll(android.view.View.FOCUS_DOWN)
         }
         Thread.sleep(1200); shot("12b_post_preview")

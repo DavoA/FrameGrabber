@@ -4,14 +4,14 @@ package com.dave.framegrabber.telegram
  * The post text, always the same shape:
  *
  *     Studio name - Model A & Model B
- *     ------------------------------
+ *     ————————————————
  *     #tag1 #tag2 #tag3
  *
  * Plain text (no parse mode): Telegram shows exactly these characters, and makes the hashtags
  * clickable by itself.
  */
 object PostCaption {
-    const val SEPARATOR = "------------------------------"
+    const val SEPARATOR = "————————————————"
     /** Telegram's limit for a photo caption sent by a bot. */
     const val MAX = 1024
     const val PHOTOS = 6

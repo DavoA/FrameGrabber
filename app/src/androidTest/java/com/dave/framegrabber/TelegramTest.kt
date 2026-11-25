@@ -28,8 +28,8 @@ class TelegramTest {
 
     @Test fun caption_shape() {
         val c = PostCaption.build("Studio name", listOf("Model A", "Model B"), listOf("tag1", "tag2"))
-        assertEquals("Studio name - Model A & Model B\n------------------------------\n#tag1 #tag2", c)
-        assertEquals("Studio - Solo\n------------------------------",
+        assertEquals("Studio name - Model A & Model B\n${PostCaption.SEPARATOR}\n#tag1 #tag2", c)
+        assertEquals("Studio - Solo\n${PostCaption.SEPARATOR}",
             PostCaption.build(" Studio ", listOf(" Solo "), emptyList()))
     }
 
