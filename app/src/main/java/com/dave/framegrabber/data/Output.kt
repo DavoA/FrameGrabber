@@ -117,8 +117,13 @@ object Output {
     }
 
     /** Human description of where images go. */
-    fun describe(ctx: Context): String {
+    fun describe(ctx: Context, kind: Kind = Kind.IMAGE): String {
         val p = Prefs(ctx)
-        return if (p.folderTree != null) (p.folderTreeName ?: "выбранная папка") else "Pictures/${Prefs.ALBUM}"
+        if (p.folderTree != null) return p.folderTreeName ?: "выбранная папка"
+        return when (kind) {
+            Kind.VIDEO -> "Movies/${Prefs.ALBUM}"
+            Kind.IMAGE -> "Pictures/${Prefs.ALBUM}"
+            else -> "Download/${Prefs.ALBUM}"
+        }
     }
 }

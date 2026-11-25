@@ -240,7 +240,12 @@ class SplitPanel(private val s: MainScreen) {
     /** Sizes the way Telegram counts them: its "2 GB" is 2000 MB of 1 048 576 bytes. */
     private fun size(b: Long): String {
         val mb = b / 1_048_576.0
-        return if (mb >= 1000) "%.2f ГБ".format(mb / 1000) else "%.0f МБ".format(mb)
+        return when {
+            mb >= 1000 -> "%.2f ГБ".format(mb / 1000)
+            mb >= 10 -> "%.0f МБ".format(mb)
+            mb >= 1 -> "%.1f МБ".format(mb)
+            else -> "%.0f КБ".format(b / 1024.0)
+        }
     }
 
     private fun sizeOf(uri: Uri): Long =

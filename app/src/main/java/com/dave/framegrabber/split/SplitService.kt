@@ -130,7 +130,7 @@ class SplitService : Service() {
                 st.saved += uri
                 res?.droppedAudio?.takeIf { it.isNotEmpty() }?.let { st.droppedAudio = it }
             }
-            st.folder = Output.describe(this) + "/" + job.videoName
+            st.folder = Output.describe(this, Output.Kind.VIDEO) + "/" + job.videoName
         } catch (e: Throwable) {
             st.error = e.message ?: e.javaClass.simpleName
         } finally {
