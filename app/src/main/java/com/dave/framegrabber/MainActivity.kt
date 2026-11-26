@@ -210,7 +210,11 @@ class MainActivity : Activity() {
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
-            REQ_POST -> screen.tgPick.onPosted()
+            REQ_POST -> {
+                screen.tgPick.onPosted()
+                if (data.getBooleanExtra(com.dave.framegrabber.ui.telegram.PostActivity.EXTRA_OPEN_FEED, false))
+                    screen.nav.show(com.dave.framegrabber.ui.main.NavController.Page.FEED)
+            }
             REQ_PLAYER_DIR -> data.getStringExtra(FileBrowserActivity.EXTRA_PATH)?.let { screen.playerTab.onFolderPicked(it) }
             REQ_PLAY -> {
                 val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)

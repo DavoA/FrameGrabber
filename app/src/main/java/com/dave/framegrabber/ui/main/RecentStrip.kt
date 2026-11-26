@@ -45,7 +45,10 @@ class RecentStrip(private val s: MainScreen) {
     }
 
     fun build() {
-        val items = Recent.list(s.act)
+        // videos deleted from the phone since: drop them from the list
+        val all = Recent.list(s.act)
+        val items = all.filter { com.dave.framegrabber.data.VideoFile.exists(s.act, it.ref, it.isPath) }
+        all.filter { it !in items }.forEach { Recent.remove(s.act, it.ref) }
         row.removeAllViews()
         if (items.isEmpty() || s.video.engine != null) { card.visibility = View.GONE; return }
         card.visibility = View.VISIBLE

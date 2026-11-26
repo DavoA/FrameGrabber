@@ -61,6 +61,7 @@ import kotlin.math.max
 class PostActivity : Activity() {
 
     companion object {
+        const val EXTRA_OPEN_FEED = "openFeed"
         private const val EXTRA_FILES = "files"
         private const val EXTRA_TIMES = "times"
         private const val EXTRA_VIDEO = "video"
@@ -462,7 +463,11 @@ class PostActivity : Activity() {
         val b = AlertDialog.Builder(this)
             .setTitle("Опубликовано ✓")
             .setMessage("Пост в «${store.chatTitle.ifEmpty { store.chat }}» готов.")
-            .setPositiveButton("Готово") { _, _ -> finish() }
+            .setPositiveButton("Готово") { _, _ ->
+                // back in the app: straight to the channel feed, where the new post shows up
+                setResult(RESULT_OK, Intent().putExtra(EXTRA_OPEN_FEED, true))
+                finish()
+            }
             .setOnCancelListener { finish() }
         if (link != null) b.setNeutralButton("Открыть в Telegram") { _, _ ->
             runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) }
