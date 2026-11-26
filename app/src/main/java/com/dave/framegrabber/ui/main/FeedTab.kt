@@ -135,6 +135,7 @@ class FeedTab(private val s: MainScreen) {
         visible = true
         Tg.start(act)
         render()
+        adapter.notifyDataSetChanged()   // downloads deleted meanwhile show «⬇ Скачать» again
     }
 
     fun onHidden() { visible = false }

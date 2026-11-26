@@ -45,8 +45,22 @@ object TgDownloads {
     private lateinit var app: Context
 
     /** Where a finished download of this post's video was saved (or null). */
-    fun saved(ctx: Context, key: String): Uri? =
-        ctx.getSharedPreferences("tgdl", Context.MODE_PRIVATE).getString(key, null)?.let(Uri::parse)
+    fun saved(ctx: Context, key: String): Uri? {
+        val sp = ctx.getSharedPreferences("tgdl", Context.MODE_PRIVATE)
+        val uri = sp.getString(key, null)?.let(Uri::parse) ?: return null
+        // the file may have been deleted since (in «Плеер», the gallery, a file manager): then it's not downloaded anymore
+        val now = android.os.SystemClock.uptimeMillis()
+        val c = existCache[key]
+        val ok = if (c != null && now - c.first < 3000) c.second else exists(ctx, uri).also { existCache[key] = now to it }
+        if (!ok) { sp.edit().remove(key).apply(); existCache.remove(key); return null }
+        return uri
+    }
+
+    private val existCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Boolean>>()
+
+    private fun exists(ctx: Context, uri: Uri): Boolean =
+        if (uri.scheme == "file") File(uri.path ?: "").exists()
+        else runCatching { ctx.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false }.getOrDefault(false)
 
     fun active(key: String) = jobs.firstOrNull { it.key == key && (it.stage == "downloading" || it.stage == "copying") }
 
