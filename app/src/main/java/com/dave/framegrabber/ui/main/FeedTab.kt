@@ -208,6 +208,7 @@ class FeedTab(private val s: MainScreen) {
     private fun button(t: String, primary: Boolean = false, click: () -> Unit): Button =
         Button(act, null, 0, if (primary) R.style.BtnPrimary else R.style.BtnSecondary).apply {
             text = t
+            gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * d).toInt() }
             setOnClickListener { click() }
             loginBox.addView(this)
@@ -615,6 +616,7 @@ class FeedTab(private val s: MainScreen) {
                 else -> "⬇ Скачать"
             }
             minHeight = (38 * d).toInt(); minimumHeight = (38 * d).toInt(); textSize = 13f
+            gravity = Gravity.CENTER
             setOnClickListener { videoTap(m) }
         })
         row.addView(top)
