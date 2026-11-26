@@ -73,6 +73,8 @@ class FeedTab(private val s: MainScreen) {
     private var loadError: String? = null
     private var shownState: Tg.State? = null
     private var visible = false
+    /** Older posts load only when YOU scroll up (not while the list lays itself out). */
+    private var userScrolled = false
 
     private val net = Executors.newFixedThreadPool(3)
     private val thumbs = object : LruCache<Int, Bitmap>(24 * 1024 * 1024) {
@@ -83,13 +85,16 @@ class FeedTab(private val s: MainScreen) {
     private val refreshRows = Runnable { adapter.notifyDataSetChanged() }
 
     init {
+        // like Telegram: newest post at the bottom, scroll UP for older ones
+        list.isStackFromBottom = true
         list.adapter = adapter
         list.setOnScrollListener(object : AbsListView.OnScrollListener {
             override fun onScrollStateChanged(v: AbsListView, st: Int) {
                 act.bgView.scrolling = st != AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+                if (st != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) userScrolled = true
             }
             override fun onScroll(v: AbsListView, first: Int, count: Int, total: Int) {
-                if (total > 0 && first + count >= total - 2) loadMore()
+                if (userScrolled && posts.isNotEmpty() && first <= 2) loadMore()
             }
         })
         s.h<View>(R.id.btnFeedRefresh).setOnClickListener { reload() }
@@ -284,7 +289,7 @@ class FeedTab(private val s: MainScreen) {
         if (Tg.state != Tg.State.READY) { render(); return }
         val name = channel()
         if (name.isEmpty()) { askChannel(); return }
-        posts.clear(); oldest = 0; reachedEnd = false; loadError = null; chatId = 0
+        posts.clear(); oldest = 0; reachedEnd = false; loadError = null; chatId = 0; userScrolled = false
         title.text = "@$name"; sub.text = "Загрузка…"
         adapter.notifyDataSetChanged()
         loading = true
@@ -332,6 +337,11 @@ class FeedTab(private val s: MainScreen) {
             s.ui.post {
                 loading = false
                 if (chat != chatId) return@post
+                val firstPage = posts.isEmpty()
+                // keep what you are looking at in place while older posts appear above it
+                val keepPos = list.firstVisiblePosition
+                val keepTop = list.getChildAt(0)?.top ?: 0
+                var added = 0
                 if (got.isEmpty()) { reachedEnd = true; loadError = error }
                 else {
                     oldest = got.last().id
@@ -342,8 +352,11 @@ class FeedTab(private val s: MainScreen) {
                         posts[posts.size - 1] = Post(last.ids + f.ids, last.date, last.caption ?: f.caption, last.media + f.media)
                     }
                     posts += grouped
+                    added = grouped.size
                 }
                 adapter.notifyDataSetChanged()
+                if (firstPage) list.setSelection(adapter.count - 1)
+                else if (added > 0) list.setSelectionFromTop(keepPos + added, keepTop)
             }
         }
     }
@@ -458,14 +471,15 @@ class FeedTab(private val s: MainScreen) {
     }
 
     private inner class Adapter : BaseAdapter() {
+        // row 0 = «loading / first post» on top, then oldest → newest (posts[] is newest first)
         override fun getCount() = posts.size + 1
         override fun getItem(p: Int) = p
         override fun getItemId(p: Int) = p.toLong()
         override fun getViewTypeCount() = 2
-        override fun getItemViewType(p: Int) = if (p < posts.size) 0 else 1
+        override fun getItemViewType(p: Int) = if (p == 0) 1 else 0
 
         override fun getView(p: Int, cv: View?, parent: ViewGroup): View =
-            if (p < posts.size) postView(posts[p], parent.width) else footer()
+            if (p == 0) footer() else postView(posts[posts.size - p], parent.width)
     }
 
     private fun footer(): View {
@@ -490,7 +504,7 @@ class FeedTab(private val s: MainScreen) {
             setPadding((10 * d).toInt(), (10 * d).toInt(), (10 * d).toInt(), (12 * d).toInt())
             layoutParams = AbsListView.LayoutParams(-1, -2)
         }
-        val outer = FrameLayout(act).apply { setPadding(0, (10 * d).toInt(), 0, 0); addView(card) }
+        val outer = FrameLayout(act).apply { setPadding(0, 0, 0, (10 * d).toInt()); addView(card) }
 
         val w = (if (listW > 0) listW - list.paddingStart - list.paddingEnd else act.resources.displayMetrics.widthPixels) - (20 * d).toInt()
         if (post.media.isNotEmpty()) card.addView(mediaGrid(post.media, w))
