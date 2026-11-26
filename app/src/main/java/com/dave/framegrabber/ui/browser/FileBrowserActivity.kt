@@ -39,6 +39,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
+import android.widget.Toast
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -68,6 +69,8 @@ class FileBrowserActivity : Activity() {
         /** Ask: pick several videos. Result: [EXTRA_REFS] (file paths or content:// Uris). */
         const val EXTRA_MULTI = "multi"
         const val EXTRA_REFS = "refs"
+        /** Ask: pick a FOLDER (for the player's library). Result: [EXTRA_PATH] = the folder. */
+        const val EXTRA_PICK_DIR = "pickDir"
         private const val REQ_PERM = 10
         private const val REQ_OTHER = 11
     }
@@ -99,6 +102,7 @@ class FileBrowserActivity : Activity() {
     private lateinit var stateBtn: TextView
     private lateinit var stateBtn2: View
     private val multi by lazy { intent.getBooleanExtra(EXTRA_MULTI, false) }
+    private val pickDir by lazy { intent.getBooleanExtra(EXTRA_PICK_DIR, false) }
     /** Multi-select: chosen videos in tap order (key -> ref). */
     private val chosen = LinkedHashMap<String, String>()
     private val adapter by lazy { BrowserAdapter(this, entries, if (multi) chosen.keys else null) }
@@ -148,6 +152,18 @@ class FileBrowserActivity : Activity() {
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressedCompat() }
         findViewById<View>(R.id.btnOther).setOnClickListener { pickWithOtherApp() }
+        if (pickDir) {
+            findViewById<View>(R.id.btnOther).visibility = View.GONE
+            findViewById<TextView>(R.id.txtTitle).text = "Выбери папку"
+            findViewById<View>(R.id.btnDone).apply {
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    setResult(RESULT_OK, Intent().putExtra(EXTRA_PATH, dir.path))
+                    finish()
+                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                }
+            }
+        }
         if (multi) {
             findViewById<View>(R.id.btnOther).visibility = View.GONE   // other apps give one video
             findViewById<View>(R.id.btnDone).setOnClickListener { finishMulti() }
@@ -207,7 +223,7 @@ class FileBrowserActivity : Activity() {
             val bars = insets.getInsets(WindowInsets.Type.systemBars())
             val ime = insets.getInsets(WindowInsets.Type.ime())
             v.setPadding(bars.left, bars.top, bars.right, 0)
-            val extra = if (multi) 76 else 12   // room for "Готово (N)"
+            val extra = if (multi || pickDir) 76 else 12   // room for "Готово (N)"
             list.setPadding(list.paddingLeft, list.paddingTop, list.paddingRight, max(bars.bottom, ime.bottom) + (extra * dp).toInt())
             findViewById<View>(R.id.btnDone).let { b ->
                 (b.layoutParams as android.widget.FrameLayout.LayoutParams).bottomMargin = max(bars.bottom, ime.bottom) + (16 * dp).toInt()
@@ -302,6 +318,8 @@ class FileBrowserActivity : Activity() {
         val rel = d.path.removePrefix(storageRoot.path).trimStart('/')
         txtPath.text = if (rel.isEmpty()) "Память" else "Память / " + rel.replace("/", " / ")
         pathScroll.post { pathScroll.fullScroll(View.FOCUS_RIGHT) }
+        if (pickDir) (findViewById<android.widget.Button>(R.id.btnDone)).text =
+            "Выбрать «${if (d == storageRoot) "Вся память" else d.name}»"
         btnUp.isEnabled = d != storageRoot
         btnUp.animate().alpha(if (d != storageRoot) 1f else 0.35f).setDuration(150).start()
         syncChips()
@@ -381,7 +399,9 @@ class FileBrowserActivity : Activity() {
     private fun onEntryClick(e: Entry) {
         when (e) {
             is Entry.Dir -> { editSearch.setText(""); openDir(e.file) }
-            is Entry.Video -> if (multi) {
+            is Entry.Video -> if (pickDir) {
+                Toast.makeText(this, "Выбираем папку: зайди в неё и нажми кнопку внизу", Toast.LENGTH_SHORT).show()
+            } else if (multi) {
                 if (chosen.remove(e.key) == null) chosen[e.key] = e.file?.path ?: e.uri.toString()
                 adapter.notifyDataSetChanged()
                 updateDone()

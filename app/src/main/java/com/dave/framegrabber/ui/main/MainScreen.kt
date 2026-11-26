@@ -94,7 +94,6 @@ class MainScreen(val act: MainActivity) {
         effects.startIdle()
         freezeBackgroundWhileScrolling(h(R.id.pageTools))
         freezeBackgroundWhileScrolling(h(R.id.pageClips))
-        freezeBackgroundWhileScrolling(h(R.id.pagePlayer))
         // the screen was recreated while the app kept running: reopen the project's video
         CaptureStore.project?.let { video.load(it.uri) }
     }

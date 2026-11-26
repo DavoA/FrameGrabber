@@ -175,8 +175,11 @@ class ScreenshotTest {
         Thread.sleep(3000); shot("16_vr")
         inst.runOnMainSync { player.finish() }
         Thread.sleep(1500)
+        com.dave.framegrabber.player.Library(appCtx).folders = listOf(appCtx.cacheDir.path)
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navPlayer).performClick() }
-        Thread.sleep(1500); shot("17_player_tab")
+        Thread.sleep(5000); shot("17_player_tab")
+        val cards = a.findViewById<android.widget.GridView>(R.id.libGrid).adapter.count
+        check(cards >= 3) { "library cards: $cards" }
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)
 

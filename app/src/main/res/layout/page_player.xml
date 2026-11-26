@@ -1,83 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Page «Плеер»: random hot moment, open a video, continue watching -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Page «Плеер»: the library of videos from the chosen folders (like VLC) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/pagePlayer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clipToPadding="false"
-    android:scrollbars="none"
+    android:orientation="vertical"
     android:visibility="gone">
 
+    <!-- search · 🎲 · sort · folders -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingStart="14dp"
+        android:paddingTop="4dp"
         android:paddingEnd="14dp">
-
-        <LinearLayout style="@style/Card">
-            <TextView
-                style="@style/CardTitle"
-                android:text="🎲  Случайный момент" />
-            <TextView
-                style="@style/SubHint"
-                android:text="Случайное видео с телефона — и сразу самое горячее место в нём (по звуку и движению)." />
-            <Button
-                android:id="@+id/btnRandomMoment"
-                style="@style/BtnPrimary"
-                android:layout_marginTop="12dp"
-                android:drawableStart="@drawable/ic_dice"
-                android:drawableTint="#FFFFFFFF"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:text="Крутануть" />
-            <TextView
-                android:id="@+id/txtRandomStatus"
-                style="@style/SubHint"
-                android:paddingTop="6dp"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <LinearLayout style="@style/Card">
-            <TextView
-                style="@style/CardTitle"
-                android:text="▶  Смотреть" />
-            <Button
-                android:id="@+id/btnPlayPick"
-                style="@style/BtnSecondary"
-                android:drawableStart="@drawable/ic_folder"
-                android:drawableTint="@color/accent"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:text="Открыть видео…" />
-            <Button
-                android:id="@+id/btnPlayCurrent"
-                style="@style/BtnSecondary"
-                android:layout_marginTop="10dp"
-                android:drawableStart="@drawable/ic_play"
-                android:drawableTint="@color/accent"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:text="Смотреть открытое видео"
-                android:visibility="gone" />
-            <TextView
-                style="@style/SubHint"
-                android:paddingTop="8dp"
-                android:text="Жесты: слева вверх-вниз — яркость, справа — громкость, в стороны — перемотка, двойной тап — ±10 с, двумя пальцами — зум. VR-видео (180° / 360°) — кнопка VR вверху плеера." />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/cardContinue"
-            style="@style/Card"
-            android:visibility="gone">
-            <TextView
-                style="@style/CardTitle"
-                android:text="⏯  Продолжить просмотр" />
-            <LinearLayout
-                android:id="@+id/continueList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </LinearLayout>
+        <EditText
+            android:id="@+id/editLibSearch"
+            style="@style/Input"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:hint="🔍 Поиск видео"
+            android:imeOptions="actionSearch"
+            android:inputType="text|textNoSuggestions" />
+        <ImageButton
+            android:id="@+id/btnRandomMoment"
+            style="@style/IconBtn"
+            android:layout_marginStart="8dp"
+            android:contentDescription="Случайный горячий момент"
+            android:src="@drawable/ic_dice"
+            android:tint="@color/accent" />
+        <ImageButton
+            android:id="@+id/btnLibSort"
+            style="@style/IconBtn"
+            android:layout_marginStart="6dp"
+            android:contentDescription="Сортировка"
+            android:src="@drawable/ic_tune" />
+        <ImageButton
+            android:id="@+id/btnLibFolders"
+            style="@style/IconBtn"
+            android:layout_marginStart="6dp"
+            android:contentDescription="Папки плеера"
+            android:src="@drawable/ic_folder" />
     </LinearLayout>
-</ScrollView>
+
+    <!-- Все · Продолжить · Новые · folders -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingStart="14dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="6dp"
+        android:scrollbars="none">
+        <LinearLayout
+            android:id="@+id/libChips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <TextView
+        android:id="@+id/txtRandomStatus"
+        style="@style/SubHint"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <GridView
+            android:id="@+id/libGrid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:columnWidth="160dp"
+            android:horizontalSpacing="10dp"
+            android:listSelector="@android:color/transparent"
+            android:numColumns="auto_fit"
+            android:paddingStart="14dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="16dp"
+            android:scrollbars="none"
+            android:stretchMode="columnWidth"
+            android:verticalSpacing="14dp" />
+
+        <!-- no folders yet / nothing found -->
+        <LinearLayout
+            android:id="@+id/libEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp"
+            android:visibility="gone">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/ic_video_library"
+                android:tint="@color/accent" />
+            <TextView
+                android:id="@+id/txtLibEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingTop="12dp"
+                android:textColor="@color/textDim"
+                android:textSize="14sp" />
+            <Button
+                android:id="@+id/btnLibAddFolder"
+                style="@style/BtnPrimary"
+                android:layout_width="wrap_content"
+                android:layout_marginTop="16dp"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="Добавить папку с видео" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

@@ -29,6 +29,7 @@ class MainActivity : Activity() {
         private const val REQ_MULTI = 3
         private const val REQ_POST = 4
         private const val REQ_PLAY = 5
+        private const val REQ_PLAYER_DIR = 6
         /** What the pickers ask other apps for. */
         val VIDEO_MIME_TYPES = arrayOf(
             "video/*", "application/x-matroska", "application/mp4", "application/x-mpegts",
@@ -168,6 +169,13 @@ class MainActivity : Activity() {
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
+    /** In-app browser in folder mode: a folder for the player's library. */
+    fun pickPlayerFolder() {
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(this, FileBrowserActivity::class.java).putExtra(FileBrowserActivity.EXTRA_PICK_DIR, true), REQ_PLAYER_DIR)
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     /** The Telegram post editor for the picked frames. */
     fun openPostEditor(i: Intent) {
         @Suppress("DEPRECATION")
@@ -195,6 +203,7 @@ class MainActivity : Activity() {
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
             REQ_POST -> screen.tgPick.onPosted()
+            REQ_PLAYER_DIR -> data.getStringExtra(FileBrowserActivity.EXTRA_PATH)?.let { screen.playerTab.onFolderPicked(it) }
             REQ_PLAY -> {
                 val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)
                 val uri = if (path != null) Uri.fromFile(File(path)) else data.data

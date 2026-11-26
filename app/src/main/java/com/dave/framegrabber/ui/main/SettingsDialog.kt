@@ -216,6 +216,10 @@ class SettingsDialog(private val s: MainScreen) {
         v.findViewById<View>(R.id.rowTgSetup).setOnClickListener {
             com.dave.framegrabber.ui.telegram.TgSetupDialog(s.act) { refresh() }.show()
         }
+        val pf = v.findViewById<TextView>(R.id.txtPlayerFolders)
+        fun pfText() { val n = com.dave.framegrabber.player.Library(s.act).folders.size; pf.text = if (n == 0) "Папки с видео не выбраны" else "Папки с видео: $n" }
+        pfText()
+        v.findViewById<View>(R.id.rowPlayerFolders).setOnClickListener { s.playerTab.showFolders() }
         v.findViewById<View>(R.id.rowTags).setOnClickListener {
             s.act.startActivity(android.content.Intent(s.act, com.dave.framegrabber.ui.telegram.TagsActivity::class.java))
         }
