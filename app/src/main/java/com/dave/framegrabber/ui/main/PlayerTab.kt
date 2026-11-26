@@ -555,6 +555,10 @@ class PlayerTab(private val s: MainScreen) {
                 }
                 name.setPadding(0, 0, 0, 0)
                 col.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+                // list: ⋮ at the end of the row, not over the small picture
+                frame.removeView(more)
+                more.background = null
+                col.addView(more, LinearLayout.LayoutParams((40 * d).toInt(), (40 * d).toInt()))
             } else { col.addView(name); col.addView(sub) }
             val holder = Holder(thumb, dur, badge, progress, name, sub)
             col.tag = holder
