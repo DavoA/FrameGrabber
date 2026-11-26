@@ -172,7 +172,7 @@ class ScreenshotTest {
         }
         Thread.sleep(1200); shot("15_player")
         inst.runOnMainSync { player.enterVr("vr180") }
-        Thread.sleep(2500); shot("16_vr")
+        Thread.sleep(3000); shot("16_vr")
         inst.runOnMainSync { player.finish() }
         Thread.sleep(1500)
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navPlayer).performClick() }

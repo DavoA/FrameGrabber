@@ -770,6 +770,12 @@ class PlayerActivity : Activity() {
             .setNegativeButton("Отмена", null).show()
     }
 
+    /** A paused player draws nothing on a new surface until asked: show the current frame. */
+    private fun redrawIfPaused() {
+        val p = mp ?: return
+        if (prepared && !p.isPlaying) p.seekTo(p.currentPosition.toLong(), MediaPlayer.SEEK_CLOSEST)
+    }
+
     private fun vrLabel() = vrModes.firstOrNull { it.first == data.vr }?.second?.let { "VR $it" } ?: "VR"
 
     /** Public for tests. */
@@ -780,7 +786,7 @@ class PlayerActivity : Activity() {
             vrView = vv
             vrHost.addView(vv, FrameLayout.LayoutParams(-1, -1))
             vv.onTap = { toggleControls() }
-            vv.onSurface = { s -> pendingVrSurface = s; mp?.setSurface(s) }
+            vv.onSurface = { s -> pendingVrSurface = s; mp?.setSurface(s); redrawIfPaused() }
             vv.start()
         }
         v.fov = if (mode.startsWith("vr360")) VrView.Fov.F360 else VrView.Fov.F180
@@ -804,6 +810,7 @@ class PlayerActivity : Activity() {
     private fun exitVr() {
         data.vr = "flat"
         mp?.setSurface(flatSurface)
+        redrawIfPaused()
         vrView?.let { it.stop(); vrHost.removeView(it) }
         vrView = null
         pendingVrSurface = null

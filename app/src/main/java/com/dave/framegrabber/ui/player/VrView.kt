@@ -55,13 +55,12 @@ class VrView(ctx: Context) : GLSurfaceView(ctx), SensorEventListener {
     private val rotSensor = sm.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) ?: sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     private val main = Handler(Looper.getMainLooper())
 
-    /** Phone orientation (column-major, ready for GL) from the sensor. */
+    /** Eye rotation from the sensor (column-major, ready for GL), relative to the "centre" pose. */
     private val sensorM = FloatArray(16).also { Matrix.setIdentityM(it, 0) }
     @Volatile private var hasSensor = false
-    /** Drag offsets (degrees) and the "recenter" correction. */
+    /** Drag offsets (degrees). */
     @Volatile private var yaw = 0f
     @Volatile private var pitch = 0f
-    @Volatile private var yawZero = 0f
     @Volatile private var zoomFov = 90f
 
     init {
@@ -83,50 +82,62 @@ class VrView(ctx: Context) : GLSurfaceView(ctx), SensorEventListener {
     fun setGyroEnabled(on: Boolean) {
         gyro = on
         sm.unregisterListener(this)
-        if (on) rotSensor?.let { sm.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) } else hasSensor = false
+        hasSensor = false
+        if (on) { needRef = true; rotSensor?.let { sm.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) } }
     }
 
-    /** Look straight at the middle of the video from where the phone points now. */
+    /** Where the phone points now becomes the middle of the video. */
     fun recenter() {
         yaw = 0f; pitch = 0f
-        yawZero = -currentSensorYaw()
+        needRef = true
     }
 
     val hasGyro get() = rotSensor != null
 
     // ================================================================ sensor
+    //
+    // The phone's rotation now relative to the moment VR was switched on (or «По центру»):
+    // that pose looks straight at the middle of the video, every turn of the phone turns the view.
+    // Works the same on every phone (no compass, no assumptions about how the phone is held).
 
-    private val rm = FloatArray(16)
-    private val remapped = FloatArray(16)
-    private var firstReading = true
+    private val now = FloatArray(9)
+    private val ref = FloatArray(9)
+    @Volatile private var needRef = true
 
     override fun onSensorChanged(e: SensorEvent) {
-        SensorManager.getRotationMatrixFromVector(rm, e.values)
+        SensorManager.getRotationMatrixFromVector(now, e.values)   // device -> world, row-major
+        if (needRef) { System.arraycopy(now, 0, ref, 0, 9); needRef = false }
+        // rel = now^T * ref : reference-device coordinates -> current-device coordinates
+        val rel = FloatArray(9)
+        for (r in 0..2) for (c in 0..2) {
+            var sum = 0f
+            for (k in 0..2) sum += now[k * 3 + r] * ref[k * 3 + c]
+            rel[r * 3 + c] = sum
+        }
+        // device axes -> screen axes (x right, y up, z towards you) for the current rotation
         @Suppress("DEPRECATION")
         val rotation = (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
-        when (rotation) {
-            Surface.ROTATION_90 -> SensorManager.remapCoordinateSystem(rm, SensorManager.AXIS_Y, SensorManager.AXIS_MINUS_X, remapped)
-            Surface.ROTATION_270 -> SensorManager.remapCoordinateSystem(rm, SensorManager.AXIS_MINUS_Y, SensorManager.AXIS_X, remapped)
-            Surface.ROTATION_180 -> SensorManager.remapCoordinateSystem(rm, SensorManager.AXIS_MINUS_X, SensorManager.AXIS_MINUS_Y, remapped)
-            else -> System.arraycopy(rm, 0, remapped, 0, 16)
+        val cm = when (rotation) {
+            Surface.ROTATION_90 -> floatArrayOf(0f, -1f, 0f, 1f, 0f, 0f, 0f, 0f, 1f)
+            Surface.ROTATION_270 -> floatArrayOf(0f, 1f, 0f, -1f, 0f, 0f, 0f, 0f, 1f)
+            Surface.ROTATION_180 -> floatArrayOf(-1f, 0f, 0f, 0f, -1f, 0f, 0f, 0f, 1f)
+            else -> floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f)
         }
-        // the phone held upright (screen facing you) looks at the horizon
-        Matrix.rotateM(remapped, 0, 90f, 1f, 0f, 0f)
-        synchronized(sensorM) { System.arraycopy(remapped, 0, sensorM, 0, 16) }
+        // view = C * rel * C^T
+        val t = mul(mul(cm, rel), transpose(cm))
+        synchronized(sensorM) {
+            Matrix.setIdentityM(sensorM, 0)
+            for (r in 0..2) for (c in 0..2) sensorM[c * 4 + r] = t[r * 3 + c]   // column-major for GL
+        }
         hasSensor = true
-        if (firstReading) { firstReading = false; yawZero = -currentSensorYaw() }
     }
+
+    private fun mul(a: FloatArray, b: FloatArray) = FloatArray(9).also { o ->
+        for (r in 0..2) for (c in 0..2) { var s = 0f; for (k in 0..2) s += a[r * 3 + k] * b[k * 3 + c]; o[r * 3 + c] = s }
+    }
+    private fun transpose(a: FloatArray) = FloatArray(9) { a[(it % 3) * 3 + it / 3] }
 
     override fun onAccuracyChanged(s: Sensor?, a: Int) {}
-
-    /** Which way (degrees around the vertical) the phone looks now. */
-    private fun currentSensorYaw(): Float {
-        if (!hasSensor) return 0f
-        val m = synchronized(sensorM) { sensorM.clone() }
-        // the view matrix maps world -> eye; the eye's forward (0,0,-1) in world is -row 2
-        val fx = -m[2]; val fz = -m[10]
-        return Math.toDegrees(Math.atan2(fx.toDouble(), -fz.toDouble())).toFloat()
-    }
 
     // ================================================================ touch: drag to look, pinch to zoom
 
@@ -210,7 +221,7 @@ class VrView(ctx: Context) : GLSurfaceView(ctx), SensorEventListener {
             Matrix.setIdentityM(view, 0)
             Matrix.rotateM(view, 0, pitch, 1f, 0f, 0f)
             Matrix.multiplyMM(tmp, 0, view, 0, base, 0)
-            Matrix.rotateM(tmp, 0, yaw + (if (hasSensor && gyro) yawZero else 0f), 0f, 1f, 0f)
+            Matrix.rotateM(tmp, 0, yaw, 0f, 1f, 0f)
             System.arraycopy(tmp, 0, view, 0, 16)
 
             if (stereo) {
