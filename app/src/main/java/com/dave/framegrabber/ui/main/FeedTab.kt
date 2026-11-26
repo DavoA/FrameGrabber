@@ -110,7 +110,7 @@ class FeedTab(private val s: MainScreen) {
                 if (userScrolled && posts.isNotEmpty() && first <= 2) loadMore()
             }
         })
-        s.h<View>(R.id.btnFeedRefresh).setOnClickListener { reload() }
+        s.h<View>(R.id.btnFeedRefresh).setOnClickListener { refreshInPlace() }
         s.h<View>(R.id.btnFeedMenu).setOnClickListener { menu() }
         s.h<View>(R.id.btnFeedSearch).setOnClickListener {
             searchRow.visibility = View.VISIBLE
@@ -127,6 +127,8 @@ class FeedTab(private val s: MainScreen) {
         Tg.stateListeners += { if (visible) render() }
         // a new post in the channel (e.g. just published from the app): it appears at the bottom by itself
         Tg.messageListeners += { m -> onNewMessage(m) }
+        // a post deleted in Telegram disappears here too
+        Tg.deleteListeners += { chat, ids -> onDeleted(chat, ids) }
         TgDownloads.listeners += { if (visible) { s.ui.removeCallbacks(refreshRows); s.ui.postDelayed(refreshRows, 250) } }
     }
 
@@ -370,6 +372,95 @@ class FeedTab(private val s: MainScreen) {
         else posts.add(0, Post(listOf(m.id), m.date, cap, listOfNotNull(media)))
         adapter.notifyDataSetChanged()
         if (atBottom) list.setSelection(adapter.count - 1)
+    }
+
+    /** Removes deleted messages (a post goes when none of its messages is left). */
+    private fun onDeleted(chat: Long, ids: LongArray) {
+        if (chat != chatId || chatId == 0L) return
+        val gone = ids.toHashSet()
+        fun strip(list: MutableList<Post>): Boolean {
+            var changed = false
+            val it = list.listIterator()
+            while (it.hasNext()) {
+                val p = it.next()
+                if (p.ids.none { id -> id in gone }) continue
+                changed = true
+                val left = p.ids.filter { id -> id !in gone }
+                if (left.isEmpty()) it.remove()
+                else it.set(Post(left, p.date, p.caption, p.media.filter { m -> m.msgId !in gone }))
+            }
+            return changed
+        }
+        saved?.let { sv -> val l = sv.posts.toMutableList(); if (strip(l)) saved = Saved(l, sv.oldest, sv.end, sv.pos, sv.top) }
+        val a = anchor()
+        if (strip(posts)) { adapter.notifyDataSetChanged(); restore(a) }
+    }
+
+    /** What you are looking at: a post (its ids) and how far from the top of the list it is. */
+    private class Anchor(val ids: List<Long>, val top: Int, val atBottom: Boolean)
+
+    private fun anchor(): Anchor? {
+        val first = list.firstVisiblePosition
+        val atBottom = list.lastVisiblePosition >= adapter.count - 1
+        // the first post row on screen (row 0 is the «loading» line)
+        for (pos in maxOf(first, 1) until minOf(list.lastVisiblePosition + 1, adapter.count)) {
+            val idx = posts.size - pos
+            if (idx !in posts.indices) continue
+            return Anchor(posts[idx].ids, list.getChildAt(pos - first)?.top ?: 0, atBottom)
+        }
+        return null
+    }
+
+    private fun restore(a: Anchor?) {
+        if (a == null) return
+        if (a.atBottom) { list.setSelection(adapter.count - 1); return }
+        // same post, else the nearest older one still there
+        val i = posts.indexOfFirst { p -> p.ids.any { it in a.ids } }.takeIf { it >= 0 }
+            ?: posts.indexOfFirst { p -> p.ids.first() < a.ids.first() }.takeIf { it >= 0 }
+            ?: return
+        list.setSelectionFromTop(posts.size - i, a.top)
+    }
+
+    /**
+     * «Обновить»: reads again everything already loaded (new posts, deleted ones, edits) and keeps
+     * you at the same post.
+     */
+    private fun refreshInPlace() {
+        if (Tg.state != Tg.State.READY || chatId == 0L) { reload(); return }
+        query?.let { search(it); return }
+        if (loading) return
+        val chat = chatId
+        val until = oldest
+        loading = true
+        sub.text = "Обновляю…"
+        net.execute {
+            val got = ArrayList<TdApi.Message>()
+            var cursor = 0L
+            var error: String? = null
+            var empty = 0
+            while (true) {
+                val r = Tg.call(TdApi.GetChatHistory(chat, cursor, 0, 100, false))
+                val m = r as? TdApi.Messages ?: run { error = Tg.errorOf(r); null } ?: break
+                if (m.messages.isEmpty()) { if (++empty >= 2) break else continue }
+                empty = 0
+                got += m.messages
+                cursor = m.messages.last().id
+                if (until != 0L && cursor <= until) break
+            }
+            val grouped = group(got)
+            s.ui.post {
+                loading = false
+                sub.text = "@$chatName"
+                if (chat != chatId || query != null) return@post
+                if (got.isEmpty()) { error?.let { act.toast(it) }; return@post }
+                val a = anchor()
+                posts.clear(); posts += grouped
+                oldest = got.last().id
+                adapter.notifyDataSetChanged()
+                restore(a)
+                act.toast("Лента обновлена")
+            }
+        }
     }
 
     // ================================================================ search
@@ -764,7 +855,8 @@ class FeedTab(private val s: MainScreen) {
         if (post.media.isNotEmpty()) card.addView(mediaGrid(post.media, w))
 
         // videos: one line each with length, size and the download state
-        post.media.filter { it.video != null }.forEach { card.addView(videoRow(it)) }
+        val videos = post.media.filter { it.video != null }
+        videos.forEachIndexed { i, m -> card.addView(videoRow(m, if (videos.size > 1) "Part ${i + 1}" else "Видео")) }
 
         post.caption?.let { c ->
             card.addView(TextView(act).apply {
@@ -850,7 +942,7 @@ class FeedTab(private val s: MainScreen) {
         return f
     }
 
-    private fun videoRow(m: Media): View {
+    private fun videoRow(m: Media, label: String): View {
         val v = m.video!!
         val k = key(m)
         val job = TgDownloads.active(k)
@@ -863,12 +955,7 @@ class FeedTab(private val s: MainScreen) {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (6 * d).toInt() }
         }
         val top = LinearLayout(act).apply { gravity = Gravity.CENTER_VERTICAL }
-        val info = buildString {
-            append("🎬 ")
-            if (v.duration > 0) append(TimeUtil.format(v.duration * 1_000_000L)).append(" · ")
-            if (v.width > 0 && v.height > 0) append("${v.width}×${v.height} · ")
-            append(size(total))
-        }
+        val info = "🎬 $label · ${size(total)}"
         top.addView(TextView(act).apply {
             text = when {
                 job != null && job.stage == "copying" -> "Сохраняю в галерею…"

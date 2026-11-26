@@ -38,6 +38,8 @@ object Tg {
     private val fileListeners = ConcurrentHashMap<Int, CopyOnWriteArrayList<(TdApi.File) -> Unit>>()
     /** New posts in a chat (main thread). */
     val messageListeners = CopyOnWriteArrayList<(TdApi.Message) -> Unit>()
+    /** Posts deleted in a chat (main thread): chat id, message ids. */
+    val deleteListeners = CopyOnWriteArrayList<(Long, LongArray) -> Unit>()
 
     /** TDLib's native part is built for 64-bit ARM phones (and the x86_64 test emulator). */
     val supported: Boolean by lazy {
@@ -84,6 +86,7 @@ object Tg {
             is TdApi.UpdateAuthorizationState -> onAuth(o.authorizationState)
             is TdApi.UpdateFile -> fileListeners[o.file.id]?.let { ls -> main.post { ls.forEach { it(o.file) } } }
             is TdApi.UpdateNewMessage -> main.post { messageListeners.forEach { it(o.message) } }
+            is TdApi.UpdateDeleteMessages -> if (o.isPermanent) main.post { deleteListeners.forEach { it(o.chatId, o.messageIds) } }
         }
     }
 
