@@ -206,9 +206,11 @@ class PostActivity : Activity() {
         val d = resources.displayMetrics.density
         val card = android.widget.LinearLayout(this, null, 0, R.style.Card)
         card.addView(TextView(this, null, 0, R.style.CardTitle).apply { text = "Видео и время" })
-        swVideo = android.widget.Switch(this, null, 0, R.style.Toggle).apply {
+        // the platform's own switch look (thumb + track), in the scheme's accent color
+        swVideo = android.widget.Switch(this).apply {
             text = "Выложить видео после фото"
-            showText = false; textOn = ""; textOff = ""   // made in code: no default «ON/OFF» texts (would crash)
+            textSize = 15f; setTextColor(tc(R.color.text))
+            minHeight = (44 * resources.displayMetrics.density).toInt()
             isEnabled = videoUri != null
             isChecked = videoUri != null && tgPrefs.getBoolean("postVideo", true)
             setOnCheckedChangeListener { _, on -> tgPrefs.edit().putBoolean("postVideo", on).apply(); updateVideoInfo() }
@@ -232,7 +234,7 @@ class PostActivity : Activity() {
         txtWhen = TextView(this).apply { textSize = 14f; setTextColor(tc(R.color.text)); layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) }
         row.addView(txtWhen)
         row.addView(Button(this, null, 0, R.style.BtnSecondary).apply {
-            text = "Когда…"; gravity = Gravity.CENTER
+            text = "Изменить"; gravity = Gravity.CENTER; maxLines = 1
             setOnClickListener { pickWhen() }
         })
         card.addView(row)
@@ -267,8 +269,11 @@ class PostActivity : Activity() {
         txtAccount.text = "Видео и расписание отправляются через твой вход в Telegram — войди во вкладке «Канал»."
     }
 
-    private fun mb(b: Long) = if (b >= 1L shl 30) String.format(java.util.Locale.US, "%.2f ГБ", b / (1L shl 30).toDouble())
-        else String.format(java.util.Locale.US, "%.0f МБ", b / (1L shl 20).toDouble())
+    private fun mb(b: Long) = when {
+        b >= 1L shl 30 -> String.format(java.util.Locale.US, "%.2f ГБ", b / (1L shl 30).toDouble())
+        b >= 1L shl 20 -> String.format(java.util.Locale.US, "%.0f МБ", b / (1L shl 20).toDouble())
+        else -> String.format(java.util.Locale.US, "%.0f КБ", b / 1024.0)
+    }
 
     private fun updateWhen() {
         txtWhen.text = if (sendAt == 0) "Публикация: сразу"
