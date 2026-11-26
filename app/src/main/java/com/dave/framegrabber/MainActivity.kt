@@ -30,6 +30,7 @@ class MainActivity : Activity() {
         private const val REQ_POST = 4
         private const val REQ_PLAY = 5
         private const val REQ_PLAYER_DIR = 6
+        private const val REQ_DELETE = 7
         /** What the pickers ask other apps for. */
         val VIDEO_MIME_TYPES = arrayOf(
             "video/*", "application/x-matroska", "application/mp4", "application/x-mpegts",
@@ -169,6 +170,12 @@ class MainActivity : Activity() {
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
+    /** A system question (e.g. "delete this video?"); the answer goes back to the player tab. */
+    fun askSystem(sender: android.content.IntentSender) {
+        @Suppress("DEPRECATION")
+        startIntentSenderForResult(sender, REQ_DELETE, null, 0, 0, 0)
+    }
+
     /** In-app browser in folder mode: a folder for the player's library. */
     fun pickPlayerFolder() {
         @Suppress("DEPRECATION")
@@ -197,6 +204,7 @@ class MainActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQ_DELETE) { screen.playerTab.onDeleteResult(resultCode == RESULT_OK); return }
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_OK || data == null) return

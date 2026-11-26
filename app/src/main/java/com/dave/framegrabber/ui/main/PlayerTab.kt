@@ -317,6 +317,8 @@ class PlayerTab(private val s: MainScreen) {
         val v = watched[i.id]
         val opts = mutableListOf("▶ Смотреть", "⏮ Смотреть с начала", "🎞 Открыть для кадров")
         if (v != null) opts += "Забыть прогресс и моменты"
+        val deleteAt = opts.size
+        opts += "🗑 Удалить видео"
         AlertDialog.Builder(s.act).setTitle(i.name)
             .setItems(opts.toTypedArray()) { _, k ->
                 val uri = Uri.fromFile(i.file)
@@ -324,6 +326,7 @@ class PlayerTab(private val s: MainScreen) {
                     0 -> play(uri, -1, i.name)
                     1 -> play(uri, 0, i.name)
                     2 -> { s.video.load(uri); s.nav.show(NavController.Page.CAPTURE) }
+                    deleteAt -> delete(i)
                     3 -> { PlayerStore(s.act).delete(i.id); refresh() }
                 }
             }.show()
@@ -345,6 +348,55 @@ class PlayerTab(private val s: MainScreen) {
     }
 
     private var lastRandom: String? = null
+
+    // ================================================================ deleting
+
+    private var deleting: Library.Item? = null
+
+    /**
+     * Android asks itself ("Разрешить удалить это видео?") for files of other apps, so the
+     * request goes through MediaStore; a file not in MediaStore is deleted directly (after asking).
+     */
+    private fun delete(i: Library.Item) {
+        stopPreview()
+        val ms = mediaStoreUri(i.file)
+        if (ms != null) {
+            deleting = i
+            val req = android.provider.MediaStore.createDeleteRequest(s.act.contentResolver, listOf(ms))
+            s.act.askSystem(req.intentSender)
+            return
+        }
+        AlertDialog.Builder(s.act)
+            .setTitle("Удалить видео?")
+            .setMessage("${i.name}\n${size(i.size)}\n\nФайл будет удалён с телефона.")
+            .setPositiveButton("Удалить") { _, _ ->
+                if (i.file.delete()) onDeleted(i) else s.act.toast("Android не разрешил удалить этот файл")
+            }
+            .setNegativeButton("Отмена", null).show()
+    }
+
+    /** Back from the system "delete?" question. */
+    fun onDeleteResult(ok: Boolean) {
+        val i = deleting ?: return
+        deleting = null
+        if (ok) onDeleted(i)
+    }
+
+    private fun onDeleted(i: Library.Item) {
+        PlayerStore(s.act).delete(i.id)
+        s.act.toast("Удалено: ${i.name}")
+        all = all.filter { it.file.path != i.file.path }
+        buildChips(); apply()
+    }
+
+    private fun mediaStoreUri(f: File): Uri? = runCatching {
+        val col = android.provider.MediaStore.Video.Media.getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL)
+        @Suppress("DEPRECATION")
+        s.act.contentResolver.query(col, arrayOf(android.provider.MediaStore.Video.Media._ID),
+            "${android.provider.MediaStore.Video.Media.DATA}=?", arrayOf(f.path), null)?.use { c ->
+            if (c.moveToFirst()) android.content.ContentUris.withAppendedId(col, c.getLong(0)) else null
+        }
+    }.getOrNull()
 
     // ================================================================ 🎲
 
