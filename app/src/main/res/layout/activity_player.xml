@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The video player: picture (flat or VR), gesture layer, controls in the app's palette -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/playerRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <TextureView
+        android:id="@+id/videoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- VR: a GL view is added here -->
+    <FrameLayout
+        android:id="@+id/vrHost"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- swipes, taps, pinch (flat mode) -->
+    <View
+        android:id="@+id/gestureLayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- what a gesture is doing: "☀ 60 %", "+10 с", "12:34 / 45:00" -->
+    <LinearLayout
+        android:id="@+id/gestureInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_player_pill"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="22dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="22dp"
+        android:paddingBottom="12dp"
+        android:visibility="gone">
+        <ImageView
+            android:id="@+id/gestureIcon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:tint="@color/accent" />
+        <TextView
+            android:id="@+id/gestureText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/text"
+            android:textSize="18sp" />
+        <ProgressBar
+            android:id="@+id/gestureLevel"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:max="100"
+            android:progressBackgroundTint="@color/stroke"
+            android:progressTint="@color/accent" />
+    </LinearLayout>
+
+    <!-- "Пропущено начало 0:32 · Вернуть", "Продолжаем с 12:34 · С начала" -->
+    <TextView
+        android:id="@+id/snack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="150dp"
+        android:background="@drawable/bg_player_pill"
+        android:paddingStart="18dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="10dp"
+        android:textColor="@color/text"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- ===== controls ===== -->
+    <FrameLayout
+        android:id="@+id/controls"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- top -->
+        <LinearLayout
+            android:id="@+id/topBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:background="@drawable/bg_player_top"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="26dp">
+            <ImageButton
+                android:id="@+id/btnBack"
+                style="@style/GlassBtn"
+                android:contentDescription="Назад"
+                android:src="@drawable/ic_arrow_back" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp">
+                <TextView
+                    android:id="@+id/txtTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="middle"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:textColor="@color/text"
+                    android:textSize="16sp" />
+                <TextView
+                    android:id="@+id/txtSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:textColor="@color/accent"
+                    android:textSize="12sp" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/btnVr"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/btn_icon_glass"
+                android:drawableStart="@drawable/ic_vr"
+                android:drawablePadding="6dp"
+                android:drawableTint="@color/accent"
+                android:gravity="center"
+                android:paddingStart="10dp"
+                android:paddingEnd="12dp"
+                android:stateListAnimator="@animator/press_scale"
+                android:text="VR"
+                android:textColor="@color/text"
+                android:textSize="13sp" />
+            <ImageButton
+                android:id="@+id/btnPip"
+                style="@style/GlassBtn"
+                android:contentDescription="Картинка в картинке"
+                android:src="@drawable/ic_pip" />
+        </LinearLayout>
+
+        <!-- VR settings (under the top bar, VR mode only) -->
+        <HorizontalScrollView
+            android:id="@+id/vrBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:layout_marginTop="64dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+            <LinearLayout
+                android:id="@+id/vrChips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- centre: −frame, −10, play, +10, +frame -->
+        <LinearLayout
+            android:id="@+id/centerRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <ImageButton
+                android:id="@+id/btnFramePrev"
+                style="@style/GlassBtn"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="Кадр назад"
+                android:src="@drawable/ic_frame_prev" />
+            <ImageButton
+                android:id="@+id/btnBack10"
+                style="@style/GlassBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="18dp"
+                android:contentDescription="Назад 10 секунд"
+                android:src="@drawable/ic_replay10" />
+            <ImageButton
+                android:id="@+id/btnPlay"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="22dp"
+                android:layout_marginEnd="22dp"
+                android:background="@drawable/btn_shutter"
+                android:contentDescription="Пауза / продолжить"
+                android:scaleType="center"
+                android:src="@drawable/ic_pause"
+                android:stateListAnimator="@animator/press_scale"
+                android:tint="#FFFFFFFF" />
+            <ImageButton
+                android:id="@+id/btnFwd10"
+                style="@style/GlassBtn"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="18dp"
+                android:contentDescription="Вперёд 10 секунд"
+                android:src="@drawable/ic_forward10" />
+            <ImageButton
+                android:id="@+id/btnFrameNext"
+                style="@style/GlassBtn"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="Кадр вперёд"
+                android:src="@drawable/ic_frame_next" />
+        </LinearLayout>
+
+        <!-- bottom -->
+        <LinearLayout
+            android:id="@+id/bottomBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_player_bottom"
+            android:orientation="vertical"
+            android:paddingStart="8dp"
+            android:paddingTop="28dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="10dp">
+
+            <com.dave.framegrabber.ui.player.TimelineBar
+                android:id="@+id/timeline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp">
+                <TextView
+                    android:id="@+id/txtTime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="monospace"
+                    android:maxLines="1"
+                    android:textColor="@color/text"
+                    android:textSize="13sp" />
+                <HorizontalScrollView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none">
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                        <ImageButton
+                            android:id="@+id/btnMomentPrev"
+                            style="@style/GlassBtn"
+                            android:contentDescription="Предыдущий момент"
+                            android:src="@drawable/ic_chev_left" />
+                        <ImageButton
+                            android:id="@+id/btnMoment"
+                            style="@style/GlassBtn"
+                            android:layout_marginStart="6dp"
+                            android:contentDescription="Отметить лучший момент"
+                            android:src="@drawable/ic_star"
+                            android:tint="@color/warn" />
+                        <ImageButton
+                            android:id="@+id/btnMomentNext"
+                            style="@style/GlassBtn"
+                            android:layout_marginStart="6dp"
+                            android:contentDescription="Следующий момент"
+                            android:src="@drawable/ic_chev_right" />
+                        <TextView
+                            android:id="@+id/btnAB"
+                            style="@style/PlayerChip"
+                            android:layout_marginStart="10dp"
+                            android:text="A–B" />
+                        <TextView
+                            android:id="@+id/btnSpeed"
+                            style="@style/PlayerChip"
+                            android:layout_marginStart="6dp"
+                            android:text="1×" />
+                        <ImageButton
+                            android:id="@+id/btnRandom"
+                            style="@style/GlassBtn"
+                            android:layout_marginStart="6dp"
+                            android:contentDescription="Случайный горячий момент"
+                            android:src="@drawable/ic_dice"
+                            android:tint="@color/accent" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

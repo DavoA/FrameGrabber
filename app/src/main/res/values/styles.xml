@@ -193,4 +193,19 @@
         <item name="android:textColor">@color/textDim</item>
         <item name="android:textSize">12sp</item>
     </style>
+
+    <!-- Text chips in the player (A–B, speed, VR layouts) -->
+    <style name="PlayerChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">38dp</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:background">@drawable/btn_icon_glass</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
+    </style>
 </resources>

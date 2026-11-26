@@ -153,6 +153,33 @@ class ScreenshotTest {
         inst.runOnMainSync { main.screen.prefs.splitLimit = com.dave.framegrabber.split.SplitPlan.TELEGRAM_LIMIT; main.screen.split.onVideoChanged() }
         Thread.sleep(1500); shot("6_tools")
 
+        // 15-17. the player: controls, A–B + moments, VR; then the «Плеер» tab
+        val pv = File(appCtx.cacheDir, "split_src.mp4")
+        inst.context.assets.open("split_src.mp4").use { i -> pv.outputStream().use { i.copyTo(it) } }
+        val pmon = inst.addMonitor(com.dave.framegrabber.ui.player.PlayerActivity::class.java.name, null, false)
+        inst.runOnMainSync { main.screen.playerTab.play(Uri.fromFile(pv), 2_000_000, "studio_scene_VR180_LR.mp4") }
+        val player = inst.waitForMonitorWithTimeout(pmon, 10_000) as com.dave.framegrabber.ui.player.PlayerActivity?
+        check(player != null) { "player didn't open" }
+        Thread.sleep(3500)
+        inst.runOnMainSync {
+            player.findViewById<android.view.View>(R.id.btnMoment).performClick()
+            player.findViewById<android.view.View>(R.id.btnAB).performClick()
+        }
+        Thread.sleep(1500)
+        inst.runOnMainSync {
+            player.findViewById<android.view.View>(R.id.btnAB).performClick()
+            player.findViewById<android.view.View>(R.id.btnPlay).performClick()   // pause: controls stay
+        }
+        Thread.sleep(1200); shot("15_player")
+        inst.runOnMainSync { player.enterVr("vr180") }
+        Thread.sleep(2500); shot("16_vr")
+        inst.runOnMainSync { player.finish() }
+        Thread.sleep(1500)
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navPlayer).performClick() }
+        Thread.sleep(1500); shot("17_player_tab")
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
+        Thread.sleep(600)
+
         // 6b. several videos at once (background service), saved to their projects + gallery
         val job = BatchJob(
             listOf(BatchVideo(Uri.fromFile(f), "h264", null), BatchVideo(Uri.fromFile(f2), "h264_rot", null)),

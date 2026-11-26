@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Page «Плеер»: random hot moment, open a video, continue watching -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pagePlayer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:scrollbars="none"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
+
+        <LinearLayout style="@style/Card">
+            <TextView
+                style="@style/CardTitle"
+                android:text="🎲  Случайный момент" />
+            <TextView
+                style="@style/SubHint"
+                android:text="Случайное видео с телефона — и сразу самое горячее место в нём (по звуку и движению)." />
+            <Button
+                android:id="@+id/btnRandomMoment"
+                style="@style/BtnPrimary"
+                android:layout_marginTop="12dp"
+                android:drawableStart="@drawable/ic_dice"
+                android:drawableTint="#FFFFFFFF"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Крутануть" />
+            <TextView
+                android:id="@+id/txtRandomStatus"
+                style="@style/SubHint"
+                android:paddingTop="6dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+            <TextView
+                style="@style/CardTitle"
+                android:text="▶  Смотреть" />
+            <Button
+                android:id="@+id/btnPlayPick"
+                style="@style/BtnSecondary"
+                android:drawableStart="@drawable/ic_folder"
+                android:drawableTint="@color/accent"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Открыть видео…" />
+            <Button
+                android:id="@+id/btnPlayCurrent"
+                style="@style/BtnSecondary"
+                android:layout_marginTop="10dp"
+                android:drawableStart="@drawable/ic_play"
+                android:drawableTint="@color/accent"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="Смотреть открытое видео"
+                android:visibility="gone" />
+            <TextView
+                style="@style/SubHint"
+                android:paddingTop="8dp"
+                android:text="Жесты: слева вверх-вниз — яркость, справа — громкость, в стороны — перемотка, двойной тап — ±10 с, двумя пальцами — зум. VR-видео (180° / 360°) — кнопка VR вверху плеера." />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/cardContinue"
+            style="@style/Card"
+            android:visibility="gone">
+            <TextView
+                style="@style/CardTitle"
+                android:text="⏯  Продолжить просмотр" />
+            <LinearLayout
+                android:id="@+id/continueList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

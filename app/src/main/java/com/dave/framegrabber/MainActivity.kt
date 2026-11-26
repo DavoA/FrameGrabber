@@ -28,6 +28,7 @@ class MainActivity : Activity() {
         private const val REQ_TREE = 2
         private const val REQ_MULTI = 3
         private const val REQ_POST = 4
+        private const val REQ_PLAY = 5
         /** What the pickers ask other apps for. */
         val VIDEO_MIME_TYPES = arrayOf(
             "video/*", "application/x-matroska", "application/mp4", "application/x-mpegts",
@@ -160,6 +161,13 @@ class MainActivity : Activity() {
         startActivityForResult(Intent.createChooser(get, "Выбрать видео через…"), REQ_PICK)
     }
 
+    /** In-app browser; the picked video opens in the player. */
+    fun openBrowserForPlayer() {
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(this, FileBrowserActivity::class.java), REQ_PLAY)
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     /** The Telegram post editor for the picked frames. */
     fun openPostEditor(i: Intent) {
         @Suppress("DEPRECATION")
@@ -187,6 +195,11 @@ class MainActivity : Activity() {
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
             REQ_POST -> screen.tgPick.onPosted()
+            REQ_PLAY -> {
+                val path = data.getStringExtra(FileBrowserActivity.EXTRA_PATH)
+                val uri = if (path != null) Uri.fromFile(File(path)) else data.data
+                uri?.let { screen.playerTab.play(it) }
+            }
             REQ_MULTI -> data.getStringArrayListExtra(FileBrowserActivity.EXTRA_REFS)?.let { refs ->
                 val uris = refs.map { if (it.startsWith("/")) Uri.fromFile(File(it)) else Uri.parse(it) }
                 screen.batch.onVideosPicked(uris)

@@ -13,7 +13,7 @@ import com.dave.framegrabber.ui.switchPanel
 /** Bottom bar: «Съёмка» / «Кадры» / «Клипы» / «Инструменты», with a frame counter on «Кадры». */
 class NavController(private val s: MainScreen) {
 
-    enum class Page { CAPTURE, FRAMES, CLIPS, TOOLS }
+    enum class Page { CAPTURE, FRAMES, CLIPS, TOOLS, PLAYER }
 
     var page = Page.CAPTURE
         private set
@@ -25,12 +25,14 @@ class NavController(private val s: MainScreen) {
         Page.FRAMES to s.pinned<View>(R.id.list),
         Page.CLIPS to s.pinned<View>(R.id.pageClips),
         Page.TOOLS to s.pinned<View>(R.id.pageTools),
+        Page.PLAYER to s.pinned<View>(R.id.pagePlayer),
     )
     private val items = mapOf(
         Page.CAPTURE to item(R.id.navCapture, R.id.navCapturePill, R.id.navCaptureIcon, R.id.navCaptureLabel),
         Page.FRAMES to item(R.id.navFrames, R.id.navFramesPill, R.id.navFramesIcon, R.id.navFramesLabel),
         Page.CLIPS to item(R.id.navClips, R.id.navClipsPill, R.id.navClipsIcon, R.id.navClipsLabel),
         Page.TOOLS to item(R.id.navTools, R.id.navToolsPill, R.id.navToolsIcon, R.id.navToolsLabel),
+        Page.PLAYER to item(R.id.navPlayer, R.id.navPlayerPill, R.id.navPlayerIcon, R.id.navPlayerLabel),
     )
     private val badge = s.pinned<TextView>(R.id.navBadge)
 
@@ -48,6 +50,7 @@ class NavController(private val s: MainScreen) {
     fun show(target: Page) {
         if (target != Page.FRAMES) s.tgPick.cancel()
         if (target == Page.TOOLS) s.split.onShown()
+        if (target == Page.PLAYER) s.playerTab.refresh()
         if (target == page) return
         val from = page
         page = target
