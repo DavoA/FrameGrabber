@@ -294,6 +294,13 @@
                             android:layout_marginStart="6dp"
                             android:text="1×" />
                         <ImageButton
+                            android:id="@+id/btnRandomVideo"
+                            style="@style/GlassBtn"
+                            android:layout_marginStart="6dp"
+                            android:contentDescription="Случайное видео"
+                            android:src="@drawable/ic_shuffle"
+                            android:tint="@color/accent" />
+                        <ImageButton
                             android:id="@+id/btnRandom"
                             style="@style/GlassBtn"
                             android:layout_marginStart="6dp"

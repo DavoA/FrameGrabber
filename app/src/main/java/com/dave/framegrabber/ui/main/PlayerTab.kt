@@ -66,6 +66,7 @@ class PlayerTab(private val s: MainScreen) {
         })
         search.onTextChanged { apply() }
         btnRandom.setOnClickListener { random() }
+        s.h<View>(R.id.btnRandomVideo).setOnClickListener { randomVideo() }
         s.h<View>(R.id.btnLibSort).setOnClickListener { chooseSort() }
         s.h<View>(R.id.btnLibFolders).setOnClickListener { showFolders() }
         s.h<View>(R.id.btnLibAddFolder).setOnClickListener { s.act.pickPlayerFolder() }
@@ -196,6 +197,23 @@ class PlayerTab(private val s: MainScreen) {
                 }
             }.show()
     }
+
+    // ================================================================ 🔀 random video
+
+    /** A random video from what's shown now (so it respects the filter / search), from its start. */
+    private fun randomVideo() {
+        val pool = shown.ifEmpty { all }
+        if (pool.isEmpty()) {
+            s.act.toast(if (lib.folders.isEmpty()) "Сначала добавь папку с видео" else "Нет видео")
+            return
+        }
+        // the one played just now doesn't come up twice in a row
+        val pick = pool.filter { it.file.path != lastRandom }.ifEmpty { pool }.random()
+        lastRandom = pick.file.path
+        play(Uri.fromFile(pick.file), -1, pick.name)
+    }
+
+    private var lastRandom: String? = null
 
     // ================================================================ 🎲
 

@@ -157,6 +157,7 @@ class PlayerActivity : Activity() {
         btnAB.setOnClickListener { cycleAB() }
         btnSpeed.setOnClickListener { chooseSpeed() }
         findViewById<View>(R.id.btnRandom).setOnClickListener { randomMoment() }
+        findViewById<View>(R.id.btnRandomVideo).setOnClickListener { randomVideo() }
         findViewById<View>(R.id.btnPip).setOnClickListener { enterPip() }
         btnVr.setOnClickListener { if (vrView == null) chooseVr() else exitVr() }
         snack.setOnClickListener { snackAction?.invoke(); hideSnack() }
@@ -512,6 +513,25 @@ class PlayerActivity : Activity() {
         val old = store.introSkipUs(folder)
         store.setIntroSkip(folder, to)
         showSnack("Запомнил: в этой папке начинать с ${TimeUtil.format(to)} · Отменить") { store.setIntroSkip(folder, old) }
+    }
+
+    // ================================================================ 🔀 random video
+
+    /** Another random video from the library (or the phone), from its start. */
+    private fun randomVideo() {
+        val cur = uri
+        Thread {
+            val lib = com.dave.framegrabber.player.Library(this)
+            val mine = runCatching { lib.scan() }.getOrDefault(emptyList()).map { Uri.fromFile(it.file) to it.name }
+            val pool = mine.ifEmpty {
+                runCatching { com.dave.framegrabber.ui.browser.VideoSource.allVideos(this) }.getOrDefault(emptyList())
+                    .filterIsInstance<com.dave.framegrabber.ui.browser.Entry.Video>().mapNotNull { v -> v.uri?.let { it to v.name } }
+            }.filter { it.first != cur }
+            ui.post {
+                val p = pool.randomOrNull()
+                if (p == null) toast("Других видео не нашлось") else open(p.first, -1, p.second)
+            }
+        }.start()
     }
 
     // ================================================================ 🎲

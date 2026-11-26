@@ -26,9 +26,16 @@
             android:imeOptions="actionSearch"
             android:inputType="text|textNoSuggestions" />
         <ImageButton
-            android:id="@+id/btnRandomMoment"
+            android:id="@+id/btnRandomVideo"
             style="@style/IconBtn"
             android:layout_marginStart="8dp"
+            android:contentDescription="Случайное видео"
+            android:src="@drawable/ic_shuffle"
+            android:tint="@color/accent" />
+        <ImageButton
+            android:id="@+id/btnRandomMoment"
+            style="@style/IconBtn"
+            android:layout_marginStart="6dp"
             android:contentDescription="Случайный горячий момент"
             android:src="@drawable/ic_dice"
             android:tint="@color/accent" />
