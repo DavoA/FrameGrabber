@@ -10,7 +10,10 @@ import android.text.InputType
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
+import android.text.TextPaint
+import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
+import android.view.inputmethod.EditorInfo
 import android.text.style.StyleSpan
 import android.util.LruCache
 import android.view.Gravity
@@ -63,6 +66,16 @@ class FeedTab(private val s: MainScreen) {
     private val title = s.h<TextView>(R.id.txtFeedTitle)
     private val sub = s.h<TextView>(R.id.txtFeedSub)
     private val keys = TgKeys(act)
+    private val searchRow = s.h<View>(R.id.feedSearchRow)
+    private val searchEdit = s.h<EditText>(R.id.editFeedSearch)
+
+    /** Search mode: what is searched (null = the normal feed) and where the next page starts. */
+    private var query: String? = null
+    private var nextFrom = 0L
+    private var found = 0
+    /** The feed as it was before a search (so closing the search returns to the same place). */
+    private var saved: Saved? = null
+    private class Saved(val posts: List<Post>, val oldest: Long, val end: Boolean, val pos: Int, val top: Int)
 
     private val posts = ArrayList<Post>()
     private var chatId = 0L
@@ -99,6 +112,18 @@ class FeedTab(private val s: MainScreen) {
         })
         s.h<View>(R.id.btnFeedRefresh).setOnClickListener { reload() }
         s.h<View>(R.id.btnFeedMenu).setOnClickListener { menu() }
+        s.h<View>(R.id.btnFeedSearch).setOnClickListener {
+            searchRow.visibility = View.VISIBLE
+            searchEdit.requestFocus()
+            (act.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                .showSoftInput(searchEdit, 0)
+        }
+        searchEdit.setOnEditorActionListener { _, id, _ ->
+            if (id == EditorInfo.IME_ACTION_SEARCH || id == EditorInfo.IME_ACTION_DONE) {
+                search(searchEdit.text.toString()); true
+            } else false
+        }
+        s.h<View>(R.id.btnFeedSearchClose).setOnClickListener { closeSearch() }
         Tg.stateListeners += { if (visible) render() }
         TgDownloads.listeners += { if (visible) { s.ui.removeCallbacks(refreshRows); s.ui.postDelayed(refreshRows, 250) } }
     }
@@ -290,6 +315,7 @@ class FeedTab(private val s: MainScreen) {
         val name = channel()
         if (name.isEmpty()) { askChannel(); return }
         posts.clear(); oldest = 0; reachedEnd = false; loadError = null; chatId = 0; userScrolled = false
+        query = null; saved = null; searchRow.visibility = View.GONE
         title.text = "@$name"; sub.text = "Загрузка…"
         adapter.notifyDataSetChanged()
         loading = true
@@ -313,8 +339,86 @@ class FeedTab(private val s: MainScreen) {
         }
     }
 
+    // ================================================================ search
+
+    /** Search the channel (Telegram's own search: captions, words, #tags). */
+    fun search(text: String) {
+        val q = text.trim()
+        if (q.isEmpty() || chatId == 0L) return
+        searchEdit.hideKeyboard()
+        if (searchRow.visibility != View.VISIBLE) searchRow.visibility = View.VISIBLE
+        if (searchEdit.text.toString() != q) searchEdit.setText(q)
+        if (query == null) saved = Saved(posts.toList(), oldest, reachedEnd, list.firstVisiblePosition, list.getChildAt(0)?.top ?: 0)
+        query = q; nextFrom = 0; found = -1
+        posts.clear(); reachedEnd = false; loadError = null; userScrolled = false
+        sub.text = "Поиск: $q"
+        adapter.notifyDataSetChanged()
+        loadMore()
+    }
+
+    private fun closeSearch() {
+        searchEdit.hideKeyboard()
+        searchEdit.setText("")
+        searchRow.visibility = View.GONE
+        if (query == null) return
+        query = null
+        val sv = saved ?: run { reload(); return }
+        saved = null
+        posts.clear(); posts += sv.posts; oldest = sv.oldest; reachedEnd = sv.end; loadError = null
+        sub.text = "@$chatName"
+        userScrolled = false
+        adapter.notifyDataSetChanged()
+        list.setSelectionFromTop(sv.pos, sv.top)
+    }
+
+    /** One page of search results; album photos are fetched around each found post. */
+    private fun searchPage() {
+        val chat = chatId
+        val q = query ?: return
+        val from = nextFrom
+        loading = true
+        adapter.notifyDataSetChanged()
+        net.execute {
+            val r = Tg.call(TdApi.SearchChatMessages(chat, null, q, null, from, 0, 30, TdApi.SearchMessagesFilterEmpty()))
+            val res = r as? TdApi.FoundChatMessages
+            val all = ArrayList<TdApi.Message>()
+            val seen = HashSet<Long>()
+            res?.messages?.forEach { m ->
+                if (m.id in seen) return@forEach
+                if (m.mediaAlbumId != 0L) {
+                    val around = (Tg.call(TdApi.GetChatHistory(chat, m.id, -10, 21, false)) as? TdApi.Messages)?.messages
+                        ?.filter { it.mediaAlbumId == m.mediaAlbumId }?.sortedByDescending { it.id }
+                    val album = if (around.isNullOrEmpty()) listOf(m) else around
+                    album.forEach { if (seen.add(it.id)) all += it }
+                } else if (seen.add(m.id)) all += m
+            }
+            val grouped = group(all)
+            s.ui.post {
+                loading = false
+                if (chat != chatId || query != q) return@post
+                if (res == null) { reachedEnd = true; loadError = Tg.errorOf(r) ?: "Поиск не удался" }
+                else {
+                    if (found < 0) found = res.totalCount
+                    val keepPos = list.firstVisiblePosition
+                    val keepTop = list.getChildAt(0)?.top ?: 0
+                    val firstPage = posts.isEmpty()
+                    posts += grouped
+                    nextFrom = res.nextFromMessageId
+                    if (nextFrom == 0L || res.messages.isEmpty()) reachedEnd = true
+                    sub.text = "Поиск: $q · найдено ${maxOf(found, 0)}"
+                    adapter.notifyDataSetChanged()
+                    if (firstPage) list.setSelection(adapter.count - 1)
+                    else if (grouped.isNotEmpty()) list.setSelectionFromTop(keepPos + grouped.size, keepTop)
+                    return@post
+                }
+                adapter.notifyDataSetChanged()
+            }
+        }
+    }
+
     private fun loadMore() {
         if (loading || reachedEnd || chatId == 0L) return
+        if (query != null) { searchPage(); return }
         loading = true
         adapter.notifyDataSetChanged()
         val chat = chatId
@@ -489,6 +593,8 @@ class FeedTab(private val s: MainScreen) {
             text = when {
                 loading -> "Загрузка…"
                 loadError != null -> loadError
+                query != null && reachedEnd && posts.isEmpty() -> "Ничего не найдено"
+                query != null && reachedEnd -> "Это все найденные посты"
                 reachedEnd && posts.isEmpty() -> "Постов нет"
                 reachedEnd -> "Это самый первый пост"
                 else -> ""
@@ -518,7 +624,6 @@ class FeedTab(private val s: MainScreen) {
                 textSize = 14.5f
                 setTextColor(act.getColor(R.color.text))
                 setLineSpacing(0f, 1.12f)
-                setTextIsSelectable(true)
                 movementMethod = LinkMovementMethod.getInstance()
                 setPadding((4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt(), 0)
             })
@@ -659,8 +764,13 @@ class FeedTab(private val s: MainScreen) {
                 else -> {}
             }
         }
+        // a #tag: tap = search the channel for it
         Regex("#[\\p{L}\\p{N}_]+").findAll(c.text).forEach {
-            sp.setSpan(ForegroundColorSpan(accent), it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val tag = it.value
+            sp.setSpan(object : ClickableSpan() {
+                override fun onClick(w: View) { search(tag) }
+                override fun updateDrawState(ds: TextPaint) { ds.color = accent; ds.isUnderlineText = false }
+            }, it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         Regex("—{4,}").findAll(c.text).forEach {
             sp.setSpan(ForegroundColorSpan(act.getColor(R.color.textDim)), it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
