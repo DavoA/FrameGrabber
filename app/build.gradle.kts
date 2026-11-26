@@ -49,7 +49,16 @@ android {
     }
 }
 
+// TDLib (Telegram client library), built from the official source by .github/workflows/tdlib.yml
+// and unpacked into app/tdlib by the CI build (Java API + native libraries).
+android.sourceSets.getByName("main") {
+    java.srcDir("tdlib/java")
+    jniLibs.srcDir("tdlib/libs")
+}
+
 dependencies {
+    // TDLib's generated TdApi.java uses these annotations
+    implementation("androidx.annotation:annotation:1.8.2")
     // OCR ("copy text from a frame"): Tesseract, works offline, reads Latin, Cyrillic and Armenian
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.8.0")
     // FFmpeg frame decoder for files Android can't open itself (AVI, FLV, MPG, WMV, some TS)

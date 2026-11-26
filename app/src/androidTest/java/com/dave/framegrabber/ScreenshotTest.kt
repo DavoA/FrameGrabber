@@ -201,6 +201,23 @@ class ScreenshotTest {
             Thread.sleep(3000); shot(name)
         }
         com.dave.framegrabber.player.Library(appCtx).view = "2"
+
+        // 18. «Канал»: the Telegram login (keys first), then the real TDLib starts and asks for the phone
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navFeed).performClick() }
+        Thread.sleep(1500); shot("18_feed_keys")
+        if (com.dave.framegrabber.tgclient.Tg.supported) {
+            com.dave.framegrabber.tgclient.TgKeys(appCtx).apply { apiId = 12345; apiHash = "0123456789abcdef0123456789abcdef" }
+            inst.runOnMainSync { com.dave.framegrabber.tgclient.Tg.restart(a) }
+            val t1 = System.currentTimeMillis()
+            while (com.dave.framegrabber.tgclient.Tg.state != com.dave.framegrabber.tgclient.Tg.State.WAIT_PHONE &&
+                System.currentTimeMillis() - t1 < 30_000) Thread.sleep(300)
+            Thread.sleep(800); shot("18b_feed_phone")
+            check(com.dave.framegrabber.tgclient.Tg.state == com.dave.framegrabber.tgclient.Tg.State.WAIT_PHONE) {
+                "TDLib: ${com.dave.framegrabber.tgclient.Tg.state} ${com.dave.framegrabber.tgclient.Tg.lastError}"
+            }
+            com.dave.framegrabber.tgclient.TgKeys(appCtx).apiId = 0
+            inst.runOnMainSync { com.dave.framegrabber.tgclient.Tg.restart(a) }
+        }
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)
 

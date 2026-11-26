@@ -15,6 +15,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - name: Get TDLib (built by the tdlib workflow)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(sed -n 2p .github/tdlib-commit.txt)
+          gh release download "$TAG" -p tdlib-android.zip -R ${{ github.repository }}
+          unzip -q tdlib-android.zip -d app && rm tdlib-android.zip
+          ls app/tdlib/libs/*
       - name: Build
         env:
           BUILD_NUMBER: ${{ github.run_number }}
@@ -61,6 +69,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - name: Get TDLib (built by the tdlib workflow)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(sed -n 2p .github/tdlib-commit.txt)
+          gh release download "$TAG" -p tdlib-android.zip -R ${{ github.repository }}
+          unzip -q tdlib-android.zip -d app && rm tdlib-android.zip
+          ls app/tdlib/libs/*
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
