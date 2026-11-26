@@ -22,33 +22,41 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:gravity="center_vertical"
-            android:hint="🔍 Поиск видео"
+            android:hint="🔍 Поиск"
             android:imeOptions="actionSearch"
             android:inputType="text|textNoSuggestions" />
         <ImageButton
             android:id="@+id/btnRandomVideo"
             style="@style/IconBtn"
-            android:layout_marginStart="8dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="4dp"
             android:contentDescription="Случайное видео"
             android:src="@drawable/ic_shuffle"
             android:tint="@color/accent" />
         <ImageButton
             android:id="@+id/btnRandomMoment"
             style="@style/IconBtn"
-            android:layout_marginStart="6dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="4dp"
             android:contentDescription="Случайный горячий момент"
             android:src="@drawable/ic_dice"
             android:tint="@color/accent" />
         <ImageButton
             android:id="@+id/btnLibSort"
             style="@style/IconBtn"
-            android:layout_marginStart="6dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="4dp"
             android:contentDescription="Сортировка"
             android:src="@drawable/ic_tune" />
         <ImageButton
             android:id="@+id/btnLibFolders"
             style="@style/IconBtn"
-            android:layout_marginStart="6dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="4dp"
             android:contentDescription="Папки плеера"
             android:src="@drawable/ic_folder" />
     </LinearLayout>
