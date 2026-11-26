@@ -29,6 +29,27 @@ enum class ColorScheme(val key: String, val title: String, val style: Int, val s
         fun set(ctx: Context, s: ColorScheme) =
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, s.key).apply()
 
+        /**
+         * The home screen icon in the scheme's color: one launcher alias per scheme
+         * (AndroidManifest: .LauncherGreen, .LauncherPink, …), only the chosen one is on.
+         */
+        fun applyIcon(ctx: Context) {
+            val cur = get(ctx)
+            val pm = ctx.packageManager
+            runCatching {
+                // switch the new one on first, so there is always an icon
+                entries.sortedBy { if (it == cur) 0 else 1 }.forEach { sc ->
+                    val cn = android.content.ComponentName(ctx.packageName, ctx.packageName + ".Launcher" + sc.name.lowercase().replaceFirstChar { it.uppercase() })
+                    val want = if (sc == cur) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                               else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                    val now = pm.getComponentEnabledSetting(cn)
+                    val effective = if (now == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)
+                        (if (sc == GREEN) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) else now
+                    if (effective != want) pm.setComponentEnabledSetting(cn, want, android.content.pm.PackageManager.DONT_KILL_APP)
+                }
+            }
+        }
+
         /** Call once from Application.onCreate. */
         fun install(app: Application) {
             app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {

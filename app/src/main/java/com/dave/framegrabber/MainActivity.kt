@@ -203,6 +203,11 @@ class MainActivity : Activity() {
         startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_TREE)
     }
 
+    override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, results: IntArray) {
+        super.onRequestPermissionsResult(code, perms, results)
+        if (code == com.dave.framegrabber.ui.main.ClipsPanel.REQ_MEDIA) screen.clips.onShown()
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == REQ_DELETE) { screen.playerTab.onDeleteResult(resultCode == RESULT_OK); return }

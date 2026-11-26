@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- In-app logo: same art as the launcher icon, as a rounded square -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="315" android:startColor="#FF9D561F" android:endColor="#FF241204" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/ic_launcher_foreground_orange" />
+</layer-list>

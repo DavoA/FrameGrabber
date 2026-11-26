@@ -56,6 +56,7 @@ class NavController(private val s: MainScreen) {
         if (target == Page.TOOLS) s.split.onShown()
         if (target == Page.PLAYER) s.playerTab.refresh() else s.playerTab.stopPreview()
         if (target == Page.FEED) s.feed.onShown() else s.feed.onHidden()
+        if (target == Page.CLIPS) s.clips.onShown()
         if (target == page) return
         val from = page
         page = target

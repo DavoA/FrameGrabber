@@ -35,4 +35,5 @@
     <attr name="h661A8A50" format="color" />
     <attr name="h662FC47F" format="color" />
     <attr name="h99031008" format="color" />
+    <attr name="logoMark" format="reference" />
 </resources>

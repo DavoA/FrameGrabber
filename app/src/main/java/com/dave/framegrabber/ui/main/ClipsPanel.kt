@@ -193,6 +193,24 @@ class ClipsPanel(private val s: MainScreen) {
 
     // ================================================================ «Готовые»
 
+    /**
+     * The page was opened: GIFs and clips already in Pictures/FrameGrabber and Movies/FrameGrabber
+     * join the list (needs the «photos» permission for files made before a reinstall — asked once).
+     */
+    fun onShown() {
+        val act = s.act
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            act.checkSelfPermission(android.Manifest.permission.READ_MEDIA_IMAGES) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            !act.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE).getBoolean("askedImages", false)) {
+            act.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("askedImages", true).apply()
+            act.requestPermissions(arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES, android.Manifest.permission.READ_MEDIA_VIDEO), REQ_MEDIA)
+            return
+        }
+        s.io.execute { if (runCatching { Made.syncWithGallery(act) }.getOrDefault(false)) s.ui.post { buildMade() } }
+    }
+
+    companion object { const val REQ_MEDIA = 78 }
+
     private fun buildMade(animateFirst: Boolean = false) {
         val items = Made.list(s.act)
         madeList.removeAllViews()

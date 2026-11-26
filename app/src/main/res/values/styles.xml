@@ -13,6 +13,7 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:alertDialogTheme">@style/DialogTheme</item>
         <!-- the green scheme (other schemes are laid on top: data/ColorScheme) -->
+        <item name="logoMark">@drawable/logo_mark</item>
         <item name="cBg">#FF04120B</item>
         <item name="cBgClassic">#FF07130D</item>
         <item name="cSurface">#E00C2218</item>

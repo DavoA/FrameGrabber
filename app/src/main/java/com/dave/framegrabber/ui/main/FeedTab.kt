@@ -70,6 +70,7 @@ class FeedTab(private val s: MainScreen) {
     private val keys = TgKeys(act)
     private val searchRow = s.h<View>(R.id.feedSearchRow)
     private val searchEdit = s.h<EditText>(R.id.editFeedSearch)
+    private val hitsText = s.h<TextView>(R.id.txtFeedHits)
 
     /** Search mode: what is searched (null = the normal feed) and where the next page starts. */
     private var query: String? = null
@@ -126,6 +127,8 @@ class FeedTab(private val s: MainScreen) {
             } else false
         }
         s.h<View>(R.id.btnFeedSearchClose).setOnClickListener { closeSearch() }
+        s.h<View>(R.id.btnFeedOlder).setOnClickListener { step(older = true) }
+        s.h<View>(R.id.btnFeedNewer).setOnClickListener { step(older = false) }
         Tg.stateListeners += { if (visible) render() }
         // a new post in the channel (e.g. just published from the app): it appears at the bottom by itself
         Tg.messageListeners += { m -> onNewMessage(m) }
@@ -334,7 +337,7 @@ class FeedTab(private val s: MainScreen) {
         val name = channel()
         if (name.isEmpty()) { askChannel(); return }
         posts.clear(); oldest = 0; reachedEnd = false; loadError = null; chatId = 0; userScrolled = false
-        query = null; saved = null; searchRow.visibility = View.GONE
+        query = null; saved = null; searchRow.visibility = View.GONE; hits = emptyList(); hit = -1; pendingJump = 0
         title.text = "@$name"; sub.text = "Загрузка…"
         adapter.notifyDataSetChanged()
         loading = true
@@ -361,7 +364,7 @@ class FeedTab(private val s: MainScreen) {
     // ================================================================ live updates
 
     private fun onNewMessage(m: TdApi.Message) {
-        if (chatId == 0L || m.chatId != chatId || query != null) return
+        if (chatId == 0L || m.chatId != chatId) return
         if (posts.any { m.id in it.ids }) return
         val media = mediaOf(m)
         val cap = captionOf(m.content)?.takeIf { it.text.isNotBlank() }
@@ -445,7 +448,6 @@ class FeedTab(private val s: MainScreen) {
      */
     private fun refreshInPlace() {
         if (Tg.state != Tg.State.READY || chatId == 0L) { reload(); return }
-        query?.let { search(it); return }
         if (loading) return
         val chat = chatId
         val until = oldest
@@ -469,7 +471,7 @@ class FeedTab(private val s: MainScreen) {
             s.ui.post {
                 loading = false
                 sub.text = "@$chatName"
-                if (chat != chatId || query != null) return@post
+                if (chat != chatId) return@post
                 if (got.isEmpty()) { error?.let { act.toast(it) }; return@post }
                 val a = anchor()
                 posts.clear(); posts += grouped
@@ -481,100 +483,88 @@ class FeedTab(private val s: MainScreen) {
         }
     }
 
-    // ================================================================ search
+    // ================================================================ search (like Telegram)
 
-    /** Search the channel (Telegram's own search: captions, words, #tags). */
+    /** Found message ids, newest first; [hit] = the one shown now. */
+    private var hits: List<Long> = emptyList()
+        set(v) { field = v; hitSet = v.toHashSet() }
+    private var hitSet: Set<Long> = emptySet()
+    private var hit = -1
+    private var pendingJump = 0L
+
+    /**
+     * Telegram's own search over the channel (words, #tags, names), shown like in Telegram: the
+     * whole feed stays, the found posts are marked and ▲ ▼ jump between them (older / newer).
+     */
     fun search(text: String) {
         val q = text.trim()
         if (q.isEmpty() || chatId == 0L) return
         searchEdit.hideKeyboard()
-        if (searchRow.visibility != View.VISIBLE) searchRow.visibility = View.VISIBLE
+        searchRow.visibility = View.VISIBLE
         if (searchEdit.text.toString() != q) searchEdit.setText(q)
-        if (query == null) saved = Saved(posts.toList(), oldest, reachedEnd, list.firstVisiblePosition, list.getChildAt(0)?.top ?: 0)
-        query = q; nextFrom = 0; found = -1
-        posts.clear(); reachedEnd = false; loadError = null; userScrolled = false
-        sub.text = "Поиск: $q"
-        adapter.notifyDataSetChanged()
-        loadMore()
+        query = q; hits = emptyList(); hit = -1
+        hitsText.text = "…"
+        val chat = chatId
+        net.execute {
+            val ids = ArrayList<Long>()
+            var from = 0L
+            var err: String? = null
+            for (page in 0 until 20) {
+                val r = Tg.call(TdApi.SearchChatMessages(chat, null, q, null, from, 0, 100, TdApi.SearchMessagesFilterEmpty()))
+                val res = r as? TdApi.FoundChatMessages ?: run { err = Tg.errorOf(r); null } ?: break
+                res.messages.forEach { ids += it.id }
+                if (res.nextFromMessageId == 0L || res.messages.isEmpty()) break
+                from = res.nextFromMessageId
+            }
+            s.ui.post {
+                if (chat != chatId || query != q) return@post
+                // one mark per post: found messages of the same album count once
+                hits = ids.distinct()
+                if (hits.isEmpty()) { hitsText.text = "0"; act.toast(err ?: "Ничего не найдено"); adapter.notifyDataSetChanged(); return@post }
+                jump(0)
+            }
+        }
     }
 
-    /** Videos without a caption posted right after [afterId] (stops at the next post with text or photos). */
-    private fun videosAfter(chat: Long, afterId: Long): List<TdApi.Message> {
-        val newer = (Tg.call(TdApi.GetChatHistory(chat, afterId, -8, 9, false)) as? TdApi.Messages)?.messages
-            ?.filter { it.id > afterId }?.sortedBy { it.id } ?: return emptyList()
-        return newer.takeWhile { m ->
-            val c = m.content
-            val isVideo = c is TdApi.MessageVideo || (c is TdApi.MessageDocument && c.document.mimeType.startsWith("video/"))
-            isVideo && captionOf(c)?.text.isNullOrBlank()
+    /** ▲ = an older found post, ▼ = a newer one. */
+    private fun step(older: Boolean) {
+        if (hits.isEmpty()) return
+        val n = if (older) hit + 1 else hit - 1
+        if (n !in hits.indices) { act.toast(if (older) "Это самый старый найденный пост" else "Это самый новый найденный пост"); return }
+        jump(n)
+    }
+
+    private fun jump(n: Int) {
+        hit = n
+        hitsText.text = "${n + 1} / ${hits.size}"
+        adapter.notifyDataSetChanged()
+        jumpToId(hits[n])
+    }
+
+    /** Scrolls to the post with this message; older posts are loaded first if needed. */
+    private fun jumpToId(id: Long) {
+        val idx = posts.indexOfFirst { id in it.ids }
+        if (idx >= 0) {
+            pendingJump = 0
+            list.setSelectionFromTop(posts.size - idx, (8 * d).toInt())
+            return
         }
+        if (reachedEnd) { act.toast("Этот пост не нашёлся в ленте"); return }
+        pendingJump = id
+        hitsText.text = "${hit + 1} / ${hits.size} …"
+        loadMore(untilId = id)
     }
 
     private fun closeSearch() {
         searchEdit.hideKeyboard()
         searchEdit.setText("")
         searchRow.visibility = View.GONE
-        if (query == null) return
-        query = null
-        val sv = saved ?: run { reload(); return }
-        saved = null
-        posts.clear(); posts += sv.posts; oldest = sv.oldest; reachedEnd = sv.end; loadError = null
-        sub.text = "@$chatName"
-        userScrolled = false
+        query = null; hits = emptyList(); hit = -1; pendingJump = 0
         adapter.notifyDataSetChanged()
-        list.setSelectionFromTop(sv.pos, sv.top)
     }
 
-    /** One page of search results; album photos are fetched around each found post. */
-    private fun searchPage() {
-        val chat = chatId
-        val q = query ?: return
-        val from = nextFrom
-        loading = true
-        adapter.notifyDataSetChanged()
-        net.execute {
-            val r = Tg.call(TdApi.SearchChatMessages(chat, null, q, null, from, 0, 30, TdApi.SearchMessagesFilterEmpty()))
-            val res = r as? TdApi.FoundChatMessages
-            // a found post + the rest of its album + the videos posted right after it without a caption
-            // (your posts: 6 photos with the names, then the video itself)
-            val grouped = ArrayList<Post>()
-            val seen = HashSet<Long>()
-            res?.messages?.forEach { m ->
-                if (m.id in seen) return@forEach
-                val album = if (m.mediaAlbumId != 0L)
-                    (Tg.call(TdApi.GetChatHistory(chat, m.id, -10, 21, false)) as? TdApi.Messages)?.messages
-                        ?.filter { it.mediaAlbumId == m.mediaAlbumId }?.sortedBy { it.id }?.ifEmpty { null } ?: listOf(m)
-                else listOf(m)
-                val unit = album + videosAfter(chat, album.last().id)
-                unit.forEach { seen += it.id }
-                val caption = unit.firstNotNullOfOrNull { captionOf(it.content)?.takeIf { c -> c.text.isNotBlank() } }
-                grouped += Post(unit.map { it.id }, album.first().date, caption, unit.mapNotNull { mediaOf(it) })
-            }
-            s.ui.post {
-                loading = false
-                if (chat != chatId || query != q) return@post
-                if (res == null) { reachedEnd = true; loadError = Tg.errorOf(r) ?: "Поиск не удался" }
-                else {
-                    if (found < 0) found = res.totalCount
-                    val keepPos = list.firstVisiblePosition
-                    val keepTop = list.getChildAt(0)?.top ?: 0
-                    val firstPage = posts.isEmpty()
-                    posts += grouped
-                    nextFrom = res.nextFromMessageId
-                    if (nextFrom == 0L || res.messages.isEmpty()) reachedEnd = true
-                    sub.text = "Поиск: $q · найдено ${maxOf(found, 0)}"
-                    adapter.notifyDataSetChanged()
-                    if (firstPage) list.setSelection(adapter.count - 1)
-                    else if (grouped.isNotEmpty()) list.setSelectionFromTop(keepPos + grouped.size, keepTop)
-                    return@post
-                }
-                adapter.notifyDataSetChanged()
-            }
-        }
-    }
-
-    private fun loadMore() {
+    private fun loadMore(untilId: Long = 0L) {
         if (loading || reachedEnd || chatId == 0L) return
-        if (query != null) { searchPage(); return }
         loading = true
         adapter.notifyDataSetChanged()
         val chat = chatId
@@ -585,9 +575,10 @@ class FeedTab(private val s: MainScreen) {
             var cursor = from
             var error: String? = null
             var tries = 0
-            while (got.size < 30 && tries < 6) {
+            // (when jumping to a found post: keep reading until it is reached)
+            while ((got.size < 30 || (untilId != 0L && cursor > untilId)) && tries < 400) {
                 tries++
-                val r = Tg.call(TdApi.GetChatHistory(chat, cursor, 0, 50, false))
+                val r = Tg.call(TdApi.GetChatHistory(chat, cursor, 0, if (untilId != 0L) 100 else 50, false))
                 val m = r as? TdApi.Messages ?: run { error = Tg.errorOf(r); null } ?: break
                 if (m.messages.isEmpty()) break
                 got += m.messages
@@ -617,6 +608,10 @@ class FeedTab(private val s: MainScreen) {
                 adapter.notifyDataSetChanged()
                 if (firstPage) list.setSelection(adapter.count - 1)
                 else if (added > 0) list.setSelectionFromTop(keepPos + added, keepTop)
+                if (pendingJump != 0L) {
+                    val id = pendingJump
+                    if (posts.any { id in it.ids } || reachedEnd) { hitsText.text = "${hit + 1} / ${hits.size}"; jumpToId(id) }
+                }
             }
         }
     }
@@ -850,8 +845,6 @@ class FeedTab(private val s: MainScreen) {
             text = when {
                 loading -> "Загрузка…"
                 loadError != null -> loadError
-                query != null && reachedEnd && posts.isEmpty() -> "Ничего не найдено"
-                query != null && reachedEnd -> "Это все найденные посты"
                 reachedEnd && posts.isEmpty() -> "Постов нет"
                 reachedEnd -> "Это самый первый пост"
                 else -> ""
@@ -876,7 +869,12 @@ class FeedTab(private val s: MainScreen) {
         val videos = post.media.filter { it.video != null }
         videos.forEachIndexed { i, m -> card.addView(videoRow(m, if (videos.size > 1) "Part ${i + 1}" else "Видео")) }
 
-        post.caption?.let { c ->
+        // the found post you jumped to (search ▲ ▼) is outlined
+        if (hit in hits.indices && hits[hit] in post.ids) card.foreground = act.getDrawable(R.drawable.fg_selected)
+
+        // videos only (Part 1, Part 2…): their own caption isn't needed under the download rows
+        val onlyVideos = post.media.isNotEmpty() && post.media.all { it.video != null }
+        if (!onlyVideos) post.caption?.let { c ->
             card.addView(TextView(act).apply {
                 text = styled(c)
                 textSize = 14.5f

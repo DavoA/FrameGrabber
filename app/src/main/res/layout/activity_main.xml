@@ -40,7 +40,7 @@
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:elevation="4dp"
-                android:src="@drawable/logo_mark" />
+                android:src="?attr/logoMark" />
 
             <LinearLayout
                 android:id="@+id/titleBox"

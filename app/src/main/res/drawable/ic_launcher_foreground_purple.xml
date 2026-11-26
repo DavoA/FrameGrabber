@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Three stacked film frames (a "burst" of captured frames), front one with perforations and a play mark. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.82" android:scaleY="0.82">
+        <!-- back frame -->
+        <path android:fillColor="#FFC75CF5" android:fillAlpha="0.35"
+            android:pathData="M45,30h35a5,5 0,0 1,5 5v22a5,5 0,0 1,-5 5h-35a5,5 0,0 1,-5 -5v-22a5,5 0,0 1,5 -5z" />
+        <!-- middle frame -->
+        <path android:fillColor="#FFC75CF5" android:fillAlpha="0.65"
+            android:pathData="M38,38h35a5,5 0,0 1,5 5v22a5,5 0,0 1,-5 5h-35a5,5 0,0 1,-5 -5v-22a5,5 0,0 1,5 -5z" />
+        <!-- front frame -->
+        <path android:fillColor="#FFF1FAF4"
+            android:pathData="M30,46h37a5,5 0,0 1,5 5v24a5,5 0,0 1,-5 5h-37a5,5 0,0 1,-5 -5v-24a5,5 0,0 1,5 -5z" />
+        <!-- perforations -->
+        <path android:fillColor="#FF1F062A"
+            android:pathData="M30,49h4v3h-4zM38,49h4v3h-4zM46,49h4v3h-4zM54,49h4v3h-4zM62,49h4v3h-4zM30,74h4v3h-4zM38,74h4v3h-4zM46,74h4v3h-4zM54,74h4v3h-4zM62,74h4v3h-4z" />
+        <!-- play mark -->
+        <path android:fillColor="#FFFF2E97"
+            android:pathData="M44,56.5L56,63L44,69.5z" />
+        <!-- spark: "captured" -->
+        <path android:fillColor="#FFF1FAF4"
+            android:pathData="M84,24l2,5l5,2l-5,2l-2,5l-2,-5l-5,-2l5,-2z" />
+    </group>
+</vector>

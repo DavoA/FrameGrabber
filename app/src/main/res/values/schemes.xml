@@ -2,6 +2,7 @@
 <!-- Color schemes: the green original and the same palette turned pink, orange, red, purple (generated, same brightness). -->
 <resources>
     <style name="Scheme.Green" parent="">
+        <item name="logoMark">@drawable/logo_mark</item>
         <item name="cBg">#FF04120B</item>
         <item name="cBgClassic">#FF07130D</item>
         <item name="cSurface">#E00C2218</item>
@@ -38,6 +39,7 @@
         <item name="h99031008">#99031008</item>
     </style>
     <style name="Scheme.Pink" parent="">
+        <item name="logoMark">@drawable/logo_mark_pink</item>
         <item name="cBg">#FF12040B</item>
         <item name="cBgClassic">#FF13070D</item>
         <item name="cSurface">#E0220C17</item>
@@ -74,6 +76,7 @@
         <item name="h99031008">#9910030A</item>
     </style>
     <style name="Scheme.Orange" parent="">
+        <item name="logoMark">@drawable/logo_mark_orange</item>
         <item name="cBg">#FF120A04</item>
         <item name="cBgClassic">#FF130C07</item>
         <item name="cSurface">#E022160C</item>
@@ -110,6 +113,7 @@
         <item name="h99031008">#99100903</item>
     </style>
     <style name="Scheme.Red" parent="">
+        <item name="logoMark">@drawable/logo_mark_red</item>
         <item name="cBg">#FF120305</item>
         <item name="cBgClassic">#FF130608</item>
         <item name="cSurface">#E0220B0E</item>
@@ -146,6 +150,7 @@
         <item name="h99031008">#99100204</item>
     </style>
     <style name="Scheme.Purple" parent="">
+        <item name="logoMark">@drawable/logo_mark_purple</item>
         <item name="cBg">#FF0E0412</item>
         <item name="cBgClassic">#FF0F0713</item>
         <item name="cSurface">#E01B0C22</item>
