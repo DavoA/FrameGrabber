@@ -208,6 +208,7 @@ class PostActivity : Activity() {
         card.addView(TextView(this, null, 0, R.style.CardTitle).apply { text = "Видео и время" })
         swVideo = android.widget.Switch(this, null, 0, R.style.Toggle).apply {
             text = "Выложить видео после фото"
+            showText = false; textOn = ""; textOff = ""   // made in code: no default «ON/OFF» texts (would crash)
             isEnabled = videoUri != null
             isChecked = videoUri != null && tgPrefs.getBoolean("postVideo", true)
             setOnCheckedChangeListener { _, on -> tgPrefs.edit().putBoolean("postVideo", on).apply(); updateVideoInfo() }
