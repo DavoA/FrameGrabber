@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.player
 
+import com.dave.framegrabber.ui.tc
+
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -40,7 +42,7 @@ class TimelineBar @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     private val pad = 14 * d
     private var scrubbing = false
 
-    private val accent = ctx.getColor(R.color.accent)
+    private val accent = ctx.tc(R.color.accent)
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x44FFFFFF; strokeWidth = 4 * d; strokeCap = Paint.Cap.ROUND }
     private val donePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; strokeWidth = 4 * d; strokeCap = Paint.Cap.ROUND }
     private val thumbPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }

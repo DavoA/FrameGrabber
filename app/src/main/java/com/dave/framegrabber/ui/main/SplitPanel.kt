@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.AlertDialog
 import android.net.Uri
 import android.os.Environment
@@ -117,7 +119,7 @@ class SplitPanel(private val s: MainScreen) {
                     .onFailure { e ->
                         if (e is InterruptedException) return@onFailure
                         hint.text = e.message ?: "Не удалось прочитать видео"
-                        hint.setTextColor(s.act.getColor(R.color.danger))
+                        hint.setTextColor(s.act.tc(R.color.danger))
                     }
             }
         }.start()
@@ -142,7 +144,7 @@ class SplitPanel(private val s: MainScreen) {
 
     private fun render() {
         val p = plan ?: return
-        hint.setTextColor(s.act.getColor(R.color.textDim))
+        hint.setTextColor(s.act.tc(R.color.textDim))
         val n = p.parts.size
         txtCount.text = if (n == 1) "1 часть" else "$n ${if (n in 2..4) "части" else "частей"}"
         partsBox.removeAllViews()
@@ -153,7 +155,7 @@ class SplitPanel(private val s: MainScreen) {
             over > 0 -> "⚠ Частей больше лимита: $over — добавь частей (＋)"
             else -> "Все части меньше ${size(limit)}. Размер — по данным самого файла, погрешность меньше 1%."
         }
-        if (over > 0) hint.setTextColor(s.act.getColor(R.color.warn))
+        if (over > 0) hint.setTextColor(s.act.tc(R.color.warn))
     }
 
     private fun row(p: SplitPlan.Part, tooBig: Boolean): View {
@@ -167,20 +169,20 @@ class SplitPanel(private val s: MainScreen) {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = (6 * d).toInt() }
             addView(TextView(ctx).apply {
                 text = "${p.number}"
-                textSize = 15f; setTextColor(ctx.getColor(R.color.accent))
+                textSize = 15f; setTextColor(ctx.tc(R.color.accent))
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
                 layoutParams = LinearLayout.LayoutParams((28 * d).toInt(), -2)
             })
             addView(TextView(ctx).apply {
                 text = "${TimeUtil.format(p.fromUs)} – ${TimeUtil.format(p.toUs)}\n${TimeUtil.format(p.toUs - p.fromUs)}"
-                textSize = 13f; setTextColor(ctx.getColor(R.color.text))
+                textSize = 13f; setTextColor(ctx.tc(R.color.text))
                 typeface = android.graphics.Typeface.MONOSPACE
                 layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
             })
             addView(TextView(ctx).apply {
                 text = "≈ " + size(p.bytes)
                 textSize = 16f
-                setTextColor(ctx.getColor(if (tooBig) R.color.danger else R.color.text))
+                setTextColor(ctx.tc(if (tooBig) R.color.danger else R.color.text))
                 typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
             })
         }
@@ -215,7 +217,7 @@ class SplitPanel(private val s: MainScreen) {
         val overall = if (st.parts == 0) 0f else ((st.part - 1).coerceAtLeast(0) + st.fraction) / st.parts
         progress.progress = (overall * 1000).toInt()
         btn.text = "Остановить"
-        hint.setTextColor(s.act.getColor(R.color.text))
+        hint.setTextColor(s.act.tc(R.color.text))
         hint.text = "Режу часть ${max(1, st.part)} из ${st.parts}… ${(overall * 100).toInt()}%\nМожно свернуть приложение — работа идёт в фоне."
     }
 
@@ -224,10 +226,10 @@ class SplitPanel(private val s: MainScreen) {
         progress.visibility = View.GONE
         btn.text = "Разделить"
         when {
-            st.error != null -> { hint.setTextColor(s.act.getColor(R.color.danger)); hint.text = "Не получилось: ${st.error}" }
-            st.cancel.get() -> { hint.setTextColor(s.act.getColor(R.color.textDim)); hint.text = "Остановлено. Готово частей: ${st.saved.size}" }
+            st.error != null -> { hint.setTextColor(s.act.tc(R.color.danger)); hint.text = "Не получилось: ${st.error}" }
+            st.cancel.get() -> { hint.setTextColor(s.act.tc(R.color.textDim)); hint.text = "Остановлено. Готово частей: ${st.saved.size}" }
             else -> {
-                hint.setTextColor(s.act.getColor(R.color.accent))
+                hint.setTextColor(s.act.tc(R.color.accent))
                 hint.text = "✓ Готово: ${st.saved.size} частей в ${st.folder}" +
                     (if (st.droppedAudio.isNotEmpty()) "\nБез звука: звук ${st.droppedAudio.joinToString()} нельзя сохранить без перекодирования" else "")
                 btn.bump()

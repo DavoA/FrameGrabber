@@ -38,9 +38,9 @@ enum class AppTheme(val key: String) {
                     bg.visibility = View.VISIBLE
                     if (animate) { bg.alpha = 0f; bg.animate().alpha(1f).setDuration(450).start() } else bg.alpha = 1f
                 }
-                root.setBackgroundColor(activity.getColor(R.color.bg))
+                root.setBackgroundColor(activity.tc(R.color.bg))
             } else {
-                root.setBackgroundColor(activity.getColor(R.color.bgClassic))
+                root.setBackgroundColor(activity.tc(R.color.bgClassic))
                 if (bg.visibility == View.VISIBLE) {
                     if (animate) {
                         bg.animate().alpha(0f).setDuration(350).withEndAction {

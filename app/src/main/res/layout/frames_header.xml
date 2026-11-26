@@ -21,7 +21,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Снятые кадры"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="17sp"
             android:textStyle="bold" />
         <TextView
@@ -49,7 +49,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="нажми, чтобы открыть"
-            android:textColor="@color/textDim"
+            android:textColor="?attr/cTextDim"
             android:textSize="12sp"
             android:visibility="gone" />
     </LinearLayout>
@@ -108,14 +108,14 @@
             android:layout_height="48dp"
             android:alpha="0.6"
             android:src="@drawable/ic_photo"
-            android:tint="@color/textDim" />
+            android:tint="?attr/cTextDim" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingTop="10dp"
             android:gravity="center"
             android:text="Пока пусто\nСними кадр на вкладке «Съёмка»\nили пачку в «Инструментах»"
-            android:textColor="@color/textDim"
+            android:textColor="?attr/cTextDim"
             android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>

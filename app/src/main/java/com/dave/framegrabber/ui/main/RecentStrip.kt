@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.animation.AnimatorInflater
 import android.app.AlertDialog
 import android.content.Intent
@@ -76,12 +78,12 @@ class RecentStrip(private val s: MainScreen) {
             Recent.thumbFile(ctx, item)?.takeIf { it.exists() }?.let { setImageBitmap(BitmapFactory.decodeFile(it.path)) }
         })
         card.addView(TextView(ctx).apply {
-            text = item.name; setTextColor(ctx.getColor(R.color.text)); textSize = 12f
+            text = item.name; setTextColor(ctx.tc(R.color.text)); textSize = 12f
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
             setPadding(2, (6 * d).toInt(), 2, 0)
         })
         card.addView(TextView(ctx).apply {
-            text = item.info; setTextColor(ctx.getColor(R.color.textDim)); textSize = 10f; maxLines = 1
+            text = item.info; setTextColor(ctx.tc(R.color.textDim)); textSize = 10f; maxLines = 1
             setPadding(2, 0, 2, 0)
         })
         card.setOnClickListener {

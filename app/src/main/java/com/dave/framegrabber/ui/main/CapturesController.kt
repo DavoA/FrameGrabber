@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.animation.AnimatorInflater
 import android.app.AlertDialog
 import android.graphics.Color
@@ -287,7 +289,7 @@ class CapturesController(private val s: MainScreen) {
                         layoutParams = FrameLayout.LayoutParams(-1, -1)
                     })
                     cell.addView(TextView(ctx).apply {
-                        setTextColor(ctx.getColor(R.color.text))
+                        setTextColor(ctx.tc(R.color.text))
                         setBackgroundResource(R.drawable.bg_chip)
                         textSize = 10f
                         typeface = Typeface.MONOSPACE
@@ -297,7 +299,7 @@ class CapturesController(private val s: MainScreen) {
                     })
                     // number in a Telegram post (1 = cover)
                     cell.addView(TextView(ctx).apply {
-                        setTextColor(ctx.getColor(R.color.text))
+                        setTextColor(ctx.tc(R.color.text))
                         setBackgroundResource(R.drawable.bg_count)
                         textSize = 13f
                         typeface = Typeface.DEFAULT_BOLD

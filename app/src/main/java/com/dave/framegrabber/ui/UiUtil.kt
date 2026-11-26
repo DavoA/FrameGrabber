@@ -13,6 +13,7 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
+import com.dave.framegrabber.R
 
 /** Dialogs, toasts, keyboard, sharing — shared by all screens. */
 
@@ -59,3 +60,21 @@ fun TextView.onTextChanged(block: (String) -> Unit) = addTextChangedListener(obj
     override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
     override fun afterTextChanged(s: Editable?) = block(s?.toString().orEmpty())
 })
+
+private val schemeAttrs by lazy {
+    mapOf(
+        R.color.bg to R.attr.cBg, R.color.bgClassic to R.attr.cBgClassic, R.color.surface to R.attr.cSurface,
+        R.color.surface2 to R.attr.cSurface2, R.color.stroke to R.attr.cStroke, R.color.primary to R.attr.cPrimary,
+        R.color.primaryBright to R.attr.cPrimaryBright, R.color.accent to R.attr.cAccent,
+        R.color.text to R.attr.cText, R.color.textDim to R.attr.cTextDim,
+    )
+}
+
+/** A palette color in the current color scheme (green / pink / orange / …); other colors as they are. */
+fun Context.tc(id: Int): Int {
+    val attr = schemeAttrs[id] ?: return getColor(id)
+    val tv = android.util.TypedValue()
+    return if (theme.resolveAttribute(attr, tv, true) &&
+        tv.type >= android.util.TypedValue.TYPE_FIRST_COLOR_INT && tv.type <= android.util.TypedValue.TYPE_LAST_COLOR_INT) tv.data
+    else getColor(id)
+}

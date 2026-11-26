@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -50,6 +52,7 @@ class SettingsDialog(private val s: MainScreen) {
         bindTelegram(v)
         val preview = v.findViewById<SynthwaveView>(R.id.wavePreview)
         val dlg = AlertDialog.Builder(s.act).setView(v).create()
+        openDlg = dlg
         v.findViewById<View>(R.id.btnDone).setOnClickListener { dlg.dismiss() }
         dlg.setOnDismissListener { preview.running = false; folderLabel = null }
         dlg.show()
@@ -84,8 +87,45 @@ class SettingsDialog(private val s: MainScreen) {
             AppTheme.apply(s.act, s.act.bgView, t, animate = true)
         }
         showChoice(AppTheme.get(s.act), animate = false)
+        bindSchemes(v)
         optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
         optWave.setOnClickListener { choose(AppTheme.WAVE) }
+    }
+
+    /** Color scheme: green, pink, orange, red, purple — the app is redrawn in it. */
+    private var openDlg: AlertDialog? = null
+
+    private fun bindSchemes(v: View) {
+        val row = v.findViewById<android.widget.LinearLayout>(R.id.schemeRow)
+        val d = s.act.resources.displayMetrics.density
+        val cur = com.dave.framegrabber.data.ColorScheme.get(s.act)
+        com.dave.framegrabber.data.ColorScheme.entries.forEach { sc ->
+            val item = android.widget.LinearLayout(s.act).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setPadding((6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt())
+                setBackgroundResource(R.drawable.bg_option)
+                isSelected = sc == cur
+                layoutParams = android.widget.LinearLayout.LayoutParams((78 * d).toInt(), -2).apply { marginEnd = (8 * d).toInt() }
+            }
+            item.addView(View(s.act).apply {
+                background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF000000.toInt(), sc.swatch)
+                ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke((2 * d).toInt(), sc.swatch) }
+            }, android.widget.LinearLayout.LayoutParams((40 * d).toInt(), (40 * d).toInt()))
+            item.addView(TextView(s.act).apply {
+                text = sc.title; textSize = 11f; gravity = android.view.Gravity.CENTER
+                setTextColor(s.act.tc(if (sc == cur) R.color.text else R.color.textDim))
+                setPadding(0, (4 * d).toInt(), 0, 0)
+            })
+            item.setOnClickListener {
+                if (sc == com.dave.framegrabber.data.ColorScheme.get(s.act)) return@setOnClickListener
+                com.dave.framegrabber.data.ColorScheme.set(s.act, sc)
+                openDlg?.dismiss()
+                s.act.recreate()
+            }
+            row.addView(item)
+        }
     }
 
     /** Size / format / quality / "sharpest frame nearby" — saved instantly. */
@@ -190,8 +230,8 @@ class SettingsDialog(private val s: MainScreen) {
         for ((code, title) in Ocr.LANGS) {
             box.addView(CheckBox(s.act).apply {
                 text = title
-                setTextColor(s.act.getColor(R.color.text))
-                buttonTintList = ColorStateList.valueOf(s.act.getColor(R.color.accent))
+                setTextColor(s.act.tc(R.color.text))
+                buttonTintList = ColorStateList.valueOf(s.act.tc(R.color.accent))
                 isChecked = code in chosen
                 setOnCheckedChangeListener { cb, on ->
                     if (on) chosen += code else chosen -= code

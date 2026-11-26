@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.AlertDialog
 import android.graphics.Typeface
 import android.net.Uri
@@ -177,8 +179,8 @@ class PlayerTab(private val s: MainScreen) {
         opts.forEach { (key, label) ->
             rg.addView(android.widget.RadioButton(ctx).apply {
                 id = View.generateViewId(); text = label; tag = key
-                setTextColor(ctx.getColor(R.color.text)); textSize = 15f
-                buttonTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.accent))
+                setTextColor(ctx.tc(R.color.text)); textSize = 15f
+                buttonTintList = android.content.res.ColorStateList.valueOf(ctx.tc(R.color.accent))
                 minHeight = (42 * d).toInt()
                 isChecked = key == lib.sort
             })
@@ -510,27 +512,27 @@ class PlayerTab(private val s: MainScreen) {
             }.apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             frame.addView(thumb, FrameLayout.LayoutParams(-1, -2))
             val dur = TextView(ctx).apply {
-                textSize = 11f; setTextColor(ctx.getColor(R.color.text)); typeface = Typeface.MONOSPACE
+                textSize = 11f; setTextColor(ctx.tc(R.color.text)); typeface = Typeface.MONOSPACE
                 setBackgroundResource(R.drawable.bg_player_pill)
                 setPadding((6 * d).toInt(), (1 * d).toInt(), (6 * d).toInt(), (1 * d).toInt())
             }
             frame.addView(dur, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, (6 * d).toInt(), (8 * d).toInt()) })
             val badge = TextView(ctx).apply {
-                textSize = 10f; setTextColor(ctx.getColor(R.color.text)); typeface = Typeface.DEFAULT_BOLD
+                textSize = 10f; setTextColor(ctx.tc(R.color.text)); typeface = Typeface.DEFAULT_BOLD
                 setBackgroundResource(R.drawable.bg_chip_on)
                 setPadding((7 * d).toInt(), (1 * d).toInt(), (7 * d).toInt(), (1 * d).toInt())
             }
             frame.addView(badge, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START).apply { setMargins((6 * d).toInt(), (6 * d).toInt(), 0, 0) })
             val progress = ProgressBar(ctx, null, 0, android.R.style.Widget_Material_ProgressBar_Horizontal).apply {
                 max = 1000
-                progressTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.accent))
+                progressTintList = android.content.res.ColorStateList.valueOf(ctx.tc(R.color.accent))
                 progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x66000000)
             }
             frame.addView(progress, FrameLayout.LayoutParams(-1, (4 * d).toInt(), Gravity.BOTTOM))
             // ⋮ : the card's menu
             val more = android.widget.ImageButton(ctx).apply {
                 setImageResource(R.drawable.ic_more)
-                imageTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.text))
+                imageTintList = android.content.res.ColorStateList.valueOf(ctx.tc(R.color.text))
                 setBackgroundResource(R.drawable.bg_player_pill)
                 contentDescription = "Действия"
                 isFocusable = false
@@ -542,11 +544,11 @@ class PlayerTab(private val s: MainScreen) {
             if (small) more.layoutParams = FrameLayout.LayoutParams((24 * d).toInt(), (24 * d).toInt(), Gravity.TOP or Gravity.END)
                 .apply { setMargins(0, (3 * d).toInt(), (3 * d).toInt(), 0) }
             val name = TextView(ctx).apply {
-                textSize = 13f; setTextColor(ctx.getColor(R.color.text)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+                textSize = 13f; setTextColor(ctx.tc(R.color.text)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
                 setPadding((2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt(), 0)
             }
             val sub = TextView(ctx).apply {
-                textSize = 11f; setTextColor(ctx.getColor(R.color.textDim)); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
+                textSize = 11f; setTextColor(ctx.tc(R.color.textDim)); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
                 setPadding((2 * d).toInt(), (1 * d).toInt(), (2 * d).toInt(), 0)
             }
             if (small) { name.textSize = 11f; name.maxLines = 1; sub.textSize = 10f }

@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Bitmap
@@ -106,7 +108,7 @@ class ClipsPanel(private val s: MainScreen) {
             append("≈ $frames кадров · ${w}×${h} · %.1f с".format(seconds))
             if (frames > GifOptions.MAX_FRAMES) append("\nСлишком много кадров (макс. ${GifOptions.MAX_FRAMES}) — укороти отрезок или снизь плавность")
         }
-        txtGifInfo.setTextColor(s.act.getColor(if (frames > GifOptions.MAX_FRAMES) R.color.danger else R.color.textDim))
+        txtGifInfo.setTextColor(s.act.tc(if (frames > GifOptions.MAX_FRAMES) R.color.danger else R.color.textDim))
     }
 
     // ================================================================ making
@@ -231,7 +233,7 @@ class ClipsPanel(private val s: MainScreen) {
         val tag = TextView(ctx).apply {
             text = if (item.isGif) "GIF" else "MP4"
             setBackgroundResource(R.drawable.bg_chip)
-            setTextColor(ctx.getColor(R.color.accent))
+            setTextColor(ctx.tc(R.color.accent))
             textSize = 9f
             typeface = Typeface.DEFAULT_BOLD
             setPadding((5 * d).toInt(), 0, (5 * d).toInt(), 0)
@@ -245,18 +247,18 @@ class ClipsPanel(private val s: MainScreen) {
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = (12 * d).toInt() }
         }
         texts.addView(TextView(ctx).apply {
-            text = item.name; setTextColor(ctx.getColor(R.color.text)); textSize = 14f
+            text = item.name; setTextColor(ctx.tc(R.color.text)); textSize = 14f
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
         })
         texts.addView(TextView(ctx).apply {
             val ago = DateUtils.getRelativeTimeSpanString(item.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
             text = "${TimeUtil.format(item.lengthUs).substringBefore('.')} · $ago"
-            setTextColor(ctx.getColor(R.color.textDim)); textSize = 12f; maxLines = 1
+            setTextColor(ctx.tc(R.color.textDim)); textSize = 12f; maxLines = 1
         })
         fun iconButton(icon: Int, tint: Int, desc: String, onClick: () -> Unit) = ImageButton(ctx).apply {
             setImageResource(icon)
             setBackgroundResource(R.drawable.btn_icon_glass)
-            imageTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(tint))
+            imageTintList = android.content.res.ColorStateList.valueOf(ctx.tc(tint))
             contentDescription = desc
             layoutParams = LinearLayout.LayoutParams((38 * d).toInt(), (38 * d).toInt()).apply { marginStart = (6 * d).toInt() }
             stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(ctx, R.animator.press_scale)

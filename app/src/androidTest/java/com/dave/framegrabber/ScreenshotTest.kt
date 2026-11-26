@@ -50,6 +50,7 @@ class ScreenshotTest {
     @Test fun screens() {
         StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX)
         AppTheme.set(appCtx, AppTheme.CLASSIC)
+        com.dave.framegrabber.data.ColorScheme.set(appCtx, com.dave.framegrabber.data.ColorScheme.GREEN)
         // 1. empty state
         val a0 = launch(Intent(Intent.ACTION_MAIN))
         Thread.sleep(2500); shot("1_empty")
@@ -355,4 +356,23 @@ class ScreenshotTest {
         Thread.sleep(1500); shot("8b_multi_select")
         m.finish()
     }
+
+    /** The color schemes: the start screen and the tools page in pink and orange. */
+    @Test fun schemes() {
+        StrictMode.setVmPolicy(StrictMode.VmPolicy.LAX)
+        AppTheme.set(appCtx, AppTheme.CLASSIC)
+        try {
+            for ((sc, name) in listOf(com.dave.framegrabber.data.ColorScheme.PINK to "20_pink", com.dave.framegrabber.data.ColorScheme.ORANGE to "21_orange")) {
+                com.dave.framegrabber.data.ColorScheme.set(appCtx, sc)
+                val a = launch(Intent(Intent.ACTION_MAIN))
+                Thread.sleep(2500); shot(name)
+                inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
+                Thread.sleep(1200); shot(name + "_tools")
+                a.finish(); Thread.sleep(800)
+            }
+        } finally {
+            com.dave.framegrabber.data.ColorScheme.set(appCtx, com.dave.framegrabber.data.ColorScheme.GREEN)
+        }
+    }
+
 }

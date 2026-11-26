@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.telegram
 
+import com.dave.framegrabber.ui.tc
+
 import android.animation.AnimatorInflater
 import android.content.Context
 import android.view.Gravity
@@ -24,7 +26,7 @@ object Chips {
 
     fun TextView.setOn(on: Boolean) {
         setBackgroundResource(if (on) R.drawable.bg_chip_on else R.drawable.bg_chip)
-        setTextColor(context.getColor(if (on) R.color.text else R.color.textDim))
+        setTextColor(context.tc(if (on) R.color.text else R.color.textDim))
         isSelected = on
     }
 }

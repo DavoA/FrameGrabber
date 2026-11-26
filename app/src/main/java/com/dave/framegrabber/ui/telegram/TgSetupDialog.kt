@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.telegram
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Handler
@@ -102,20 +104,20 @@ class TgSetupDialog(private val act: Activity, private val onSaved: () -> Unit =
     }
 
     private fun show(v: TextView, msg: String, color: Int) {
-        v.visibility = View.VISIBLE; v.text = msg; v.setTextColor(act.getColor(color))
+        v.visibility = View.VISIBLE; v.text = msg; v.setTextColor(act.tc(color))
     }
 
     private fun label(s: String) = text(s, 13f, R.color.accent).apply { setPadding(0, (14 * d).toInt(), 0, (4 * d).toInt()) }
 
     private fun text(s: String, size: Float, color: Int) = TextView(act).apply {
-        text = s; textSize = size; setTextColor(act.getColor(color))
+        text = s; textSize = size; setTextColor(act.tc(color))
         setPadding(0, (6 * d).toInt(), 0, (6 * d).toInt())
     }
 
     private fun input(hint: String, value: String) = EditText(act).apply {
         this.hint = hint; setText(value)
         setBackgroundResource(R.drawable.bg_input)
-        setTextColor(act.getColor(R.color.text)); setHintTextColor(act.getColor(R.color.textDim))
+        setTextColor(act.tc(R.color.text)); setHintTextColor(act.tc(R.color.textDim))
         textSize = 14f; isSingleLine = true
         minHeight = (46 * d).toInt()
         setPadding((12 * d).toInt(), 0, (12 * d).toInt(), 0)

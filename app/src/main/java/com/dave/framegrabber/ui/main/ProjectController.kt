@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.animation.AnimatorInflater
 import android.app.AlertDialog
 import android.graphics.Bitmap
@@ -141,17 +143,17 @@ class ProjectController(private val s: MainScreen) {
             setPadding(p, p / 2, p, p)
         }
         val loading = TextView(ctx).apply {
-            text = "Загружаю…"; setTextColor(ctx.getColor(R.color.textDim)); gravity = Gravity.CENTER
+            text = "Загружаю…"; setTextColor(ctx.tc(R.color.textDim)); gravity = Gravity.CENTER
             setPadding(0, (24 * dp).toInt(), 0, (24 * dp).toInt())
         }
         box.addView(loading)
         val title = TextView(ctx).apply {
-            text = "История проектов"; textSize = 20f; setTextColor(ctx.getColor(R.color.text))
+            text = "История проектов"; textSize = 20f; setTextColor(ctx.tc(R.color.text))
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
             setPadding((24 * dp).toInt(), (20 * dp).toInt(), (24 * dp).toInt(), 0)
         }
         val sub = TextView(ctx).apply {
-            textSize = 12f; setTextColor(ctx.getColor(R.color.textDim))
+            textSize = 12f; setTextColor(ctx.tc(R.color.textDim))
             setPadding((24 * dp).toInt(), (2 * dp).toInt(), (24 * dp).toInt(), (6 * dp).toInt())
         }
         val head = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; addView(title); addView(sub) }
@@ -177,7 +179,7 @@ class ProjectController(private val s: MainScreen) {
                 if (items.isEmpty()) {
                     box.addView(TextView(ctx).apply {
                         text = "Пока пусто. Открой видео — его кадры, метки и отрезки будут сохраняться здесь."
-                        setTextColor(ctx.getColor(R.color.textDim)); gravity = Gravity.CENTER
+                        setTextColor(ctx.tc(R.color.textDim)); gravity = Gravity.CENTER
                         setPadding((12 * dp).toInt(), (24 * dp).toInt(), (12 * dp).toInt(), (24 * dp).toInt())
                     })
                 }
@@ -225,7 +227,7 @@ class ProjectController(private val s: MainScreen) {
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = (12 * d).toInt() }
         }
         texts.addView(TextView(ctx).apply {
-            text = it.name; textSize = 14f; setTextColor(ctx.getColor(R.color.text))
+            text = it.name; textSize = 14f; setTextColor(ctx.tc(R.color.text))
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
         })
         texts.addView(TextView(ctx).apply {
@@ -233,19 +235,19 @@ class ProjectController(private val s: MainScreen) {
                 append("Кадров: ${it.frames}")
                 if (it.marks > 0) append(" · меток: ${it.marks}")
             }
-            textSize = 12f; setTextColor(ctx.getColor(R.color.accent)); maxLines = 1
+            textSize = 12f; setTextColor(ctx.tc(R.color.accent)); maxLines = 1
         })
         texts.addView(TextView(ctx).apply {
             val time = if (isOpen) "открыт сейчас"
                        else DateUtils.getRelativeTimeSpanString(it.updated, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
             text = "$time · ${Formatter.formatShortFileSize(ctx, it.bytes)}"
-            textSize = 11f; setTextColor(ctx.getColor(R.color.textDim)); maxLines = 1
+            textSize = 11f; setTextColor(ctx.tc(R.color.textDim)); maxLines = 1
         })
         row.addView(texts)
         if (!isOpen) {
             row.addView(ImageButton(ctx).apply {
                 setImageResource(R.drawable.ic_delete)
-                imageTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.textDim))
+                imageTintList = android.content.res.ColorStateList.valueOf(ctx.tc(R.color.textDim))
                 background = null
                 layoutParams = LinearLayout.LayoutParams((44 * d).toInt(), (44 * d).toInt())
                 contentDescription = "Удалить проект"

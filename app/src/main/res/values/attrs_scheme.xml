@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colors that follow the color scheme (Настройки → Цвет). Values: values/schemes.xml -->
+<resources>
+    <attr name="cBg" format="color" />
+    <attr name="cBgClassic" format="color" />
+    <attr name="cSurface" format="color" />
+    <attr name="cSurface2" format="color" />
+    <attr name="cStroke" format="color" />
+    <attr name="cPrimary" format="color" />
+    <attr name="cPrimaryBright" format="color" />
+    <attr name="cAccent" format="color" />
+    <attr name="cText" format="color" />
+    <attr name="cTextDim" format="color" />
+    <attr name="h337FE0A6" format="color" />
+    <attr name="h555CF5AE" format="color" />
+    <attr name="h665CF5AE" format="color" />
+    <attr name="h995CF5AE" format="color" />
+    <attr name="h335CF5AE" format="color" />
+    <attr name="h445CF5AE" format="color" />
+    <attr name="h227FE0A6" format="color" />
+    <attr name="h557FE0A6" format="color" />
+    <attr name="hF20A1D14" format="color" />
+    <attr name="hC40F2A1C" format="color" />
+    <attr name="hB8061509" format="color" />
+    <attr name="hCC04120B" format="color" />
+    <attr name="hE006120D" format="color" />
+    <attr name="h0006120D" format="color" />
+    <attr name="hCC06120D" format="color" />
+    <attr name="hFF020805" format="color" />
+    <attr name="hB3041009" format="color" />
+    <attr name="hCC0B1A14" format="color" />
+    <attr name="h331A8A50" format="color" />
+    <attr name="hFF0C2218" format="color" />
+    <attr name="h990C2218" format="color" />
+    <attr name="h661A8A50" format="color" />
+    <attr name="h662FC47F" format="color" />
+    <attr name="h99031008" format="color" />
+</resources>

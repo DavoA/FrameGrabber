@@ -33,7 +33,7 @@
             android:layout_marginStart="4dp"
             android:contentDescription="Случайное видео"
             android:src="@drawable/ic_shuffle"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <ImageButton
             android:id="@+id/btnRandomMoment"
             style="@style/IconBtn"
@@ -42,7 +42,7 @@
             android:layout_marginStart="4dp"
             android:contentDescription="Случайный горячий момент"
             android:src="@drawable/ic_dice"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <ImageButton
             android:id="@+id/btnLibSort"
             style="@style/IconBtn"
@@ -120,14 +120,14 @@
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:src="@drawable/ic_video_library"
-                android:tint="@color/accent" />
+                android:tint="?attr/cAccent" />
             <TextView
                 android:id="@+id/txtLibEmpty"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:paddingTop="12dp"
-                android:textColor="@color/textDim"
+                android:textColor="?attr/cTextDim"
                 android:textSize="14sp" />
             <Button
                 android:id="@+id/btnLibAddFolder"

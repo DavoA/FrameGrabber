@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
@@ -261,7 +263,7 @@ class VideoController(private val s: MainScreen) {
             setText(TimeUtil.format(currentUs))
             setSelectAllOnFocus(true)
             inputType = android.text.InputType.TYPE_CLASS_TEXT
-            setTextColor(s.act.getColor(R.color.text))
+            setTextColor(s.act.tc(R.color.text))
             gravity = android.view.Gravity.CENTER
             textSize = 20f
             typeface = android.graphics.Typeface.MONOSPACE

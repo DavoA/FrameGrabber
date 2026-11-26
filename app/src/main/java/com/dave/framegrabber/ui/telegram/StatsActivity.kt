@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.telegram
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Typeface
@@ -51,7 +53,7 @@ class StatsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
-        val root = FrameLayout(this).apply { setBackgroundColor(getColor(R.color.bg)) }
+        val root = FrameLayout(this).apply { setBackgroundColor(tc(R.color.bg)) }
         val bg = SynthwaveView(this).apply { visibility = View.GONE }
         root.addView(bg, FrameLayout.LayoutParams(-1, -1))
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -110,7 +112,7 @@ class StatsActivity : Activity() {
                 if (isDestroyed) return@runOnUiThread
                 window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 r.onSuccess { show(it); status.text = "Обновлено: ${SimpleDateFormat("d MMM, HH:mm", Locale("ru")).format(Date())}" }
-                    .onFailure { status.setTextColor(getColor(R.color.danger)); status.text = "Не удалось прочитать канал: ${it.message}" }
+                    .onFailure { status.setTextColor(tc(R.color.danger)); status.text = "Не удалось прочитать канал: ${it.message}" }
             }
         }.start()
     }
@@ -248,7 +250,7 @@ class StatsActivity : Activity() {
     }
 
     private fun text(s: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
-        text = s; textSize = size; setTextColor(getColor(color))
+        text = s; textSize = size; setTextColor(tc(color))
         if (bold) typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     }
 }

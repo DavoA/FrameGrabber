@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.telegram
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
@@ -275,7 +277,7 @@ class PostActivity : Activity() {
             if (editable) {
                 tile.addView(TextView(this).apply {
                     text = if (i == 0) "1 · обложка" else (i + 1).toString()
-                    setTextColor(getColor(R.color.text)); textSize = 11f
+                    setTextColor(tc(R.color.text)); textSize = 11f
                     setBackgroundResource(R.drawable.bg_chip)
                     setPadding((7 * d).toInt(), (2 * d).toInt(), (7 * d).toInt(), (2 * d).toInt())
                     layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START)
@@ -283,7 +285,7 @@ class PostActivity : Activity() {
                 })
                 tile.addView(TextView(this).apply {
                     text = TimeUtil.format(times[i])
-                    setTextColor(getColor(R.color.textDim)); textSize = 9f
+                    setTextColor(tc(R.color.textDim)); textSize = 9f
                     typeface = android.graphics.Typeface.MONOSPACE
                     setBackgroundResource(R.drawable.bg_chip)
                     setPadding((5 * d).toInt(), 0, (5 * d).toInt(), 0)
@@ -295,7 +297,7 @@ class PostActivity : Activity() {
                     text = "уже было"
                     setTextColor(0xFF2A220C.toInt()); textSize = 10f
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    setBackgroundColor(getColor(R.color.warn))
+                    setBackgroundColor(tc(R.color.warn))
                     setPadding((6 * d).toInt(), (1 * d).toInt(), (6 * d).toInt(), (1 * d).toInt())
                     layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START)
                         .apply { setMargins((5 * d).toInt(), 0, 0, (5 * d).toInt()) }
@@ -367,7 +369,7 @@ class PostActivity : Activity() {
         txtPreview.text = sp
         val n = PostCaption.length(text)
         txtCounter.text = "$n / ${PostCaption.MAX}"
-        txtCounter.setTextColor(getColor(if (n > PostCaption.MAX) R.color.danger else R.color.textDim))
+        txtCounter.setTextColor(tc(if (n > PostCaption.MAX) R.color.danger else R.color.textDim))
         txtTagCount.text = if (tags.selected.isEmpty()) "" else "выбрано ${tags.selected.size}"
     }
 

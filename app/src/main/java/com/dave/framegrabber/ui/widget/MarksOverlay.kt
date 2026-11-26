@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.widget
 
+import com.dave.framegrabber.ui.tc
+
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -15,9 +17,9 @@ class MarksOverlay @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? 
     /** Same side padding as the seek bar, so a flag sits exactly under the thumb at that moment. */
     private val pad = 4 * d
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ctx.getColor(R.color.accent); strokeWidth = 2 * d
+        color = ctx.tc(R.color.accent); strokeWidth = 2 * d
     }
-    private val flag = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ctx.getColor(R.color.accent) }
+    private val flag = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ctx.tc(R.color.accent) }
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x99000000.toInt(); strokeWidth = 4 * d }
     private val path = Path()
 

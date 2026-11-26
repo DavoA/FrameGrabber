@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.widget
 
+import com.dave.framegrabber.ui.tc
+
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -37,7 +39,7 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
     private val skyMid = Color.parseColor("#0B3A2A")
     private val skyLow = Color.parseColor("#8A1F6A")
     private val skyHorizon = Color.parseColor("#FF7A3D")
-    private val neonGreen = Color.parseColor("#5CF5AE")
+    private val neonGreen = context.tc(com.dave.framegrabber.R.color.accent)   // follows the color scheme
     private val palmColor = Color.parseColor("#03100A")
 
     // ---- terrain mesh
@@ -125,9 +127,9 @@ class SynthwaveView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
             Color.parseColor("#CCFF4FA0"), Color.TRANSPARENT, Shader.TileMode.CLAMP)
         // grid lines fade into the haze near the horizon
         linePaint.shader = LinearGradient(0f, horizon, 0f, h.toFloat(),
-            Color.argb(40, 92, 245, 174), neonGreen, Shader.TileMode.CLAMP)
+            (neonGreen and 0x00FFFFFF) or (40 shl 24), neonGreen, Shader.TileMode.CLAMP)
         glowPaint.shader = LinearGradient(0f, horizon, 0f, h.toFloat(),
-            Color.TRANSPARENT, Color.argb(70, 92, 245, 174), Shader.TileMode.CLAMP)
+            Color.TRANSPARENT, (neonGreen and 0x00FFFFFF) or (70 shl 24), Shader.TileMode.CLAMP)
         val d = resources.displayMetrics.density
         linePaint.strokeWidth = 1.2f * d
         glowPaint.strokeWidth = 4.5f * d

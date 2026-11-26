@@ -10,7 +10,7 @@
             </item>
             <item android:top="5dp" android:bottom="5dp" android:left="5dp" android:right="5dp">
                 <shape android:shape="oval">
-                    <gradient android:angle="315" android:startColor="@color/primaryBright" android:endColor="@color/primary" />
+                    <gradient android:angle="315" android:startColor="?attr/cPrimaryBright" android:endColor="?attr/cPrimary" />
                 </shape>
             </item>
         </layer-list>

@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.view.View
 import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
@@ -76,7 +78,7 @@ class NavController(private val s: MainScreen) {
 
     private fun highlight(p: Page, on: Boolean, animate: Boolean) {
         val it = items.getValue(p)
-        val color = s.act.getColor(if (on) R.color.accent else R.color.textDim)
+        val color = s.act.tc(if (on) R.color.accent else R.color.textDim)
         it.icon.imageTintList = android.content.res.ColorStateList.valueOf(color)
         it.label.setTextColor(color)
         if (!animate) { it.pill.alpha = if (on) 1f else 0f; return }

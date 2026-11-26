@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.browser
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.Activity
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -68,7 +70,7 @@ class BrowserAdapter(
         if (e is Entry.Header) {
             val d = parent.dp
             val tv = (convertView as? TextView) ?: TextView(act).apply {
-                setTextColor(act.getColor(R.color.accent))
+                setTextColor(act.tc(R.color.accent))
                 textSize = 12f
                 letterSpacing = 0.08f
                 setPadding((8 * d).toInt(), (14 * d).toInt(), 0, (6 * d).toInt())
@@ -84,7 +86,7 @@ class BrowserAdapter(
                 h.thumb.setImageDrawable(null)
                 h.icon.setImageResource(R.drawable.ic_folder)
                 h.chevron.setImageResource(R.drawable.ic_chev_right)
-                h.chevron.imageTintList = ColorStateList.valueOf(act.getColor(R.color.textDim))
+                h.chevron.imageTintList = ColorStateList.valueOf(act.tc(R.color.textDim))
                 h.row.foreground = null
                 h.badge.visibility = View.GONE
                 h.chevron.visibility = View.VISIBLE
@@ -95,7 +97,7 @@ class BrowserAdapter(
                 h.icon.setImageResource(R.drawable.ic_movie)
                 val on = selected?.contains(e.key) == true
                 h.chevron.setImageResource(R.drawable.ic_check)
-                h.chevron.imageTintList = ColorStateList.valueOf(act.getColor(R.color.accent))
+                h.chevron.imageTintList = ColorStateList.valueOf(act.tc(R.color.accent))
                 h.chevron.visibility = if (on) View.VISIBLE else View.GONE
                 h.row.foreground = if (on) act.getDrawable(R.drawable.fg_selected) else null
                 h.name.text = e.name
@@ -159,7 +161,7 @@ class BrowserAdapter(
         }
         val icon = ImageView(ctx).apply {
             layoutParams = FrameLayout.LayoutParams((28 * d).toInt(), (28 * d).toInt(), Gravity.CENTER)
-            imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.accent))
+            imageTintList = ColorStateList.valueOf(ctx.tc(R.color.accent))
         }
         val thumb = ImageView(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(-1, -1)
@@ -167,7 +169,7 @@ class BrowserAdapter(
         }
         val badge = TextView(ctx).apply {
             setBackgroundResource(R.drawable.bg_chip)
-            setTextColor(ctx.getColor(R.color.text))
+            setTextColor(ctx.tc(R.color.text))
             textSize = 9f
             typeface = Typeface.MONOSPACE
             setPadding((4 * d).toInt(), 0, (4 * d).toInt(), 0)
@@ -181,17 +183,17 @@ class BrowserAdapter(
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = (12 * d).toInt() }
         }
         val name = TextView(ctx).apply {
-            setTextColor(ctx.getColor(R.color.text)); textSize = 15f
+            setTextColor(ctx.tc(R.color.text)); textSize = 15f
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
         }
         val sub = TextView(ctx).apply {
-            setTextColor(ctx.getColor(R.color.textDim)); textSize = 12f
+            setTextColor(ctx.tc(R.color.textDim)); textSize = 12f
             maxLines = 1; ellipsize = TextUtils.TruncateAt.END
         }
         texts.addView(name); texts.addView(sub)
         val chevron = ImageView(ctx).apply {
             setImageResource(R.drawable.ic_chev_right)
-            imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.textDim))
+            imageTintList = ColorStateList.valueOf(ctx.tc(R.color.textDim))
         }
         row.addView(box); row.addView(texts); row.addView(chevron)
         outer.addView(row)

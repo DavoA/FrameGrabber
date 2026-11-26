@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.animation.AnimatorInflater
 import android.view.Gravity
 import android.view.View
@@ -88,7 +90,7 @@ class MarksPanel(private val s: MainScreen) {
             this.text = text
             textSize = 13f
             typeface = android.graphics.Typeface.MONOSPACE
-            setTextColor(ctx.getColor(if (strong) R.color.accent else R.color.text))
+            setTextColor(ctx.tc(if (strong) R.color.accent else R.color.text))
             gravity = Gravity.CENTER
             setBackgroundResource(R.drawable.bg_chip)
             setPadding((12 * d).toInt(), 0, (12 * d).toInt(), 0)

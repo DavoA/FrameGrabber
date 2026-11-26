@@ -1,23 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/bg</item>
-        <item name="android:colorBackground">@color/bg</item>
-        <item name="android:colorPrimary">@color/primary</item>
-        <item name="android:colorPrimaryDark">@color/bg</item>
-        <item name="android:colorAccent">@color/accent</item>
-        <item name="android:colorControlNormal">@color/textDim</item>
-        <item name="android:textColorPrimary">@color/text</item>
-        <item name="android:textColorSecondary">@color/textDim</item>
+        <item name="android:windowBackground">?attr/cBg</item>
+        <item name="android:colorBackground">?attr/cBg</item>
+        <item name="android:colorPrimary">?attr/cPrimary</item>
+        <item name="android:colorPrimaryDark">?attr/cBg</item>
+        <item name="android:colorAccent">?attr/cAccent</item>
+        <item name="android:colorControlNormal">?attr/cTextDim</item>
+        <item name="android:textColorPrimary">?attr/cText</item>
+        <item name="android:textColorSecondary">?attr/cTextDim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:alertDialogTheme">@style/DialogTheme</item>
+        <!-- the green scheme (other schemes are laid on top: data/ColorScheme) -->
+        <item name="cBg">#FF04120B</item>
+        <item name="cBgClassic">#FF07130D</item>
+        <item name="cSurface">#E00C2218</item>
+        <item name="cSurface2">#CC14301F</item>
+        <item name="cStroke">#FF234A38</item>
+        <item name="cPrimary">#FF1A8A50</item>
+        <item name="cPrimaryBright">#FF2FC47F</item>
+        <item name="cAccent">#FF5CF5AE</item>
+        <item name="cText">#FFE9F7EF</item>
+        <item name="cTextDim">#FF94BCA6</item>
+        <item name="h337FE0A6">#337FE0A6</item>
+        <item name="h555CF5AE">#555CF5AE</item>
+        <item name="h665CF5AE">#665CF5AE</item>
+        <item name="h995CF5AE">#995CF5AE</item>
+        <item name="h335CF5AE">#335CF5AE</item>
+        <item name="h445CF5AE">#445CF5AE</item>
+        <item name="h227FE0A6">#227FE0A6</item>
+        <item name="h557FE0A6">#557FE0A6</item>
+        <item name="hF20A1D14">#F20A1D14</item>
+        <item name="hC40F2A1C">#C40F2A1C</item>
+        <item name="hB8061509">#B8061509</item>
+        <item name="hCC04120B">#CC04120B</item>
+        <item name="hE006120D">#E006120D</item>
+        <item name="h0006120D">#0006120D</item>
+        <item name="hCC06120D">#CC06120D</item>
+        <item name="hFF020805">#FF020805</item>
+        <item name="hB3041009">#B3041009</item>
+        <item name="hCC0B1A14">#CC0B1A14</item>
+        <item name="h331A8A50">#331A8A50</item>
+        <item name="hFF0C2218">#FF0C2218</item>
+        <item name="h990C2218">#990C2218</item>
+        <item name="h661A8A50">#661A8A50</item>
+        <item name="h662FC47F">#662FC47F</item>
+        <item name="h99031008">#99031008</item>
     </style>
 
     <style name="DialogTheme" parent="android:Theme.Material.Dialog.Alert">
         <item name="android:windowBackground">@drawable/bg_dialog</item>
-        <item name="android:colorAccent">@color/accent</item>
-        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:colorAccent">?attr/cAccent</item>
+        <item name="android:textColorPrimary">?attr/cText</item>
     </style>
 
     <style name="Card">
@@ -33,7 +68,7 @@
     <style name="CardTitle">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/cText</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">17sp</item>
         <item name="android:paddingBottom">10dp</item>
@@ -42,7 +77,7 @@
     <style name="Label">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">@color/textDim</item>
+        <item name="android:textColor">?attr/cTextDim</item>
         <item name="android:textSize">13sp</item>
         <item name="android:paddingTop">12dp</item>
         <item name="android:paddingBottom">6dp</item>
@@ -67,7 +102,7 @@
         <item name="android:minHeight">44dp</item>
         <item name="android:minWidth">56dp</item>
         <item name="android:background">@drawable/btn_secondary</item>
-        <item name="android:textColor">@color/accent</item>
+        <item name="android:textColor">?attr/cAccent</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:paddingStart">14dp</item>
@@ -79,8 +114,8 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">44dp</item>
         <item name="android:background">@drawable/bg_input</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorHint">@color/textDim</item>
+        <item name="android:textColor">?attr/cText</item>
+        <item name="android:textColorHint">?attr/cTextDim</item>
         <item name="android:textSize">15sp</item>
         <item name="android:paddingStart">12dp</item>
         <item name="android:paddingEnd">12dp</item>
@@ -113,9 +148,9 @@
     <style name="Slider">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:progressTint">@color/primaryBright</item>
-        <item name="android:progressBackgroundTint">@color/stroke</item>
-        <item name="android:thumbTint">@color/accent</item>
+        <item name="android:progressTint">?attr/cPrimaryBright</item>
+        <item name="android:progressBackgroundTint">?attr/cStroke</item>
+        <item name="android:thumbTint">?attr/cAccent</item>
         <item name="android:paddingTop">12dp</item>
         <item name="android:paddingBottom">12dp</item>
     </style>
@@ -124,7 +159,7 @@
         <item name="android:layout_width">46dp</item>
         <item name="android:layout_height">46dp</item>
         <item name="android:background">@drawable/btn_icon</item>
-        <item name="android:tint">@color/accent</item>
+        <item name="android:tint">?attr/cAccent</item>
         <item name="android:scaleType">center</item>
         <item name="android:stateListAnimator">@animator/press_scale</item>
     </style>
@@ -133,7 +168,7 @@
         <item name="android:layout_width">38dp</item>
         <item name="android:layout_height">38dp</item>
         <item name="android:background">@drawable/btn_icon_glass</item>
-        <item name="android:tint">@color/text</item>
+        <item name="android:tint">?attr/cText</item>
         <item name="android:scaleType">center</item>
         <item name="android:stateListAnimator">@animator/press_scale</item>
     </style>
@@ -144,11 +179,11 @@
         <item name="android:layout_height">match_parent</item>
         <item name="android:layout_weight">1</item>
         <item name="android:background">@drawable/btn_action</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/cText</item>
         <item name="android:textSize">11sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:drawablePadding">2dp</item>
-        <item name="android:drawableTint">@color/accent</item>
+        <item name="android:drawableTint">?attr/cAccent</item>
         <item name="android:paddingTop">8dp</item>
         <item name="android:paddingBottom">6dp</item>
         <item name="android:paddingStart">1dp</item>
@@ -166,7 +201,7 @@
     <style name="ToolBtn" parent="BtnSecondary">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_weight">1</item>
-        <item name="android:drawableTint">@color/accent</item>
+        <item name="android:drawableTint">?attr/cAccent</item>
         <item name="android:drawablePadding">4dp</item>
         <item name="android:textSize">12sp</item>
         <item name="android:paddingStart">8dp</item>
@@ -180,7 +215,7 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">44dp</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/cText</item>
         <item name="android:textSize">14sp</item>
         <item name="android:thumbTint">@color/switch_thumb</item>
         <item name="android:trackTint">@color/switch_track</item>
@@ -190,7 +225,7 @@
     <style name="SubHint">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">@color/textDim</item>
+        <item name="android:textColor">?attr/cTextDim</item>
         <item name="android:textSize">12sp</item>
     </style>
 
@@ -203,7 +238,7 @@
         <item name="android:paddingStart">12dp</item>
         <item name="android:paddingEnd">12dp</item>
         <item name="android:background">@drawable/btn_icon_glass</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">?attr/cText</item>
         <item name="android:textSize">13sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:stateListAnimator">@animator/press_scale</item>

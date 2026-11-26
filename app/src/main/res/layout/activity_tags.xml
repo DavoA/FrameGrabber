@@ -3,7 +3,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="?attr/cBg">
 
     <com.dave.framegrabber.ui.widget.SynthwaveView
         android:id="@+id/bgView"
@@ -39,13 +39,13 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:text="Хэштеги"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/cText"
                     android:textSize="20sp" />
                 <TextView
                     android:id="@+id/txtSub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/textDim"
+                    android:textColor="?attr/cTextDim"
                     android:textSize="12sp" />
             </LinearLayout>
             <ImageButton

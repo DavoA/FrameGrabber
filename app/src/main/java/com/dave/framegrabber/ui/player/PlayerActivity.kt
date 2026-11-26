@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.player
 
+import com.dave.framegrabber.ui.tc
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
@@ -467,7 +469,7 @@ class PlayerActivity : Activity() {
         }
         timeline.loopA = loopA; timeline.loopB = loopB
         btnAB.text = when { loopA < 0 -> "A–B"; loopB < 0 -> "A–…"; else -> "A–B ⟲" }
-        btnAB.setTextColor(getColor(if (loopA >= 0) R.color.warn else R.color.text))
+        btnAB.setTextColor(tc(if (loopA >= 0) R.color.warn else R.color.text))
         updateSub()
         showControls()
     }

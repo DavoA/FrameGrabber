@@ -19,14 +19,14 @@
             android:layout_width="26dp"
             android:layout_height="26dp"
             android:src="@drawable/ic_settings"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingStart="10dp"
             android:fontFamily="sans-serif-medium"
             android:text="Общие настройки"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="20sp" />
     </LinearLayout>
 
@@ -60,14 +60,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Классика"
-                android:textColor="@color/text"
+                android:textColor="?attr/cText"
                 android:textSize="16sp"
                 android:textStyle="bold" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Тёмно-зелёная, спокойный фон"
-                android:textColor="@color/textDim"
+                android:textColor="?attr/cTextDim"
                 android:textSize="12sp" />
         </LinearLayout>
         <ImageView
@@ -75,7 +75,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_check"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
     </LinearLayout>
 
     <!-- Digital wave -->
@@ -109,14 +109,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Цифровая волна"
-                android:textColor="@color/text"
+                android:textColor="?attr/cText"
                 android:textSize="16sp"
                 android:textStyle="bold" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Закат, пальмы и зелёные треугольники в движении"
-                android:textColor="@color/textDim"
+                android:textColor="?attr/cTextDim"
                 android:textSize="12sp" />
         </LinearLayout>
         <ImageView
@@ -124,8 +124,24 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_check"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
     </LinearLayout>
+
+    <TextView
+        style="@style/Label"
+        android:paddingTop="18dp"
+        android:text="ЦВЕТ"
+        android:letterSpacing="0.1" />
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+        <LinearLayout
+            android:id="@+id/schemeRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
 
     <!-- Frame quality (moved here from the main screen: set once) -->
     <TextView
@@ -167,7 +183,7 @@
             android:layout_height="wrap_content"
             android:padding="8dp"
             android:text="×"
-            android:textColor="@color/textDim" />
+            android:textColor="?attr/cTextDim" />
         <EditText
             android:id="@+id/editH"
             style="@style/Input"
@@ -255,20 +271,20 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_folder"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <TextView
             android:id="@+id/txtFolder"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:paddingStart="10dp"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="14sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Изменить"
-            android:textColor="@color/accent"
+            android:textColor="?attr/cAccent"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -291,20 +307,20 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_send"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <TextView
             android:id="@+id/txtTgSetup"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:paddingStart="10dp"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="14sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Изменить"
-            android:textColor="@color/accent"
+            android:textColor="?attr/cAccent"
             android:textSize="13sp" />
     </LinearLayout>
     <LinearLayout
@@ -320,20 +336,20 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_text"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <TextView
             android:id="@+id/txtTags"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:paddingStart="10dp"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="14sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Изменить"
-            android:textColor="@color/accent"
+            android:textColor="?attr/cAccent"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -355,20 +371,20 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_folder"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <TextView
             android:id="@+id/txtPlayerFolders"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:paddingStart="10dp"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="14sp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Изменить"
-            android:textColor="@color/accent"
+            android:textColor="?attr/cAccent"
             android:textSize="13sp" />
     </LinearLayout>
     <Switch
@@ -405,7 +421,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:paddingTop="12dp"
-        android:textColor="@color/textDim"
+        android:textColor="?attr/cTextDim"
         android:textSize="12sp" />
 </LinearLayout>
 </ScrollView>

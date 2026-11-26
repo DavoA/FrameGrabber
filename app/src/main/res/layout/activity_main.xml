@@ -8,7 +8,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="?attr/cBg">
 
     <!-- Animated synthwave background (only with the «Цифровая волна» theme) -->
     <com.dave.framegrabber.ui.widget.SynthwaveView
@@ -59,7 +59,7 @@
                     android:letterSpacing="0.01"
                     android:maxLines="1"
                     android:text="Кадры из видео"
-                    android:textColor="@color/text" />
+                    android:textColor="?attr/cText" />
                 <TextView
                     android:id="@+id/txtInfo"
                     android:layout_width="wrap_content"
@@ -67,7 +67,7 @@
                     android:ellipsize="middle"
                     android:singleLine="true"
                     android:text="Видео не выбрано"
-                    android:textColor="@color/textDim"
+                    android:textColor="?attr/cTextDim"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -136,7 +136,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:paddingStart="6dp"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/cText"
                     android:textSize="14sp" />
                 <Button
                     android:id="@+id/btnTgPickCancel"
@@ -284,7 +284,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:letterSpacing="0.08"
-                android:textColor="@color/accent"
+                android:textColor="?attr/cAccent"
                 android:textSize="13sp"
                 android:textStyle="bold" />
             <View
@@ -326,7 +326,7 @@
                 android:paddingTop="4dp"
                 android:paddingEnd="12dp"
                 android:paddingBottom="4dp"
-                android:textColor="@color/text"
+                android:textColor="?attr/cText"
                 android:textSize="12sp" />
             <LinearLayout
                 android:id="@+id/captureBar"

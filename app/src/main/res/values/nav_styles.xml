@@ -21,7 +21,7 @@
         <item name="android:layout_width">24dp</item>
         <item name="android:layout_height">24dp</item>
         <item name="android:layout_gravity">center</item>
-        <item name="android:tint">@color/textDim</item>
+        <item name="android:tint">?attr/cTextDim</item>
     </style>
     <style name="NavLabel">
         <item name="android:layout_width">match_parent</item>
@@ -34,7 +34,7 @@
         <item name="android:autoSizeMaxTextSize">10sp</item>
         <item name="android:autoSizeStepGranularity">0.5sp</item>
         <item name="android:layout_marginTop">3dp</item>
-        <item name="android:textColor">@color/textDim</item>
+        <item name="android:textColor">?attr/cTextDim</item>
         <item name="android:textSize">10sp</item>
         <item name="android:maxLines">1</item>
         <item name="android:letterSpacing">-0.02</item>

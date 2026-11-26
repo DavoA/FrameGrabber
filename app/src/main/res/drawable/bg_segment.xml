@@ -3,7 +3,7 @@
     android:enterFadeDuration="180" android:exitFadeDuration="180">
     <item android:state_checked="true">
         <shape android:shape="rectangle">
-            <gradient android:angle="0" android:startColor="@color/primary" android:endColor="@color/primaryBright" />
+            <gradient android:angle="0" android:startColor="?attr/cPrimary" android:endColor="?attr/cPrimaryBright" />
             <corners android:radius="11dp" />
         </shape>
     </item>

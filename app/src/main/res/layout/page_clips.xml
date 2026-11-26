@@ -98,8 +98,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:max="1000"
-                android:progressBackgroundTint="@color/stroke"
-                android:progressTint="@color/accent"
+                android:progressBackgroundTint="?attr/cStroke"
+                android:progressTint="?attr/cAccent"
                 android:visibility="gone" />
             <TextView
                 android:id="@+id/txtGif"
@@ -107,7 +107,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:paddingTop="6dp"
-                android:textColor="@color/textDim"
+                android:textColor="?attr/cTextDim"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -138,8 +138,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:max="1000"
-                android:progressBackgroundTint="@color/stroke"
-                android:progressTint="@color/accent"
+                android:progressBackgroundTint="?attr/cStroke"
+                android:progressTint="?attr/cAccent"
                 android:visibility="gone" />
             <TextView
                 android:id="@+id/txtClips"
@@ -147,7 +147,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:paddingTop="6dp"
-                android:textColor="@color/textDim"
+                android:textColor="?attr/cTextDim"
                 android:textSize="13sp"
                 android:visibility="gone" />
         </LinearLayout>

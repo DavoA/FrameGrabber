@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Bitmap
@@ -229,7 +231,7 @@ class FeedTab(private val s: MainScreen) {
     private fun title(t: String) = loginBox.addView(TextView(act, null, 0, R.style.CardTitle).apply { text = t })
 
     private fun text(t: String, color: Int = R.color.textDim): TextView = TextView(act).apply {
-        text = t; textSize = 14f; setTextColor(act.getColor(color)); setLineSpacing(0f, 1.15f)
+        text = t; textSize = 14f; setTextColor(act.tc(color)); setLineSpacing(0f, 1.15f)
         setPadding(0, (4 * d).toInt(), 0, (4 * d).toInt())
         loginBox.addView(this)
     }
@@ -252,7 +254,7 @@ class FeedTab(private val s: MainScreen) {
     private fun spinner(t: String) {
         val row = LinearLayout(act).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, (8 * d).toInt(), 0, (8 * d).toInt()) }
         row.addView(ProgressBar(act).apply { layoutParams = LinearLayout.LayoutParams((28 * d).toInt(), (28 * d).toInt()) })
-        row.addView(TextView(act).apply { text = t; setTextColor(act.getColor(R.color.textDim)); setPadding((12 * d).toInt(), 0, 0, 0) })
+        row.addView(TextView(act).apply { text = t; setTextColor(act.tc(R.color.textDim)); setPadding((12 * d).toInt(), 0, 0, 0) })
         loginBox.addView(row)
     }
 
@@ -372,6 +374,22 @@ class FeedTab(private val s: MainScreen) {
         else posts.add(0, Post(listOf(m.id), m.date, cap, listOfNotNull(media)))
         adapter.notifyDataSetChanged()
         if (atBottom) list.setSelection(adapter.count - 1)
+    }
+
+    /** Deletes the post (all its photos and videos) from the channel itself, after asking. */
+    private fun askDelete(post: Post) {
+        val n = post.ids.size
+        AlertDialog.Builder(act, R.style.DialogTheme)
+            .setTitle("Удалить пост из канала?")
+            .setMessage("Он исчезнет из Telegram для всех" + (if (n > 1) " — все $n сообщения поста (фото и видео)" else "") + ". Отменить нельзя.")
+            .setPositiveButton("Удалить") { _, _ ->
+                Tg.send(TdApi.DeleteMessages(chatId, post.ids.toLongArray(), true)) { r ->
+                    val err = Tg.errorOf(r)
+                    if (err != null) act.toast("Не удалось удалить: $err")
+                    else { onDeleted(chatId, post.ids.toLongArray()); act.toast("Пост удалён") }
+                }
+            }
+            .setNegativeButton("Отмена", null).show()
     }
 
     /** Removes deleted messages (a post goes when none of its messages is left). */
@@ -828,7 +846,7 @@ class FeedTab(private val s: MainScreen) {
     private fun footer(): View {
         val t = TextView(act).apply {
             gravity = Gravity.CENTER; setPadding(0, (18 * d).toInt(), 0, (18 * d).toInt())
-            setTextColor(act.getColor(R.color.textDim)); textSize = 13f
+            setTextColor(act.tc(R.color.textDim)); textSize = 13f
             text = when {
                 loading -> "Загрузка…"
                 loadError != null -> loadError
@@ -862,19 +880,30 @@ class FeedTab(private val s: MainScreen) {
             card.addView(TextView(act).apply {
                 text = styled(c)
                 textSize = 14.5f
-                setTextColor(act.getColor(R.color.text))
+                setTextColor(act.tc(R.color.text))
                 setLineSpacing(0f, 1.12f)
                 movementMethod = LinkMovementMethod.getInstance()
                 setPadding((4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt(), 0)
             })
         }
-        card.addView(TextView(act).apply {
+        // bottom line: 🗑 (delete the post from the channel) … date
+        val bottom = LinearLayout(act).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, (4 * d).toInt(), 0, 0) }
+        bottom.addView(ImageView(act).apply {
+            setImageResource(R.drawable.ic_delete)
+            setColorFilter(act.tc(R.color.textDim))
+            setBackgroundResource(R.drawable.btn_icon_glass)
+            val p = (7 * d).toInt(); setPadding(p, p, p, p)
+            contentDescription = "Удалить пост"
+            setOnClickListener { askDelete(post) }
+        }, LinearLayout.LayoutParams((32 * d).toInt(), (32 * d).toInt()))
+        bottom.addView(TextView(act).apply {
             text = DATE.format(Date(post.date * 1000L))
             textSize = 11.5f
-            setTextColor(act.getColor(R.color.textDim))
+            setTextColor(act.tc(R.color.textDim))
             gravity = Gravity.END
-            setPadding(0, (6 * d).toInt(), (4 * d).toInt(), 0)
-        })
+            setPadding(0, 0, (4 * d).toInt(), 0)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        card.addView(bottom)
         return outer
     }
 
@@ -962,7 +991,7 @@ class FeedTab(private val s: MainScreen) {
                 job != null -> "${(job.fraction * 100).toInt()}% · ${size(job.done)} из ${size(job.total)}"
                 else -> info
             }
-            textSize = 13f; setTextColor(act.getColor(if (saved != null) R.color.accent else R.color.text))
+            textSize = 13f; setTextColor(act.tc(if (saved != null) R.color.accent else R.color.text))
             maxLines = 1
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
         })
@@ -980,11 +1009,11 @@ class FeedTab(private val s: MainScreen) {
         if (job != null) row.addView(ProgressBar(act, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000; progress = (job.fraction * 1000).toInt()
             isIndeterminate = job.stage == "copying"
-            progressTintList = android.content.res.ColorStateList.valueOf(act.getColor(R.color.primaryBright))
+            progressTintList = android.content.res.ColorStateList.valueOf(act.tc(R.color.primaryBright))
             layoutParams = LinearLayout.LayoutParams(-1, (6 * d).toInt()).apply { topMargin = (6 * d).toInt() }
         })
         else TgDownloads.jobs.lastOrNull { it.key == k && it.stage == "failed" }?.let { j ->
-            row.addView(TextView(act).apply { text = "Ошибка: ${j.error}"; textSize = 12f; setTextColor(act.getColor(R.color.danger)) })
+            row.addView(TextView(act).apply { text = "Ошибка: ${j.error}"; textSize = 12f; setTextColor(act.tc(R.color.danger)) })
         }
         return row
     }
@@ -992,7 +1021,7 @@ class FeedTab(private val s: MainScreen) {
     /** Caption: hashtags in the accent color, bold/italic kept, the separator dimmed. */
     private fun styled(c: TdApi.FormattedText): CharSequence {
         val sp = SpannableString(c.text)
-        val accent = act.getColor(R.color.accent)
+        val accent = act.tc(R.color.accent)
         c.entities?.forEach { e ->
             val end = (e.offset + e.length).coerceAtMost(sp.length)
             if (e.offset < 0 || e.offset >= end) return@forEach
@@ -1003,7 +1032,7 @@ class FeedTab(private val s: MainScreen) {
             }
         }
         // «Studio - Model A & Model B»: each name is tappable = search the channel for it
-        val nameColor = act.getColor(R.color.primaryBright)
+        val nameColor = act.tc(R.color.primaryBright)
         nameRanges(c.text).forEach { (st, en) ->
             val name = c.text.substring(st, en)
             sp.setSpan(object : ClickableSpan() {
@@ -1020,7 +1049,7 @@ class FeedTab(private val s: MainScreen) {
             }, it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         Regex("—{4,}").findAll(c.text).forEach {
-            sp.setSpan(ForegroundColorSpan(act.getColor(R.color.textDim)), it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sp.setSpan(ForegroundColorSpan(act.tc(R.color.textDim)), it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         return sp
     }

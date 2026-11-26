@@ -14,7 +14,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Отрезок"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="15sp"
             android:textStyle="bold" />
         <TextView
@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
             android:text="всё видео"
-            android:textColor="@color/textDim"
+            android:textColor="?attr/cTextDim"
             android:textSize="12sp" />
     </LinearLayout>
     <LinearLayout
@@ -55,7 +55,7 @@
             android:paddingStart="6dp"
             android:paddingEnd="6dp"
             android:text="—"
-            android:textColor="@color/textDim" />
+            android:textColor="?attr/cTextDim" />
         <EditText
             android:id="@+id/editTo"
             style="@style/Input"

@@ -42,14 +42,14 @@
             android:id="@+id/gestureIcon"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:tint="@color/accent" />
+            android:tint="?attr/cAccent" />
         <TextView
             android:id="@+id/gestureText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="sans-serif-medium"
-            android:textColor="@color/text"
+            android:textColor="?attr/cText"
             android:textSize="18sp" />
         <ProgressBar
             android:id="@+id/gestureLevel"
@@ -58,8 +58,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:max="100"
-            android:progressBackgroundTint="@color/stroke"
-            android:progressTint="@color/accent" />
+            android:progressBackgroundTint="?attr/cStroke"
+            android:progressTint="?attr/cAccent" />
     </LinearLayout>
 
     <!-- "Пропущено начало 0:32 · Вернуть", "Продолжаем с 12:34 · С начала" -->
@@ -74,7 +74,7 @@
         android:paddingTop="10dp"
         android:paddingEnd="18dp"
         android:paddingBottom="10dp"
-        android:textColor="@color/text"
+        android:textColor="?attr/cText"
         android:textSize="14sp"
         android:visibility="gone" />
 
@@ -116,14 +116,14 @@
                     android:ellipsize="middle"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/cText"
                     android:textSize="16sp" />
                 <TextView
                     android:id="@+id/txtSub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:textColor="@color/accent"
+                    android:textColor="?attr/cAccent"
                     android:textSize="12sp" />
             </LinearLayout>
             <TextView
@@ -134,13 +134,13 @@
                 android:background="@drawable/btn_icon_glass"
                 android:drawableStart="@drawable/ic_vr"
                 android:drawablePadding="6dp"
-                android:drawableTint="@color/accent"
+                android:drawableTint="?attr/cAccent"
                 android:gravity="center"
                 android:paddingStart="10dp"
                 android:paddingEnd="12dp"
                 android:stateListAnimator="@animator/press_scale"
                 android:text="VR"
-                android:textColor="@color/text"
+                android:textColor="?attr/cText"
                 android:textSize="13sp" />
             <ImageButton
                 android:id="@+id/btnPip"
@@ -252,7 +252,7 @@
                     android:paddingEnd="8dp"
                     android:fontFamily="monospace"
                     android:maxLines="1"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/cText"
                     android:textSize="13sp" />
                 <HorizontalScrollView
                     android:layout_width="0dp"
@@ -299,14 +299,14 @@
                             android:layout_marginStart="6dp"
                             android:contentDescription="Случайное видео"
                             android:src="@drawable/ic_shuffle"
-                            android:tint="@color/accent" />
+                            android:tint="?attr/cAccent" />
                         <ImageButton
                             android:id="@+id/btnRandom"
                             style="@style/GlassBtn"
                             android:layout_marginStart="6dp"
                             android:contentDescription="Случайный горячий момент"
                             android:src="@drawable/ic_dice"
-                            android:tint="@color/accent" />
+                            android:tint="?attr/cAccent" />
                     </LinearLayout>
                 </HorizontalScrollView>
             </LinearLayout>

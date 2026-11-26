@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.telegram
 
+import com.dave.framegrabber.ui.tc
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
@@ -112,16 +114,16 @@ class TagsActivity : Activity() {
             setPadding((12 * d).toInt(), 0, 0, 0)
         }
         header.addView(TextView(this).apply {
-            text = if (isOpen) "▾" else "▸"; textSize = 18f; setTextColor(getColor(R.color.accent))
+            text = if (isOpen) "▾" else "▸"; textSize = 18f; setTextColor(tc(R.color.accent))
             layoutParams = LinearLayout.LayoutParams((24 * d).toInt(), -2)
         })
         header.addView(TextView(this).apply {
-            text = c.name; textSize = 16f; setTextColor(getColor(R.color.text))
+            text = c.name; textSize = 16f; setTextColor(tc(R.color.text))
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
         })
         header.addView(TextView(this).apply {
-            text = c.tags.size.toString(); textSize = 13f; setTextColor(getColor(R.color.textDim))
+            text = c.tags.size.toString(); textSize = 13f; setTextColor(tc(R.color.textDim))
         })
         header.addView(iconBtn(R.drawable.ic_edit, "Категория: действия") { categoryActions(c) })
         header.setOnClickListener { if (!open.remove(c.name)) open += c.name; render() }
@@ -199,7 +201,7 @@ class TagsActivity : Activity() {
         }
         val handle = ImageView(this).apply {
             setImageResource(R.drawable.ic_drag)
-            imageTintList = ColorStateList.valueOf(getColor(if (list != null) R.color.accent else R.color.stroke))
+            imageTintList = ColorStateList.valueOf(tc(if (list != null) R.color.accent else R.color.stroke))
             scaleType = ImageView.ScaleType.CENTER
             layoutParams = LinearLayout.LayoutParams((42 * d).toInt(), -1)
             contentDescription = "Переставить"
@@ -207,7 +209,7 @@ class TagsActivity : Activity() {
         row.addView(handle)
         row.addView(TextView(this).apply {
             text = "#$t" + if (showCategory) "   · ${c.name}" else ""
-            textSize = 15f; setTextColor(getColor(R.color.text))
+            textSize = 15f; setTextColor(tc(R.color.text))
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, -1, 1f)
             maxLines = 1
@@ -251,7 +253,7 @@ class TagsActivity : Activity() {
         val input = EditText(this).apply {
             hint = "＋ тег в «${c.name}»"
             setBackgroundResource(R.drawable.bg_input)
-            setTextColor(getColor(R.color.text)); setHintTextColor(getColor(R.color.textDim))
+            setTextColor(tc(R.color.text)); setHintTextColor(tc(R.color.textDim))
             textSize = 14f; isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             imeOptions = EditorInfo.IME_ACTION_DONE
@@ -316,7 +318,7 @@ class TagsActivity : Activity() {
 
     private fun iconBtn(icon: Int, desc: String, onClick: () -> Unit) = ImageButton(this).apply {
         setImageResource(icon)
-        imageTintList = ColorStateList.valueOf(getColor(R.color.textDim))
+        imageTintList = ColorStateList.valueOf(tc(R.color.textDim))
         background = null
         contentDescription = desc
         layoutParams = LinearLayout.LayoutParams((46 * d).toInt(), (46 * d).toInt())
@@ -324,14 +326,14 @@ class TagsActivity : Activity() {
     }
 
     private fun hint(s: String) = TextView(this).apply {
-        text = s; setTextColor(getColor(R.color.textDim)); gravity = Gravity.CENTER
+        text = s; setTextColor(tc(R.color.textDim)); gravity = Gravity.CENTER
         setPadding((12 * d).toInt(), (24 * d).toInt(), (12 * d).toInt(), (24 * d).toInt())
     }
 
     private fun ask(title: String, value: String, onOk: (String) -> Unit) {
         val edit = EditText(this).apply {
             setText(value); setSelectAllOnFocus(true); isSingleLine = true
-            setTextColor(getColor(R.color.text))
+            setTextColor(tc(R.color.text))
         }
         AlertDialog.Builder(this)
             .setTitle(title)

@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.main
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.AlertDialog
 import android.graphics.BitmapFactory
 import android.widget.EditText
@@ -64,7 +66,7 @@ class TextRecognition(private val s: MainScreen) {
         val pad = (20 * s.act.resources.displayMetrics.density).toInt()
         val tv = EditText(s.act).apply {
             setText(text)
-            setTextColor(s.act.getColor(R.color.text))
+            setTextColor(s.act.tc(R.color.text))
             textSize = 15f
             background = null
             setTextIsSelectable(true)

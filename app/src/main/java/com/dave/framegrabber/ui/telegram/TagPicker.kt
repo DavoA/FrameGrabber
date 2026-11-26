@@ -1,5 +1,7 @@
 package com.dave.framegrabber.ui.telegram
 
+import com.dave.framegrabber.ui.tc
+
 import android.app.Activity
 import android.graphics.Typeface
 import android.text.Editable
@@ -106,7 +108,7 @@ class TagPicker(
         val norm = PostCaption.normalizeTag(q)
         if (norm != null && !lib.contains(norm)) {
             flow.addView(Chips.make(act, "＋ создать #$norm").apply {
-                setTextColor(act.getColor(R.color.accent))
+                setTextColor(act.tc(R.color.accent))
                 setOnClickListener { createFromSearch() }
             })
         }
@@ -127,15 +129,15 @@ class TagPicker(
         }
         header.addView(TextView(act).apply {
             text = if (isOpen) "▾" else "▸"
-            setTextColor(act.getColor(R.color.accent)); textSize = 16f
+            setTextColor(act.tc(R.color.accent)); textSize = 16f
             layoutParams = LinearLayout.LayoutParams((22 * d).toInt(), -2)
         })
         header.addView(TextView(act).apply {
-            text = c.name; textSize = 15f; setTextColor(act.getColor(R.color.text))
+            text = c.name; textSize = 15f; setTextColor(act.tc(R.color.text))
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
         })
-        val count = TextView(act).apply { textSize = 12f; setTextColor(act.getColor(R.color.textDim)) }
+        val count = TextView(act).apply { textSize = 12f; setTextColor(act.tc(R.color.textDim)) }
         headerCounts[c.name] = count
         header.addView(count)
         box.addView(header)
@@ -144,7 +146,7 @@ class TagPicker(
                 setPadding((4 * d).toInt(), (8 * d).toInt(), 0, (6 * d).toInt())
                 c.tags.forEach { addView(chip(it)) }
                 if (c.tags.isEmpty()) addView(TextView(act).apply {
-                    text = "Пусто — теги добавляются в ⚙ → Хэштеги"; setTextColor(act.getColor(R.color.textDim)); textSize = 12f
+                    text = "Пусто — теги добавляются в ⚙ → Хэштеги"; setTextColor(act.tc(R.color.textDim)); textSize = 12f
                 })
             })
         }
@@ -178,7 +180,7 @@ class TagPicker(
             val n = c.tags.count { it in selected }
             headerCounts[c.name]?.apply {
                 text = if (n > 0) "$n из ${c.tags.size}" else "${c.tags.size}"
-                setTextColor(act.getColor(if (n > 0) R.color.accent else R.color.textDim))
+                setTextColor(act.tc(if (n > 0) R.color.accent else R.color.textDim))
             }
         }
     }
@@ -195,7 +197,7 @@ class TagPicker(
     }
 
     private fun label(s: String) = TextView(act).apply {
-        text = s; textSize = 12f; setTextColor(act.getColor(R.color.textDim))
+        text = s; textSize = 12f; setTextColor(act.tc(R.color.textDim))
         letterSpacing = 0.05f
         setPadding(0, (14 * d).toInt(), 0, (6 * d).toInt())
     }

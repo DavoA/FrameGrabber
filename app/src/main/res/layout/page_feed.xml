@@ -46,14 +46,14 @@
                     android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/cText"
                     android:textSize="17sp" />
                 <TextView
                     android:id="@+id/txtFeedSub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:maxLines="1"
-                    android:textColor="@color/textDim"
+                    android:textColor="?attr/cTextDim"
                     android:textSize="12sp" />
             </LinearLayout>
             <ImageButton
