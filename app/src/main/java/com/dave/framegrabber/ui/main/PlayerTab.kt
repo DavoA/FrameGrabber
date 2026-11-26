@@ -161,6 +161,9 @@ class PlayerTab(private val s: MainScreen) {
         views.forEachIndexed { i, (key, label) ->
             seg.addView(android.widget.RadioButton(ctx, null, 0, R.style.Segment).apply {
                 id = View.generateViewId(); text = label; tag = key
+                // made in code with only our style, the button misses Android's default
+                // "clickable" — without this a tap does nothing
+                isClickable = true; isFocusable = true
                 layoutParams = android.widget.RadioGroup.LayoutParams(0, (40 * d).toInt(), 1f)
             })
             if (key == lib.view) seg.check(seg.getChildAt(i).id)
