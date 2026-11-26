@@ -1,0 +1,57 @@
+# Builds TDLib (the official Telegram client library) for Android from its source at a pinned
+# commit, and publishes it as a release of this repo; the app build downloads it from there.
+# Runs only when this file or tdlib-commit.txt changes (or by hand): it takes ~1–2 hours.
+name: tdlib
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/tdlib-commit.txt
+      - .github/workflows/tdlib.yml
+
+permissions:
+  contents: write
+
+jobs:
+  tdlib:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versions
+        id: v
+        run: |
+          echo "commit=$(head -1 .github/tdlib-commit.txt)" >> $GITHUB_OUTPUT
+          echo "tag=$(sed -n 2p .github/tdlib-commit.txt)" >> $GITHUB_OUTPUT
+      - name: Tools
+        run: sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq g++ git gperf make perl php-cli unzip wget ninja-build
+      - name: TDLib source (official, pinned commit)
+        run: |
+          git clone https://github.com/tdlib/td.git td
+          cd td && git checkout ${{ steps.v.outputs.commit }}
+      - name: Android SDK + NDK
+        working-directory: td/example/android
+        run: ./fetch-sdk.sh SDK 23.2.8568313
+      - name: OpenSSL
+        working-directory: td/example/android
+        run: ./build-openssl.sh SDK 23.2.8568313 openssl OpenSSL_1_1_1w
+      - name: TDLib (arm64 phones + x86_64 for the test emulator)
+        working-directory: td/example/android
+        run: ./build-tdlib.sh SDK 23.2.8568313 openssl c++_static Java 21 "arm64-v8a x86_64"
+      - name: Strip
+        working-directory: td/example/android
+        run: |
+          STRIP=$(ls SDK/ndk/23.2.8568313/toolchains/llvm/prebuilt/*/bin/llvm-strip)
+          for f in tdlib/libs/*/*.so; do $STRIP --strip-unneeded "$f"; done
+          rm -rf tdlib/javadoc tdlib/*.zip
+          ls -la tdlib/libs/*
+          (cd . && zip -qr tdlib-android.zip tdlib)
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: TDLib ${{ steps.v.outputs.tag }} (Android build)
+          body: "TDLib built from https://github.com/tdlib/td/commit/${{ steps.v.outputs.commit }} for the app (arm64-v8a, x86_64)."
+          prerelease: true
+          files: td/example/android/tdlib-android.zip
