@@ -125,6 +125,8 @@ class FeedTab(private val s: MainScreen) {
         }
         s.h<View>(R.id.btnFeedSearchClose).setOnClickListener { closeSearch() }
         Tg.stateListeners += { if (visible) render() }
+        // a new post in the channel (e.g. just published from the app): it appears at the bottom by itself
+        Tg.messageListeners += { m -> onNewMessage(m) }
         TgDownloads.listeners += { if (visible) { s.ui.removeCallbacks(refreshRows); s.ui.postDelayed(refreshRows, 250) } }
     }
 
@@ -337,6 +339,24 @@ class FeedTab(private val s: MainScreen) {
                 loadMore()
             }
         }
+    }
+
+    // ================================================================ live updates
+
+    private fun onNewMessage(m: TdApi.Message) {
+        if (chatId == 0L || m.chatId != chatId || query != null) return
+        if (posts.any { m.id in it.ids }) return
+        val media = mediaOf(m)
+        val cap = captionOf(m.content)?.takeIf { it.text.isNotBlank() }
+        if (media == null && cap == null) return
+        albumOf[m.id] = m.mediaAlbumId
+        val atBottom = list.lastVisiblePosition >= adapter.count - 2
+        val first = posts.firstOrNull()
+        if (first != null && m.mediaAlbumId != 0L && albumOf[first.ids.last()] == m.mediaAlbumId)
+            posts[0] = Post(first.ids + m.id, first.date, first.caption ?: cap, first.media + listOfNotNull(media))
+        else posts.add(0, Post(listOf(m.id), m.date, cap, listOfNotNull(media)))
+        adapter.notifyDataSetChanged()
+        if (atBottom) list.setSelection(adapter.count - 1)
     }
 
     // ================================================================ search
