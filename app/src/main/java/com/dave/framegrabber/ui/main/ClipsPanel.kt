@@ -211,12 +211,22 @@ class ClipsPanel(private val s: MainScreen) {
 
     companion object { const val REQ_MEDIA = 78 }
 
+    private val viewPrefs get() = s.act.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+    /** «Готовые» as a grid of cells (true) or as rows. */
+    private var madeGrid: Boolean
+        get() = viewPrefs.getBoolean("madeGrid", false)
+        set(v) { viewPrefs.edit().putBoolean("madeGrid", v).apply() }
+
     private fun buildMade(animateFirst: Boolean = false) {
         val items = Made.list(s.act)
         madeList.removeAllViews()
         madeEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         madeCount.text = items.size.toString()
         if (animateFirst) madeCount.bump()
+        val btnView = s.h<ImageButton>(R.id.btnMadeView)
+        btnView.setImageResource(if (madeGrid) R.drawable.ic_list else R.drawable.ic_grid)
+        btnView.setOnClickListener { madeGrid = !madeGrid; buildMade() }
+        if (madeGrid) { buildGrid(items); return }
         items.forEachIndexed { i, item ->
             val row = makeRow(item)
             madeList.addView(row)
@@ -225,6 +235,55 @@ class ClipsPanel(private val s: MainScreen) {
                 row.anim().alpha(1f).translationX(0f).setDuration(350).start()
             }
         }
+    }
+
+    /** 3 square cells per row: picture, GIF / MP4 badge; tap = open, hold = share / delete. */
+    private fun buildGrid(items: List<Made.Item>) {
+        val ctx = s.act
+        val d = madeList.dp
+        val gap = (6 * d).toInt()
+        items.chunked(3).forEachIndexed { ri, chunk ->
+            val line = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (ri > 0) gap else (6 * d).toInt() }
+                weightSum = 3f
+            }
+            for (i in 0 until 3) {
+                val item = chunk.getOrNull(i)
+                val cell = SquareFrame(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { if (i > 0) marginStart = gap }
+                }
+                if (item != null) {
+                    cell.setBackgroundResource(R.drawable.bg_thumb)
+                    cell.clipToOutline = true
+                    cell.stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(ctx, R.animator.press_scale)
+                    val thumb = ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+                    cell.addView(thumb, FrameLayout.LayoutParams(-1, -1))
+                    cell.addView(TextView(ctx).apply {
+                        text = if (item.isGif) "GIF" else "MP4"
+                        setBackgroundResource(R.drawable.bg_chip)
+                        setTextColor(ctx.tc(R.color.accent)); textSize = 9f; typeface = Typeface.DEFAULT_BOLD
+                        setPadding((5 * d).toInt(), 0, (5 * d).toInt(), 0)
+                    }, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, (4 * d).toInt(), (4 * d).toInt()) })
+                    cell.setOnClickListener { open(item) }
+                    cell.setOnLongClickListener {
+                        AlertDialog.Builder(ctx).setTitle(item.name)
+                            .setItems(arrayOf("Отправить", "Удалить")) { _, w ->
+                                if (w == 0) ctx.shareUri(item.uri, item.mime) else confirmDelete(item)
+                            }.show()
+                        true
+                    }
+                    loadThumb(item, thumb)
+                }
+                line.addView(cell)
+            }
+            madeList.addView(line)
+        }
+    }
+
+    /** A cell as tall as it is wide. */
+    private class SquareFrame(c: android.content.Context) : FrameLayout(c) {
+        override fun onMeasure(w: Int, h: Int) = super.onMeasure(w, w)
     }
 
     private fun makeRow(item: Made.Item): View {
@@ -315,10 +374,64 @@ class ClipsPanel(private val s: MainScreen) {
             s.act.toast("Файл больше не найден — убираю из списка")
             Made.remove(s.act, item, deleteFile = false); buildMade(); return
         }
-        runCatching {
-            s.act.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(item.uri, item.mime)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
-        }.onFailure { s.act.toast("Нет приложения, чтобы открыть этот файл") }
+        // in the app: GIFs in the GIF viewer, clips in the player
+        if (item.isGif) showGif(item) else s.playerTab.play(item.uri, name = item.name)
+    }
+
+    /** Full screen GIF, playing, with ✕ and «Отправить». Tap toggles the buttons. */
+    private fun showGif(item: Made.Item) {
+        val ctx = s.act
+        val d = madeList.dp
+        val dlg = android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val root = FrameLayout(ctx).apply { setBackgroundColor(0xFF000000.toInt()) }
+        val iv = ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+        root.addView(iv, FrameLayout.LayoutParams(-1, -1))
+        val bar = LinearLayout(ctx).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding((12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt(), (12 * d).toInt())
+        }
+        bar.addView(TextView(ctx).apply {
+            text = item.name; setTextColor(0xFFFFFFFF.toInt()); textSize = 14f; maxLines = 1
+            ellipsize = TextUtils.TruncateAt.MIDDLE
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        fun btn(icon: Int, desc: String, click: () -> Unit) = ImageButton(ctx).apply {
+            setImageResource(icon); contentDescription = desc
+            setBackgroundResource(R.drawable.btn_icon_glass)
+            imageTintList = android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt())
+            layoutParams = LinearLayout.LayoutParams((42 * d).toInt(), (42 * d).toInt()).apply { marginStart = (8 * d).toInt() }
+            setOnClickListener { click() }
+        }
+        bar.addView(btn(R.drawable.ic_share, "Отправить") { ctx.shareUri(item.uri, item.mime) })
+        bar.addView(btn(R.drawable.ic_close, "Закрыть") { dlg.dismiss() })
+        root.addView(bar, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
+        val info = TextView(ctx).apply {
+            setTextColor(0xCCFFFFFF.toInt()); textSize = 12f; gravity = Gravity.CENTER
+            setPadding(0, 0, 0, (24 * d).toInt())
+        }
+        root.addView(info, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
+        root.setOnClickListener {
+            val v = if (bar.visibility == View.VISIBLE) View.INVISIBLE else View.VISIBLE
+            bar.visibility = v; info.visibility = v
+        }
+        dlg.setContentView(root)
+        dlg.show()
+        s.io.execute {
+            val r = runCatching {
+                val src = android.graphics.ImageDecoder.createSource(ctx.contentResolver, item.uri)
+                var w = 0; var h = 0
+                val drawable = android.graphics.ImageDecoder.decodeDrawable(src) { dec, inf, _ -> w = inf.size.width; h = inf.size.height; dec.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE }
+                Triple(drawable, w, h)
+            }
+            s.ui.post {
+                if (!dlg.isShowing) return@post
+                r.onSuccess { (dr, w, h) ->
+                    iv.setImageDrawable(dr)
+                    (dr as? android.graphics.drawable.AnimatedImageDrawable)?.start()
+                    info.text = "${w}×${h}" + if (item.lengthUs > 0) " · ${TimeUtil.format(item.lengthUs).substringBefore('.')}" else ""
+                }.onFailure { info.text = "Не удалось открыть GIF: ${it.message}" }
+            }
+        }
+        dlg.setOnDismissListener { (iv.drawable as? android.graphics.drawable.AnimatedImageDrawable)?.stop() }
     }
 
     private fun confirmDelete(item: Made.Item) {

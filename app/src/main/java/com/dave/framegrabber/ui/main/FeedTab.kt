@@ -71,6 +71,7 @@ class FeedTab(private val s: MainScreen) {
     private val searchRow = s.h<View>(R.id.feedSearchRow)
     private val searchEdit = s.h<EditText>(R.id.editFeedSearch)
     private val hitsText = s.h<TextView>(R.id.txtFeedHits)
+    private val btnDown = s.h<View>(R.id.btnFeedDown)
 
     /** Search mode: what is searched (null = the normal feed) and where the next page starts. */
     private var query: String? = null
@@ -97,6 +98,22 @@ class FeedTab(private val s: MainScreen) {
         override fun sizeOf(k: Int, b: Bitmap) = b.byteCount
     }
     private val pendingThumbs = HashSet<Int>()
+    /** Full-size photos already downloaded: file id → path (fetched ahead while you scroll). */
+    private val bigPaths = java.util.concurrent.ConcurrentHashMap<Int, String>()
+    private val pendingBig = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<Int, Boolean>())
+    private val prefetchExec = Executors.newFixedThreadPool(2)
+    private val galleryExec = Executors.newFixedThreadPool(2)
+
+    /** Downloads a post's full photo in the background, so it opens in full quality at once. */
+    private fun prefetchBig(f: TdApi.File) {
+        if (bigPaths.containsKey(f.id)) return
+        if (f.local.isDownloadingCompleted && java.io.File(f.local.path).exists()) { bigPaths[f.id] = f.local.path; return }
+        if (!pendingBig.add(f.id)) return
+        prefetchExec.execute {
+            Tg.fetch(f, 2)?.let { bigPaths[f.id] = it }
+            pendingBig.remove(f.id)
+        }
+    }
     private val adapter = Adapter()
     private val refreshRows = Runnable { adapter.notifyDataSetChanged() }
 
@@ -110,11 +127,24 @@ class FeedTab(private val s: MainScreen) {
                 if (st != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) userScrolled = true
             }
             override fun onScroll(v: AbsListView, first: Int, count: Int, total: Int) {
+                // ↓ shows when the newest post is more than a few posts away
+                val far = total > 0 && first + count < total - 2
+                if (far && btnDown.visibility != View.VISIBLE) {
+                    btnDown.visibility = View.VISIBLE; btnDown.alpha = 0f; btnDown.scaleX = 0.6f; btnDown.scaleY = 0.6f
+                    btnDown.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180).start()
+                } else if (!far && btnDown.visibility == View.VISIBLE) {
+                    btnDown.animate().alpha(0f).scaleX(0.6f).scaleY(0.6f).setDuration(150).withEndAction { btnDown.visibility = View.GONE }.start()
+                }
                 if (userScrolled && posts.isNotEmpty() && first <= 2) loadMore()
             }
         })
         s.h<View>(R.id.btnFeedRefresh).setOnClickListener { refreshInPlace() }
         s.h<View>(R.id.btnFeedMenu).setOnClickListener { menu() }
+        btnDown.setOnClickListener {
+            // close by: glide; far: jump
+            if (adapter.count - list.lastVisiblePosition < 8) list.smoothScrollToPosition(adapter.count - 1)
+            else list.setSelection(adapter.count - 1)
+        }
         s.h<View>(R.id.btnFeedSearch).setOnClickListener {
             searchRow.visibility = View.VISIBLE
             searchEdit.requestFocus()
@@ -703,14 +733,22 @@ class FeedTab(private val s: MainScreen) {
         if (items.isEmpty()) return
         val dlg = android.app.Dialog(act, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         val root = FrameLayout(act).apply { setBackgroundColor(0xFF000000.toInt()) }
-        val views = items.map { m ->
+        /** Photos already shown in full quality. */
+        val full = HashSet<Int>()
+        val views = items.mapIndexed { i, m ->
             ImageView(act).apply {
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                (m.thumb?.let { thumbs.get(it.id) } ?: m.mini?.let { b -> runCatching { BitmapFactory.decodeByteArray(b, 0, b.size) }.getOrNull() })
+                // already downloaded in full (the feed fetches photos ahead): shown in full right away
+                val ready = m.big?.let { bigPaths[it.id] }?.takeIf { i == start }?.let { decode(it, FULL) }
+                if (ready != null) { setImageBitmap(ready); full += i }
+                else (m.thumb?.let { thumbs.get(it.id) } ?: m.mini?.let { b -> runCatching { BitmapFactory.decodeByteArray(b, 0, b.size) }.getOrNull() })
                     ?.let { setImageBitmap(it) }
                 root.addView(this, FrameLayout.LayoutParams(-1, -1))
             }
         }
+        // while the full picture is still loading
+        val spinner = ProgressBar(act).apply { indeterminateTintList = android.content.res.ColorStateList.valueOf(act.tc(R.color.accent)) }
+        root.addView(spinner, FrameLayout.LayoutParams((40 * d).toInt(), (40 * d).toInt(), Gravity.CENTER))
         val counter = TextView(act).apply {
             textSize = 14f; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
             setBackgroundResource(R.drawable.bg_badge)
@@ -739,15 +777,21 @@ class FeedTab(private val s: MainScreen) {
             }
             root.background.alpha = (255 * (1f - kotlin.math.abs(dy) / (root.height.coerceAtLeast(1) * 0.6f))).toInt().coerceIn(60, 255)
             counter.text = "${index + 1} / ${items.size}"
+            spinner.visibility = if (index in full) View.GONE else View.VISIBLE
         }
-        // full-size pictures for the current one and its neighbours
+        // full-size pictures for the current one and its neighbours (current first)
         fun ensure() {
-            for (i in (index - 1)..(index + 1)) {
-                if (i !in items.indices || !loaded.add(i)) continue
+            for (i in listOf(index, index + 1, index - 1, index + 2, index - 2)) {
+                if (i !in items.indices || i in full || !loaded.add(i)) continue
                 val f = items[i].big ?: items[i].thumb ?: continue
-                net.execute {
-                    val bmp = Tg.fetch(f, 24)?.let { decode(it, 1600) }
-                    s.ui.post { if (bmp != null) views[i].setImageBitmap(bmp) }
+                galleryExec.execute {
+                    val path = bigPaths[f.id] ?: Tg.fetch(f, 32)?.also { bigPaths[f.id] = it }
+                    val bmp = path?.let { decode(it, FULL) }
+                    s.ui.post {
+                        if (bmp != null) { views[i].setImageBitmap(bmp); full += i }
+                        else full += i   // nothing better to wait for
+                        layout()
+                    }
                 }
             }
         }
@@ -961,6 +1005,7 @@ class FeedTab(private val s: MainScreen) {
             }, FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply { setMargins((6 * d).toInt(), (6 * d).toInt(), 0, 0) })
             f.setOnClickListener { videoTap(m) }
         } else if (m.big != null) {
+            prefetchBig(m.big)
             f.setOnClickListener {
                 val photos = all.filter { it.video == null && (it.big != null || it.thumb != null) }
                 openGallery(photos, photos.indexOf(m).coerceAtLeast(0))
@@ -1090,6 +1135,8 @@ class FeedTab(private val s: MainScreen) {
     }
 
     companion object {
+        /** Longest side of a photo opened full screen (Telegram photos are at most 2560). */
+        private const val FULL = 2560
         private val DATE = SimpleDateFormat("d MMM yyyy, HH:mm", Locale("ru"))
     }
 }

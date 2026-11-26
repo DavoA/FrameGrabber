@@ -135,11 +135,14 @@
                 android:contentDescription="Закрыть поиск"
                 android:src="@drawable/ic_close" />
         </LinearLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
         <ListView
             android:id="@+id/feedList"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:clipToPadding="false"
             android:divider="@null"
             android:dividerHeight="0dp"
@@ -148,5 +151,22 @@
             android:paddingEnd="12dp"
             android:paddingBottom="16dp"
             android:scrollbars="none" />
+            <!-- appears when you are far from the newest post: jump straight down -->
+            <ImageButton
+                android:id="@+id/btnFeedDown"
+                style="@style/IconBtn"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="16dp"
+                android:background="@drawable/bg_fab"
+                android:stateListAnimator="@null"
+                android:elevation="6dp"
+                android:rotation="180"
+                android:tint="#FFFFFFFF"
+                android:contentDescription="Вниз, к новым постам"
+                android:src="@drawable/ic_arrow_up"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 </FrameLayout>
