@@ -55,7 +55,7 @@ class PlayerTab(private val s: MainScreen) {
     private val adapter = Adapter()
 
     init {
-        grid.adapter = adapter
+        applyView()
         // taps, holds (= preview) and ⋮ are handled by each card itself
         grid.setOnScrollListener(object : AbsListView.OnScrollListener {
             override fun onScrollStateChanged(v: AbsListView, state: Int) {
@@ -79,6 +79,7 @@ class PlayerTab(private val s: MainScreen) {
 
     /** The page was opened (or folders changed): scan again. */
     fun refresh() {
+        if (lib.view != appliedView) applyView()
         if (scanning) return
         scanning = true
         val ctx = s.act.applicationContext
@@ -143,13 +144,59 @@ class PlayerTab(private val s: MainScreen) {
         }
     }
 
+    /** «Вид и сортировка»: cards per row (1 / 2 / 3 / list) and the order. */
     private fun chooseSort() {
+        val ctx = s.act
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((20 * d).toInt(), (8 * d).toInt(), (20 * d).toInt(), 0)
+        }
+        box.addView(TextView(ctx, null, 0, R.style.Label).apply { text = "Вид" })
+        val views = listOf("1" to "1 в ряд", "2" to "2 в ряд", "3" to "3 в ряд", "list" to "Список")
+        val seg = android.widget.RadioGroup(ctx, null).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.bg_segment_group)
+            setPadding((3 * d).toInt(), (3 * d).toInt(), (3 * d).toInt(), (3 * d).toInt())
+        }
+        views.forEachIndexed { i, (key, label) ->
+            seg.addView(android.widget.RadioButton(ctx, null, 0, R.style.Segment).apply {
+                id = View.generateViewId(); text = label; tag = key
+                layoutParams = android.widget.RadioGroup.LayoutParams(0, (40 * d).toInt(), 1f)
+            })
+            if (key == lib.view) seg.check(seg.getChildAt(i).id)
+        }
+        seg.setOnCheckedChangeListener { g, id -> lib.view = g.findViewById<View>(id).tag as String; applyView() }
+        box.addView(seg)
+        box.addView(TextView(ctx, null, 0, R.style.Label).apply { text = "Сортировка" })
         val opts = listOf("date" to "Сначала новые", "name" to "По имени", "size" to "Сначала большие",
             "duration" to "Сначала длинные", "watched" to "Недавно смотрел")
-        AlertDialog.Builder(s.act).setTitle("Сортировка")
-            .setSingleChoiceItems(opts.map { it.second }.toTypedArray(), opts.indexOfFirst { it.first == lib.sort }) { dlg, i ->
-                lib.sort = opts[i].first; apply(); dlg.dismiss()
-            }.show()
+        val rg = android.widget.RadioGroup(ctx)
+        opts.forEach { (key, label) ->
+            rg.addView(android.widget.RadioButton(ctx).apply {
+                id = View.generateViewId(); text = label; tag = key
+                setTextColor(ctx.getColor(R.color.text)); textSize = 15f
+                buttonTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.accent))
+                minHeight = (42 * d).toInt()
+                isChecked = key == lib.sort
+            })
+        }
+        rg.setOnCheckedChangeListener { g, id -> lib.sort = g.findViewById<View>(id).tag as String; apply() }
+        box.addView(rg)
+        AlertDialog.Builder(ctx).setTitle("Вид и сортировка").setView(android.widget.ScrollView(ctx).apply { addView(box) })
+            .setPositiveButton("Готово", null).show()
+    }
+
+    /** Cards per row from the settings (a list = one per row, the small layout). */
+    private var appliedView = ""
+
+    private fun applyView() {
+        stopPreview()
+        val v = lib.view
+        appliedView = v
+        grid.numColumns = when (v) { "1", "list" -> 1; "3" -> 3; else -> 2 }
+        grid.horizontalSpacing = ((if (v == "3") 6 else 10) * d).toInt()
+        grid.verticalSpacing = ((if (v == "list") 8 else if (v == "3") 10 else 14) * d).toInt()
+        grid.adapter = adapter   // fresh cells for the new layout
     }
 
     // ================================================================ folders
@@ -248,7 +295,16 @@ class PlayerTab(private val s: MainScreen) {
         tv.setTransform(m)
     }
 
+    private val stopLater = Runnable { stopPreview() }
+
+    /** Finger lifted: stop in 4 s, or keep playing until another preview starts (⚙). */
+    private fun releasePreview() {
+        s.ui.removeCallbacks(stopLater)
+        if (!lib.previewKeep) s.ui.postDelayed(stopLater, 4000)
+    }
+
     fun stopPreview() {
+        s.ui.removeCallbacks(stopLater)
         s.ui.removeCallbacks(hop)
         prevMp?.let { p -> prevMp = null; runCatching { p.stop() }; p.release() }
         prevView?.let { v -> prevFrame?.removeView(v) }
@@ -324,6 +380,8 @@ class PlayerTab(private val s: MainScreen) {
         override fun getCount() = shown.size
         override fun getItem(p: Int) = shown[p]
         override fun getItemId(p: Int) = p.toLong()
+        override fun getViewTypeCount() = 2
+        override fun getItemViewType(p: Int) = if (lib.view == "list") 1 else 0
 
         private inner class Holder(val thumb: ImageView, val dur: TextView, val badge: TextView,
                                    val progress: ProgressBar, val name: TextView, val sub: TextView) {
@@ -332,7 +390,7 @@ class PlayerTab(private val s: MainScreen) {
         }
 
         override fun getView(pos: Int, convert: View?, parent: ViewGroup): View {
-            val v = convert ?: make(parent)
+            val v = convert ?: make(parent, list = lib.view == "list")
             val h = v.tag as Holder
             val item = shown[pos]
             val w = watched[item.id]
@@ -340,6 +398,7 @@ class PlayerTab(private val s: MainScreen) {
             h.item = item
             h.name.text = item.name.substringBeforeLast('.')
             h.sub.text = buildString {
+                if (lib.view == "list") lib.cachedDuration(item.file).takeIf { it > 1 }?.let { append(TimeUtil.format(it * 1000).substringBefore('.')).append(" · ") }
                 append(size(item.size))
                 if (filter == "all" || filter == "new" || filter == "continue") append(" · ${item.folder.name}")
             }
@@ -376,9 +435,14 @@ class PlayerTab(private val s: MainScreen) {
             return v
         }
 
-        private fun make(parent: ViewGroup): View {
+        private fun make(parent: ViewGroup, list: Boolean): View {
             val ctx = s.act
-            val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            val small = lib.view == "3"
+            // list: the picture on the left, the text on the right
+            val col = LinearLayout(ctx).apply {
+                orientation = if (list) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+                if (list) { gravity = Gravity.CENTER_VERTICAL; setBackgroundResource(R.drawable.bg_row); setPadding((6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt()) }
+            }
             val frame = FrameLayout(ctx).apply {
                 setBackgroundResource(R.drawable.bg_thumb)
                 clipToOutline = true
@@ -418,7 +482,10 @@ class PlayerTab(private val s: MainScreen) {
             }
             frame.addView(more, FrameLayout.LayoutParams((30 * d).toInt(), (30 * d).toInt(), Gravity.TOP or Gravity.END)
                 .apply { setMargins(0, (5 * d).toInt(), (5 * d).toInt(), 0) })
-            col.addView(frame)
+            if (list) col.addView(frame, LinearLayout.LayoutParams((132 * d).toInt(), -2))
+            else col.addView(frame)
+            if (small) more.layoutParams = FrameLayout.LayoutParams((24 * d).toInt(), (24 * d).toInt(), Gravity.TOP or Gravity.END)
+                .apply { setMargins(0, (3 * d).toInt(), (3 * d).toInt(), 0) }
             val name = TextView(ctx).apply {
                 textSize = 13f; setTextColor(ctx.getColor(R.color.text)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
                 setPadding((2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt(), 0)
@@ -427,7 +494,16 @@ class PlayerTab(private val s: MainScreen) {
                 textSize = 11f; setTextColor(ctx.getColor(R.color.textDim)); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
                 setPadding((2 * d).toInt(), (1 * d).toInt(), (2 * d).toInt(), 0)
             }
-            col.addView(name); col.addView(sub)
+            if (small) { name.textSize = 11f; name.maxLines = 1; sub.textSize = 10f }
+            if (list) {
+                val texts = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding((10 * d).toInt(), 0, 0, 0)
+                    addView(name); addView(sub)
+                }
+                name.setPadding(0, 0, 0, 0)
+                col.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+            } else { col.addView(name); col.addView(sub) }
             val holder = Holder(thumb, dur, badge, progress, name, sub)
             col.tag = holder
             more.setOnClickListener { stopPreview(); holder.item?.let { actions(it) } }
@@ -444,13 +520,13 @@ class PlayerTab(private val s: MainScreen) {
                     android.view.MotionEvent.ACTION_UP -> {
                         s.ui.removeCallbacks(startHold)
                         v.isPressed = false
-                        if (previewing) stopPreview()
+                        if (previewing) releasePreview()
                         else holder.item?.let { stopPreview(); play(Uri.fromFile(it.file), -1, it.name) }
                     }
                     android.view.MotionEvent.ACTION_CANCEL -> {
                         s.ui.removeCallbacks(startHold)
                         v.isPressed = false
-                        if (previewing) stopPreview()
+                        if (previewing) releasePreview()
                     }
                 }
                 true

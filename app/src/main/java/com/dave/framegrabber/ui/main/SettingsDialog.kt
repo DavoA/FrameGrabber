@@ -220,6 +220,11 @@ class SettingsDialog(private val s: MainScreen) {
         fun pfText() { val n = com.dave.framegrabber.player.Library(s.act).folders.size; pf.text = if (n == 0) "Папки с видео не выбраны" else "Папки с видео: $n" }
         pfText()
         v.findViewById<View>(R.id.rowPlayerFolders).setOnClickListener { s.playerTab.showFolders() }
+        val lib = com.dave.framegrabber.player.Library(s.act)
+        v.findViewById<android.widget.Switch>(R.id.swPreviewKeep).apply {
+            isChecked = lib.previewKeep
+            setOnCheckedChangeListener { _, on -> lib.previewKeep = on }
+        }
         v.findViewById<View>(R.id.rowTags).setOnClickListener {
             s.act.startActivity(android.content.Intent(s.act, com.dave.framegrabber.ui.telegram.TagsActivity::class.java))
         }

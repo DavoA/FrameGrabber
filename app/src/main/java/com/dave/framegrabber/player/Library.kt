@@ -44,6 +44,16 @@ class Library(ctx: Context) {
 
     fun removeFolder(path: String) { folders = folders - path }
 
+    /** Library view: "1", "2", "3" cards per row, or "list". */
+    var view: String
+        get() = sp.getString("view", "2") ?: "2"
+        set(v) = sp.edit().putString("view", v).apply()
+
+    /** Card preview keeps playing after the finger is lifted, until another one starts. */
+    var previewKeep: Boolean
+        get() = sp.getBoolean("previewKeep", false)
+        set(v) = sp.edit().putBoolean("previewKeep", v).apply()
+
     /** "date" | "name" | "size" | "duration" | "watched" */
     var sort: String
         get() = sp.getString("sort", "date") ?: "date"

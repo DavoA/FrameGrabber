@@ -371,6 +371,14 @@
             android:textColor="@color/accent"
             android:textSize="13sp" />
     </LinearLayout>
+    <Switch
+        android:id="@+id/swPreviewKeep"
+        style="@style/Toggle"
+        android:layout_marginTop="8dp"
+        android:text="Превью в библиотеке играет, пока не начнёшь другое" />
+    <TextView
+        style="@style/SubHint"
+        android:text="Выключено: превью останавливается через 4 секунды после того, как отпустишь палец." />
 
 
     <!-- OCR languages -->

@@ -191,6 +191,16 @@ class ScreenshotTest {
             val t = android.os.SystemClock.uptimeMillis()
             cell.dispatchTouchEvent(android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_CANCEL, 40f, 40f, 0))
         }
+        // other views: a list, 3 per row
+        listOf("list" to "17c_list", "3" to "17d_three").forEach { (mode, name) ->
+            com.dave.framegrabber.player.Library(appCtx).view = mode
+            inst.runOnMainSync {
+                a.findViewById<android.view.View>(R.id.navTools).performClick()
+                a.findViewById<android.view.View>(R.id.navPlayer).performClick()
+            }
+            Thread.sleep(3000); shot(name)
+        }
+        com.dave.framegrabber.player.Library(appCtx).view = "2"
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)
 
