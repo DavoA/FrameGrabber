@@ -377,6 +377,17 @@ class FeedTab(private val s: MainScreen) {
         loadMore()
     }
 
+    /** Videos without a caption posted right after [afterId] (stops at the next post with text or photos). */
+    private fun videosAfter(chat: Long, afterId: Long): List<TdApi.Message> {
+        val newer = (Tg.call(TdApi.GetChatHistory(chat, afterId, -8, 9, false)) as? TdApi.Messages)?.messages
+            ?.filter { it.id > afterId }?.sortedBy { it.id } ?: return emptyList()
+        return newer.takeWhile { m ->
+            val c = m.content
+            val isVideo = c is TdApi.MessageVideo || (c is TdApi.MessageDocument && c.document.mimeType.startsWith("video/"))
+            isVideo && captionOf(c)?.text.isNullOrBlank()
+        }
+    }
+
     private fun closeSearch() {
         searchEdit.hideKeyboard()
         searchEdit.setText("")
@@ -402,18 +413,21 @@ class FeedTab(private val s: MainScreen) {
         net.execute {
             val r = Tg.call(TdApi.SearchChatMessages(chat, null, q, null, from, 0, 30, TdApi.SearchMessagesFilterEmpty()))
             val res = r as? TdApi.FoundChatMessages
-            val all = ArrayList<TdApi.Message>()
+            // a found post + the rest of its album + the videos posted right after it without a caption
+            // (your posts: 6 photos with the names, then the video itself)
+            val grouped = ArrayList<Post>()
             val seen = HashSet<Long>()
             res?.messages?.forEach { m ->
                 if (m.id in seen) return@forEach
-                if (m.mediaAlbumId != 0L) {
-                    val around = (Tg.call(TdApi.GetChatHistory(chat, m.id, -10, 21, false)) as? TdApi.Messages)?.messages
-                        ?.filter { it.mediaAlbumId == m.mediaAlbumId }?.sortedByDescending { it.id }
-                    val album = if (around.isNullOrEmpty()) listOf(m) else around
-                    album.forEach { if (seen.add(it.id)) all += it }
-                } else if (seen.add(m.id)) all += m
+                val album = if (m.mediaAlbumId != 0L)
+                    (Tg.call(TdApi.GetChatHistory(chat, m.id, -10, 21, false)) as? TdApi.Messages)?.messages
+                        ?.filter { it.mediaAlbumId == m.mediaAlbumId }?.sortedBy { it.id }?.ifEmpty { null } ?: listOf(m)
+                else listOf(m)
+                val unit = album + videosAfter(chat, album.last().id)
+                unit.forEach { seen += it.id }
+                val caption = unit.firstNotNullOfOrNull { captionOf(it.content)?.takeIf { c -> c.text.isNotBlank() } }
+                grouped += Post(unit.map { it.id }, album.first().date, caption, unit.mapNotNull { mediaOf(it) })
             }
-            val grouped = group(all)
             s.ui.post {
                 loading = false
                 if (chat != chatId || query != q) return@post
