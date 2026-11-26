@@ -166,7 +166,8 @@ class ProjectController(private val s: MainScreen) {
     private fun fill(box: LinearLayout, sub: TextView) {
         val ctx = s.act
         CaptureStore.disk.execute {   // after pending saves
-            // only videos that are still on the phone (a deleted video can't be opened anymore)
+            // deleted videos: their frames go too (no leftovers), and they aren't listed
+            com.dave.framegrabber.data.VideoFile.cleanUp(ctx, CaptureStore.project?.id)
             val items = Projects.list(ctx).filter { com.dave.framegrabber.data.VideoFile.exists(ctx, it.ref, it.isPath) }
             val covers = items.associate { it.id to loadCover(it) }
             s.ui.post {

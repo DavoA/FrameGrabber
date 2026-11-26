@@ -279,17 +279,29 @@ class FeedTab(private val s: MainScreen) {
     }
 
     private fun menu() {
-        val items = arrayOf("Другой канал", "Загрузки", "Выйти из аккаунта Telegram")
+        val items = arrayOf("Статистика канала", "Другой канал", "Загрузки", "Выйти из аккаунта Telegram")
         AlertDialog.Builder(act, R.style.DialogTheme).setItems(items) { _, i ->
             when (i) {
-                0 -> askChannel()
-                1 -> showDownloads()
-                2 -> AlertDialog.Builder(act, R.style.DialogTheme)
+                0 -> openStats()
+                1 -> askChannel()
+                2 -> showDownloads()
+                3 -> AlertDialog.Builder(act, R.style.DialogTheme)
                     .setMessage("Выйти из аккаунта в приложении? Скачанные видео останутся.")
                     .setPositiveButton("Выйти") { _, _ -> posts.clear(); chatId = 0; adapter.notifyDataSetChanged(); Tg.logOut() }
                     .setNegativeButton("Отмена", null).show()
             }
         }.show()
+    }
+
+    /** Models, studios, tags over all the channel's posts (tap a name → search here). */
+    private fun openStats() {
+        if (chatId == 0L) { act.toast("Сначала дождись загрузки канала"); return }
+        act.startActivityForResult(
+            Intent(act, com.dave.framegrabber.ui.telegram.StatsActivity::class.java)
+                .putExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_CHAT, chatId)
+                .putExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_TITLE, title.text.toString()),
+            com.dave.framegrabber.MainActivity.REQ_STATS
+        )
     }
 
     private fun showDownloads() {

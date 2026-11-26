@@ -31,6 +31,7 @@ class MainActivity : Activity() {
         private const val REQ_PLAY = 5
         private const val REQ_PLAYER_DIR = 6
         private const val REQ_DELETE = 7
+        const val REQ_STATS = 8
         /** What the pickers ask other apps for. */
         val VIDEO_MIME_TYPES = arrayOf(
             "video/*", "application/x-matroska", "application/mp4", "application/x-mpegts",
@@ -210,6 +211,7 @@ class MainActivity : Activity() {
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
+            REQ_STATS -> data.getStringExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_SEARCH)?.let { screen.feed.search(it) }
             REQ_POST -> {
                 screen.tgPick.onPosted()
                 if (data.getBooleanExtra(com.dave.framegrabber.ui.telegram.PostActivity.EXTRA_OPEN_FEED, false))

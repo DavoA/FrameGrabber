@@ -98,6 +98,8 @@ class MainScreen(val act: MainActivity) {
         freezeBackgroundWhileScrolling(h(R.id.pageClips))
         // the screen was recreated while the app kept running: reopen the project's video
         CaptureStore.project?.let { video.load(it.uri) }
+        // frames of videos deleted from the phone: cleaned up in the background
+        CaptureStore.disk.execute { runCatching { com.dave.framegrabber.data.VideoFile.cleanUp(act, CaptureStore.project?.id) } }
     }
 
     /** The animated background pauses while a page scrolls (smoother scrolling). */
