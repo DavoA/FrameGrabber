@@ -142,16 +142,22 @@
                     android:id="@+id/btnTgPickCancel"
                     style="@style/BtnSecondary"
                     android:layout_width="wrap_content"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
+                    android:layout_height="46dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:text="Отмена" />
                 <Button
                     android:id="@+id/btnTgPickNext"
                     style="@style/BtnPrimary"
                     android:layout_width="wrap_content"
+                    android:layout_height="46dp"
+                    android:minHeight="0dp"
+                    android:minWidth="0dp"
+                    android:layout_marginTop="0dp"
                     android:layout_marginStart="8dp"
-                    android:paddingStart="18dp"
-                    android:paddingEnd="18dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
                     android:text="Далее" />
             </LinearLayout>
         </FrameLayout>
