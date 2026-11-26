@@ -56,10 +56,10 @@ class PlayerTab(private val s: MainScreen) {
 
     init {
         grid.adapter = adapter
-        grid.setOnItemClickListener { _, _, pos, _ -> shown.getOrNull(pos)?.let { play(Uri.fromFile(it.file), -1, it.name) } }
-        grid.setOnItemLongClickListener { _, _, pos, _ -> shown.getOrNull(pos)?.let { actions(it) }; true }
+        // taps, holds (= preview) and ⋮ are handled by each card itself
         grid.setOnScrollListener(object : AbsListView.OnScrollListener {
             override fun onScrollStateChanged(v: AbsListView, state: Int) {
+                if (state != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) stopPreview()
                 s.act.bgView.scrolling = state != AbsListView.OnScrollListener.SCROLL_STATE_IDLE
             }
             override fun onScroll(v: AbsListView, a: Int, b: Int, c: Int) {}
@@ -180,7 +180,82 @@ class PlayerTab(private val s: MainScreen) {
         refresh()
     }
 
-    // ================================================================ a card's long press
+    // ================================================================ hold a card = preview
+
+    private var prevMp: android.media.MediaPlayer? = null
+    private var prevView: android.view.TextureView? = null
+    private var prevFrame: FrameLayout? = null
+    private var prevTimes: List<Long> = emptyList()
+    private val hop = object : Runnable {
+        override fun run() {
+            val p = prevMp ?: return
+            runCatching { p.seekTo(prevTimes.random() / 1000, android.media.MediaPlayer.SEEK_PREVIOUS_SYNC) }
+            s.ui.postDelayed(this, 2600)
+        }
+    }
+
+    /** Muted snippets of the video in the card: a random place, then another every ~2.5 s. */
+    private fun startPreview(frame: FrameLayout, item: Library.Item) {
+        stopPreview()
+        val ctx = s.act
+        frame.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+        // hot places if the video was analysed, otherwise anywhere from 5 % to 90 %
+        val w = watched[item.id]
+        val durUs = (w?.durationUs?.takeIf { it > 0 } ?: lib.cachedDuration(item.file) * 1000).coerceAtLeast(1)
+        prevTimes = w?.activity?.let { com.dave.framegrabber.player.ActivityScan.hotMoments(it, durUs, 0.3f) }
+            ?: List(12) { (durUs * (0.05 + Math.random() * 0.85)).toLong() }
+        val tv = android.view.TextureView(ctx)
+        tv.alpha = 0f
+        frame.addView(tv, 1, FrameLayout.LayoutParams(-1, -1))
+        prevView = tv; prevFrame = frame
+        tv.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, width: Int, height: Int) {
+                if (prevView !== tv) return
+                val p = android.media.MediaPlayer()
+                prevMp = p
+                runCatching {
+                    p.setDataSource(item.file.path)
+                    p.setSurface(android.view.Surface(st))
+                    p.setVolume(0f, 0f)
+                    p.isLooping = true
+                    p.setOnVideoSizeChangedListener { _, vw, vh -> cropFill(tv, vw, vh) }
+                    p.setOnInfoListener { _, what, _ ->
+                        if (what == android.media.MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) tv.animate().alpha(1f).setDuration(150).start()
+                        false
+                    }
+                    p.setOnPreparedListener {
+                        if (prevMp !== it) return@setOnPreparedListener
+                        it.seekTo(prevTimes.random() / 1000, android.media.MediaPlayer.SEEK_PREVIOUS_SYNC)
+                        it.start()
+                        s.ui.postDelayed(hop, 2600)
+                    }
+                    p.setOnErrorListener { _, _, _ -> stopPreview(); true }
+                    p.prepareAsync()
+                }.onFailure { stopPreview() }
+            }
+            override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) {}
+            override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
+            override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) {}
+        }
+    }
+
+    /** Fill the card (crop the edges) like the thumbnail does. */
+    private fun cropFill(tv: android.view.TextureView, vw: Int, vh: Int) {
+        if (vw <= 0 || vh <= 0 || tv.width <= 0) return
+        val k = maxOf(tv.width.toFloat() / vw, tv.height.toFloat() / vh)
+        val m = android.graphics.Matrix()
+        m.setScale(vw * k / tv.width, vh * k / tv.height, tv.width / 2f, tv.height / 2f)
+        tv.setTransform(m)
+    }
+
+    fun stopPreview() {
+        s.ui.removeCallbacks(hop)
+        prevMp?.let { p -> prevMp = null; runCatching { p.stop() }; p.release() }
+        prevView?.let { v -> prevFrame?.removeView(v) }
+        prevView = null; prevFrame = null
+    }
+
+    // ================================================================ a card's ⋮ menu
 
     private fun actions(i: Library.Item) {
         val v = watched[i.id]
@@ -253,6 +328,7 @@ class PlayerTab(private val s: MainScreen) {
         private inner class Holder(val thumb: ImageView, val dur: TextView, val badge: TextView,
                                    val progress: ProgressBar, val name: TextView, val sub: TextView) {
             var path = ""
+            var item: Library.Item? = null
         }
 
         override fun getView(pos: Int, convert: View?, parent: ViewGroup): View {
@@ -261,6 +337,7 @@ class PlayerTab(private val s: MainScreen) {
             val item = shown[pos]
             val w = watched[item.id]
             h.path = item.file.path
+            h.item = item
             h.name.text = item.name.substringBeforeLast('.')
             h.sub.text = buildString {
                 append(size(item.size))
@@ -331,6 +408,16 @@ class PlayerTab(private val s: MainScreen) {
                 progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x66000000)
             }
             frame.addView(progress, FrameLayout.LayoutParams(-1, (4 * d).toInt(), Gravity.BOTTOM))
+            // ⋮ : the card's menu
+            val more = android.widget.ImageButton(ctx).apply {
+                setImageResource(R.drawable.ic_more)
+                imageTintList = android.content.res.ColorStateList.valueOf(ctx.getColor(R.color.text))
+                setBackgroundResource(R.drawable.bg_player_pill)
+                contentDescription = "Действия"
+                isFocusable = false
+            }
+            frame.addView(more, FrameLayout.LayoutParams((30 * d).toInt(), (30 * d).toInt(), Gravity.TOP or Gravity.END)
+                .apply { setMargins(0, (5 * d).toInt(), (5 * d).toInt(), 0) })
             col.addView(frame)
             val name = TextView(ctx).apply {
                 textSize = 13f; setTextColor(ctx.getColor(R.color.text)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
@@ -341,7 +428,33 @@ class PlayerTab(private val s: MainScreen) {
                 setPadding((2 * d).toInt(), (1 * d).toInt(), (2 * d).toInt(), 0)
             }
             col.addView(name); col.addView(sub)
-            col.tag = Holder(thumb, dur, badge, progress, name, sub)
+            val holder = Holder(thumb, dur, badge, progress, name, sub)
+            col.tag = holder
+            more.setOnClickListener { stopPreview(); holder.item?.let { actions(it) } }
+            // tap = play; hold = preview (muted snippets) while the finger is down
+            var previewing = false
+            val startHold = Runnable { holder.item?.let { previewing = true; startPreview(frame, it) } }
+            col.setOnTouchListener { v, e ->
+                when (e.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        previewing = false
+                        v.isPressed = true
+                        s.ui.postDelayed(startHold, 280)
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        s.ui.removeCallbacks(startHold)
+                        v.isPressed = false
+                        if (previewing) stopPreview()
+                        else holder.item?.let { stopPreview(); play(Uri.fromFile(it.file), -1, it.name) }
+                    }
+                    android.view.MotionEvent.ACTION_CANCEL -> {
+                        s.ui.removeCallbacks(startHold)
+                        v.isPressed = false
+                        if (previewing) stopPreview()
+                    }
+                }
+                true
+            }
             return col
         }
     }

@@ -50,7 +50,7 @@ class NavController(private val s: MainScreen) {
     fun show(target: Page) {
         if (target != Page.FRAMES) s.tgPick.cancel()
         if (target == Page.TOOLS) s.split.onShown()
-        if (target == Page.PLAYER) s.playerTab.refresh()
+        if (target == Page.PLAYER) s.playerTab.refresh() else s.playerTab.stopPreview()
         if (target == page) return
         val from = page
         page = target

@@ -115,6 +115,7 @@ class MainScreen(val act: MainActivity) {
 
     fun onPause() {
         video.pausePlayback()
+        playerTab.stopPreview()
         project.saveNow()
         grid.onPause()
         batch.onPause()

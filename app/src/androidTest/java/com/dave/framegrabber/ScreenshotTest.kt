@@ -180,6 +180,17 @@ class ScreenshotTest {
         Thread.sleep(5000); shot("17_player_tab")
         val cards = a.findViewById<android.widget.GridView>(R.id.libGrid).adapter.count
         check(cards >= 3) { "library cards: $cards" }
+        // hold the first card: a muted snippet plays in it
+        val cell = a.findViewById<android.widget.GridView>(R.id.libGrid).getChildAt(0)
+        inst.runOnMainSync {
+            val t = android.os.SystemClock.uptimeMillis()
+            cell.dispatchTouchEvent(android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_DOWN, 40f, 40f, 0))
+        }
+        Thread.sleep(2500); shot("17b_preview")
+        inst.runOnMainSync {
+            val t = android.os.SystemClock.uptimeMillis()
+            cell.dispatchTouchEvent(android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_CANCEL, 40f, 40f, 0))
+        }
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)
 
