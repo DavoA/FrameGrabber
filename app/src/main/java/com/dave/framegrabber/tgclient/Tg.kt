@@ -81,7 +81,11 @@ object Tg {
         start(ctx)
     }
 
+    /** Every update, on TDLib's own thread (uploads watch file progress and «sent» here). */
+    val rawListeners = CopyOnWriteArrayList<(TdApi.Object) -> Unit>()
+
     private fun onUpdate(o: TdApi.Object) {
+        rawListeners.forEach { runCatching { it(o) } }
         when (o) {
             is TdApi.UpdateAuthorizationState -> onAuth(o.authorizationState)
             is TdApi.UpdateFile -> fileListeners[o.file.id]?.let { ls -> main.post { ls.forEach { it(o.file) } } }

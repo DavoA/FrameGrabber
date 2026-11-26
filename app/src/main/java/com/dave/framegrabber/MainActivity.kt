@@ -32,6 +32,7 @@ class MainActivity : Activity() {
         private const val REQ_PLAYER_DIR = 6
         private const val REQ_DELETE = 7
         const val REQ_STATS = 8
+        private const val REQ_BACKUP = 9
         /** What the pickers ask other apps for. */
         val VIDEO_MIME_TYPES = arrayOf(
             "video/*", "application/x-matroska", "application/mp4", "application/x-mpegts",
@@ -203,6 +204,29 @@ class MainActivity : Activity() {
         startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_TREE)
     }
 
+    /** Settings → «Восстановить»: pick the backup file. */
+    fun pickBackup() {
+        runCatching {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("*/*").putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/json", "text/plain", "application/octet-stream")), REQ_BACKUP)
+        }
+    }
+
+    private fun restoreBackup(uri: Uri) {
+        val r = runCatching { com.dave.framegrabber.data.Backup.restore(this, uri) }
+        r.onSuccess { n ->
+            android.app.AlertDialog.Builder(this).setTitle("Восстановлено ✓")
+                .setMessage("Настроек: $n. Приложение перезапустится.")
+                .setCancelable(false)
+                .setPositiveButton("OK") { _, _ ->
+                    packageManager.getLaunchIntentForPackage(packageName)?.let {
+                        startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                    }
+                    android.os.Process.killProcess(android.os.Process.myPid())
+                }.show()
+        }.onFailure { android.app.AlertDialog.Builder(this).setTitle("Не восстановлено").setMessage(it.message).setPositiveButton("OK", null).show() }
+    }
+
     override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(code, perms, results)
         if (code == com.dave.framegrabber.ui.main.ClipsPanel.REQ_MEDIA) screen.clips.onShown()
@@ -216,7 +240,11 @@ class MainActivity : Activity() {
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
-            REQ_STATS -> data.getStringExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_SEARCH)?.let { screen.feed.search(it) }
+            REQ_BACKUP -> data.data?.let { restoreBackup(it) }
+            REQ_STATS -> {
+                data.getStringExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_SEARCH)?.let { screen.feed.search(it) }
+                data.getLongExtra(com.dave.framegrabber.ui.telegram.ModelActivity.EXTRA_JUMP, 0L).takeIf { it != 0L }?.let { screen.feed.jumpToMessage(it) }
+            }
             REQ_POST -> {
                 screen.tgPick.onPosted()
                 if (data.getBooleanExtra(com.dave.framegrabber.ui.telegram.PostActivity.EXTRA_OPEN_FEED, false))

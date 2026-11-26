@@ -121,9 +121,15 @@ class StatsActivity : Activity() {
         while (body.childCount > 1) body.removeViewAt(1)
         if (posts.isEmpty()) { body.addView(text("В канале пока нет постов с подписью.", 14f, R.color.textDim)); return }
         body.addView(totals(posts))
-        body.addView(names("Модели", group(posts) { it.models }))
-        body.addView(names("Студии", group(posts) { listOf(it.studio) }))
+        body.addView(names("Модели", group(posts) { it.models }, models = true))
+        body.addView(names("Студии", group(posts) { listOf(it.studio) }, models = false))
         body.addView(tags(posts))
+    }
+
+    /** Her page; what is picked there (a post / a search) goes straight back to the feed. */
+    private fun openModel(name: String) {
+        startActivity(ModelActivity.intent(this, chatId, name).addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT))
+        finish()
     }
 
     private fun searchInFeed(q: String) {
@@ -193,17 +199,17 @@ class StatsActivity : Activity() {
     }
 
     /** Studios or models: how many posts each, and when last. */
-    private fun names(title: String, groups: List<Pair<String, List<Post>>>): View = card("$title (${groups.size})").apply {
+    private fun names(title: String, groups: List<Pair<String, List<Post>>>, models: Boolean): View = card("$title (${groups.size})").apply {
         val sorted = groups.sortedWith(compareByDescending<Pair<String, List<Post>>> { it.second.size }.thenByDescending { it.second.last().time })
         val maxN = max(1, sorted.firstOrNull()?.second?.size ?: 1)
         val row = { name: String, list: List<Post> ->
             val v = list.count { it.video }
             barRow(name, list.size, maxN, "${list.size} пост. · видео $v · ${dateFmt.format(Date(list.last().time))}").apply {
-                setOnClickListener { searchInFeed(name) }
+                setOnClickListener { if (models) openModel(name) else searchInFeed(name) }
             }
         }
         if (sorted.isEmpty()) addView(text("Нет постов в формате «Студия - Модель»", 13f, R.color.textDim))
-        else addView(text("Нажми на имя — лента найдёт все его посты", 12f, R.color.textDim).apply { setPadding(0, 0, 0, (6 * d).toInt()) })
+        else addView(text(if (models) "Нажми на имя — страница модели с её постами" else "Нажми на имя — лента найдёт все его посты", 12f, R.color.textDim).apply { setPadding(0, 0, 0, (6 * d).toInt()) })
         sorted.take(30).forEach { (name, list) -> addView(row(name, list)) }
         if (sorted.size > 30) {
             val more = text("Показать все (${sorted.size}) ›", 14f, R.color.accent).apply { setPadding(0, (10 * d).toInt(), 0, (4 * d).toInt()) }

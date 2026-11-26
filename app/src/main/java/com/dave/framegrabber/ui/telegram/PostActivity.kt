@@ -68,9 +68,11 @@ class PostActivity : Activity() {
         private const val EXTRA_TIMES = "times"
         private const val EXTRA_VIDEO = "video"
         private const val EXTRA_VIDEO_KEY = "videoKey"
+        private const val EXTRA_VIDEO_URI = "videoUri"
 
-        fun intent(ctx: Context, files: List<String>, times: List<Long>, video: String, videoKey: String) =
+        fun intent(ctx: Context, files: List<String>, times: List<Long>, video: String, videoKey: String, videoUri: Uri? = null) =
             Intent(ctx, PostActivity::class.java)
+                .putExtra(EXTRA_VIDEO_URI, videoUri?.toString())
                 .putStringArrayListExtra(EXTRA_FILES, ArrayList(files))
                 .putExtra(EXTRA_TIMES, times.toLongArray())
                 .putExtra(EXTRA_VIDEO, video)
@@ -181,6 +183,141 @@ class PostActivity : Activity() {
         tags.render()
         updateSetup()
         updatePreview()
+        buildVideoCard()
+    }
+
+    // ================================================================ video after the photos · when
+
+    private var videoUri: Uri? = null
+    private var sendAt = 0                       // unix time, 0 = now
+    private lateinit var swVideo: android.widget.Switch
+    private lateinit var editVideoCaption: EditText
+    private lateinit var txtWhen: TextView
+    private lateinit var txtAccount: TextView
+    private val tgPrefs get() = getSharedPreferences("telegram", MODE_PRIVATE)
+
+    /**
+     * «Видео и время»: the video right after the 6 photos (cut into Part 1, 2… when too big) and
+     * publishing now or at a chosen time. Both go through your Telegram login (tab «Канал»).
+     */
+    private fun buildVideoCard() {
+        com.dave.framegrabber.tgclient.Tg.start(this)
+        videoUri = intent.getStringExtra(EXTRA_VIDEO_URI)?.let(Uri::parse)
+        val d = resources.displayMetrics.density
+        val card = android.widget.LinearLayout(this, null, 0, R.style.Card)
+        card.addView(TextView(this, null, 0, R.style.CardTitle).apply { text = "Видео и время" })
+        swVideo = android.widget.Switch(this, null, 0, R.style.Toggle).apply {
+            text = "Выложить видео после фото"
+            isEnabled = videoUri != null
+            isChecked = videoUri != null && tgPrefs.getBoolean("postVideo", true)
+            setOnCheckedChangeListener { _, on -> tgPrefs.edit().putBoolean("postVideo", on).apply(); updateVideoInfo() }
+        }
+        card.addView(swVideo)
+        val info = TextView(this).apply { textSize = 12f; setTextColor(tc(R.color.textDim)); setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt()) }
+        info.tag = "videoInfo"
+        card.addView(info)
+        editVideoCaption = EditText(this, null, 0, R.style.Input).apply {
+            hint = "Подпись под видео (необязательно)"
+            gravity = Gravity.CENTER_VERTICAL
+            setText(tgPrefs.getString("videoCaption", ""))
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2)
+            addTextChangedListener(watcher { tgPrefs.edit().putString("videoCaption", text.toString()).apply() })
+        }
+        card.addView(editVideoCaption)
+        val row = android.widget.LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, (12 * d).toInt(), 0, 0)
+        }
+        txtWhen = TextView(this).apply { textSize = 14f; setTextColor(tc(R.color.text)); layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) }
+        row.addView(txtWhen)
+        row.addView(Button(this, null, 0, R.style.BtnSecondary).apply {
+            text = "Когда…"; gravity = Gravity.CENTER
+            setOnClickListener { pickWhen() }
+        })
+        card.addView(row)
+        txtAccount = TextView(this).apply { textSize = 12f; setTextColor(tc(R.color.warn)); setPadding(0, (8 * d).toInt(), 0, 0) }
+        card.addView(txtAccount)
+        val parent = btnPublish.parent as android.view.ViewGroup
+        parent.addView(card, parent.indexOfChild(btnPublish))
+        (card.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.topMargin = (12 * d).toInt()
+        updateVideoInfo()
+        updateWhen()
+    }
+
+    private fun updateVideoInfo() {
+        val info = swVideo.rootView.findViewWithTag<TextView>("videoInfo") ?: return
+        val uri = videoUri
+        info.text = when {
+            uri == null -> "Видео этих кадров не известно (открой видео и выбери кадры заново)"
+            !swVideo.isChecked -> "Только 6 фото"
+            else -> {
+                val size = runCatching { contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } }.getOrNull() ?: -1L
+                val limit = com.dave.framegrabber.split.SplitPlan.TELEGRAM_LIMIT
+                when {
+                    size <= 0 -> "Видео: ${intent.getStringExtra(EXTRA_VIDEO) ?: ""}"
+                    size <= limit -> "Видео ${mb(size)} — одним файлом"
+                    else -> "Видео ${mb(size)} — больше 2 ГБ, будет разрезано на ~${(size + limit - 1) / limit} части (Part 1, Part 2…; с Premium — до 4 ГБ на часть)"
+                }
+            }
+        }
+        val needsAccount = swVideo.isChecked || sendAt > 0
+        val ready = com.dave.framegrabber.tgclient.Tg.state == com.dave.framegrabber.tgclient.Tg.State.READY
+        txtAccount.visibility = if (needsAccount && !ready) View.VISIBLE else View.GONE
+        txtAccount.text = "Видео и расписание отправляются через твой вход в Telegram — войди во вкладке «Канал»."
+    }
+
+    private fun mb(b: Long) = if (b >= 1L shl 30) String.format(java.util.Locale.US, "%.2f ГБ", b / (1L shl 30).toDouble())
+        else String.format(java.util.Locale.US, "%.0f МБ", b / (1L shl 20).toDouble())
+
+    private fun updateWhen() {
+        txtWhen.text = if (sendAt == 0) "Публикация: сразу"
+        else "Публикация: " + java.text.SimpleDateFormat("d MMMM, HH:mm", java.util.Locale("ru")).format(java.util.Date(sendAt * 1000L))
+        updateVideoInfo()
+    }
+
+    /** Now, or a date + time (Telegram publishes it by itself then). */
+    private fun pickWhen() {
+        AlertDialog.Builder(this).setItems(arrayOf("Сразу", "Запланировать на дату и время…")) { _, i ->
+            if (i == 0) { sendAt = 0; updateWhen(); return@setItems }
+            val c = java.util.Calendar.getInstance().apply { if (sendAt > 0) timeInMillis = sendAt * 1000L else add(java.util.Calendar.HOUR_OF_DAY, 1) }
+            android.app.DatePickerDialog(this, { _, y, m, day ->
+                c.set(y, m, day)
+                android.app.TimePickerDialog(this, { _, h, min ->
+                    c.set(java.util.Calendar.HOUR_OF_DAY, h); c.set(java.util.Calendar.MINUTE, min); c.set(java.util.Calendar.SECOND, 0)
+                    if (c.timeInMillis < System.currentTimeMillis() + 60_000) { toast("Это время уже прошло"); return@TimePickerDialog }
+                    sendAt = (c.timeInMillis / 1000).toInt(); updateWhen()
+                }, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE), true).show()
+            }, c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH), c.get(java.util.Calendar.DAY_OF_MONTH))
+                .apply { datePicker.minDate = System.currentTimeMillis() - 1000 }.show()
+        }.show()
+    }
+
+    /** Photos + video and/or a schedule: sent through the account, in the background. */
+    private fun sendViaAccount(text: String, studio: String) {
+        if (com.dave.framegrabber.tgclient.Tg.state != com.dave.framegrabber.tgclient.Tg.State.READY) {
+            AlertDialog.Builder(this).setTitle("Нужен вход в Telegram")
+                .setMessage("Видео после фото и отложенные посты отправляются через твой аккаунт. Войди во вкладке «Канал» (один раз), потом опубликуй снова.\n\nИли выключи видео и выбери «Сразу» — тогда фото уйдут через бота, как раньше.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        val channel = store.chatUsername.removePrefix("@").ifBlank { com.dave.framegrabber.tgclient.TgKeys(this).feedChannel }
+        if (channel.isBlank()) { toast("Не знаю @имя канала — укажи канал во вкладке «Канал»"); return }
+        if (com.dave.framegrabber.tgclient.TgPublish.running) { toast("Предыдущий пост ещё отправляется"); return }
+        com.dave.framegrabber.tgclient.TgPublish.start(this, com.dave.framegrabber.tgclient.TgPublish.Request(
+            channel, files.toList(), text, if (swVideo.isChecked) videoUri else null,
+            intent.getStringExtra(EXTRA_VIDEO) ?: "video", editVideoCaption.text.toString(), sendAt,
+        ))
+        recordPost(studio, 0)
+        AlertDialog.Builder(this)
+            .setTitle(if (sendAt > 0) "Пост запланирован" else "Публикуется ✓")
+            .setMessage((if (sendAt > 0) "Фото" + (if (swVideo.isChecked) " и видео" else "") + " загружаются сейчас, а в канале появятся в ${txtWhen.text.toString().substringAfter(": ")}. "
+                else "Фото" + (if (swVideo.isChecked) " и видео" else "") + " отправляются в фоне. ") +
+                "Прогресс — в уведомлении, приложение можно закрыть.")
+            .setPositiveButton("Готово") { _, _ ->
+                setResult(RESULT_OK, Intent().putExtra(EXTRA_OPEN_FEED, true)); finish()
+            }
+            .setOnCancelListener { finish() }
+            .show()
     }
 
     override fun onPause() {
@@ -402,14 +539,19 @@ class PostActivity : Activity() {
             // already posted: say what exactly, and ask
             b.setTitle("⚠ Это уже было в канале")
                 .setMessage(describe(dup) + "\n\nВсё равно опубликовать?")
-                .setPositiveButton("Опубликовать") { _, _ -> send(text, studio) }
+                .setPositiveButton("Опубликовать") { _, _ -> route(text, studio) }
         } else {
             b.setTitle("Опубликовать в «${store.chatTitle.ifEmpty { store.chat }}»?")
-                .setMessage(text + if (withoutTags) "\n\n(без хэштегов)" else "")
-                .setPositiveButton("Опубликовать") { _, _ -> send(text, studio) }
+                .setMessage(text + (if (withoutTags) "\n\n(без хэштегов)" else "") +
+                    (if (swVideo.isChecked) "\n\n+ видео после фото" else "") +
+                    (if (sendAt > 0) "\n\n" + txtWhen.text else ""))
+                .setPositiveButton(if (sendAt > 0) "Запланировать" else "Опубликовать") { _, _ -> route(text, studio) }
         }
         b.setNegativeButton("Отмена", null).show()
     }
+
+    private fun route(text: String, studio: String) =
+        if (swVideo.isChecked || sendAt > 0) sendViaAccount(text, studio) else send(text, studio)
 
     private fun send(text: String, studio: String) {
         posting = true
@@ -448,19 +590,24 @@ class PostActivity : Activity() {
         }
     }
 
-    private fun onPosted(msgId: Long, studio: String) {
+    /** Remembers the post (duplicates check, names, tag use) and clears the draft. */
+    private fun recordPost(studio: String, msgId: Long) {
         posted = true
-        setBusy(false, null, 0)
         store.rememberUsed(studio, models)
         runCatching {
             log.add(PostLog.Post(
-                System.currentTimeMillis(), store.chat, msgId, postLink(msgId), studio, models.toList(), tags.ordered(),
+                System.currentTimeMillis(), store.chat, msgId, if (msgId > 0) postLink(msgId) else null, studio, models.toList(), tags.ordered(),
                 intent.getStringExtra(EXTRA_VIDEO) ?: "", videoKey, files.mapNotNull { hashes[it.path] },
             ))
         }
         com.dave.framegrabber.telegram.TagLibrary(this).countUse(tags.selected)
         store.clearDraft()
         setResult(RESULT_OK, Intent())
+    }
+
+    private fun onPosted(msgId: Long, studio: String) {
+        setBusy(false, null, 0)
+        recordPost(studio, msgId)
         val link = postLink(msgId)
         val b = AlertDialog.Builder(this)
             .setTitle("Опубликовано ✓")

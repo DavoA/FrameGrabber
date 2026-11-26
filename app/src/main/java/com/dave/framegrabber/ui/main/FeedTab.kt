@@ -341,23 +341,44 @@ class FeedTab(private val s: MainScreen) {
         )
     }
 
+    /** Downloads: progress, queue; tap one → pause / continue / cancel / watch. */
     private fun showDownloads() {
         val jobs = TgDownloads.jobs.toList().reversed()
         if (jobs.isEmpty()) { act.toast("Загрузок пока нет"); return }
         val lines = jobs.map { j ->
             val st = when (j.stage) {
+                "queued" -> "в очереди"
                 "downloading" -> "${(j.fraction * 100).toInt()}% · ${size(j.done)} из ${size(j.total)}"
+                "paused" -> "⏸ пауза · ${(j.fraction * 100).toInt()}%"
                 "copying" -> "сохраняю…"
-                "finished" -> "✓ скачано"
+                "joining" -> "соединяю части… ${(j.fraction * 100).toInt()}%"
+                "finished" -> if (j.isJoin) "✓ соединено" else "✓ скачано"
                 "cancelled" -> "отменено"
                 else -> "ошибка: ${j.error}"
             }
-            "${j.name}\n$st"
+            (if (j.isJoin) "🔗 " else "") + "${j.name}\n$st"
         }.toTypedArray()
         AlertDialog.Builder(act, R.style.DialogTheme).setTitle("Загрузки").setItems(lines) { _, i ->
             val j = jobs[i]
-            TgDownloads.saved(act, j.key)?.let { s.playerTab.play(it, name = j.name) }
-        }.setPositiveButton("Закрыть", null).show()
+            val actions = buildList {
+                when (j.stage) {
+                    "downloading", "queued" -> { add("Пауза"); add("Отменить") }
+                    "paused" -> { add("Продолжить"); add("Отменить") }
+                    "finished" -> add("Смотреть")
+                }
+            }
+            if (actions.isEmpty()) return@setItems
+            AlertDialog.Builder(act, R.style.DialogTheme).setTitle(j.name).setItems(actions.toTypedArray()) { _, k ->
+                when (actions[k]) {
+                    "Пауза" -> TgDownloads.pause(j.key)
+                    "Продолжить" -> TgDownloads.resume(j.key)
+                    "Отменить" -> TgDownloads.cancel(j.key)
+                    "Смотреть" -> (j.uri ?: TgDownloads.saved(act, j.key))?.let { s.playerTab.play(it, name = j.name) }
+                }
+            }.show()
+        }.setPositiveButton("Закрыть", null)
+            .setNeutralButton("Пауза всем") { _, _ -> TgDownloads.jobs.filter { it.stage == "downloading" || it.stage == "queued" }.forEach { TgDownloads.pause(it.key) } }
+            .show()
     }
 
     // ================================================================ feed loading
@@ -581,8 +602,25 @@ class FeedTab(private val s: MainScreen) {
         }
         if (reachedEnd) { act.toast("Этот пост не нашёлся в ленте"); return }
         pendingJump = id
-        hitsText.text = "${hit + 1} / ${hits.size} …"
+        if (hits.isNotEmpty()) hitsText.text = "${hit + 1} / ${hits.size} …" else sub.text = "Листаю к посту…"
         loadMore(untilId = id)
+    }
+
+    /** The post with this message, outlined (from a model's page). */
+    private var focusId = 0L
+
+    fun jumpToMessage(id: Long) {
+        if (chatId == 0L) return
+        closeSearch()
+        focusId = id
+        adapter.notifyDataSetChanged()
+        jumpToId(id)
+    }
+
+    /** A model's page: her photo, name and all her posts. */
+    fun openModel(name: String) {
+        if (chatId == 0L) return
+        act.startActivityForResult(com.dave.framegrabber.ui.telegram.ModelActivity.intent(act, chatId, name), com.dave.framegrabber.MainActivity.REQ_STATS)
     }
 
     private fun closeSearch() {
@@ -640,7 +678,10 @@ class FeedTab(private val s: MainScreen) {
                 else if (added > 0) list.setSelectionFromTop(keepPos + added, keepTop)
                 if (pendingJump != 0L) {
                     val id = pendingJump
-                    if (posts.any { id in it.ids } || reachedEnd) { hitsText.text = "${hit + 1} / ${hits.size}"; jumpToId(id) }
+                    if (posts.any { id in it.ids } || reachedEnd) {
+                        if (hits.isNotEmpty()) hitsText.text = "${hit + 1} / ${hits.size}" else sub.text = "@$chatName"
+                        jumpToId(id)
+                    }
                 }
             }
         }
@@ -860,14 +901,16 @@ class FeedTab(private val s: MainScreen) {
         val v = m.video ?: return
         val k = key(m)
         TgDownloads.saved(act, k)?.let { s.playerTab.play(it, name = v.fileName.ifBlank { null }); return }
-        if (TgDownloads.active(k) != null) {
-            AlertDialog.Builder(act, R.style.DialogTheme).setMessage("Отменить загрузку?")
-                .setPositiveButton("Отменить") { _, _ -> TgDownloads.cancel(k) }
-                .setNegativeButton("Нет", null).show()
+        TgDownloads.active(k)?.let { j ->
+            val paused = j.stage == "paused"
+            AlertDialog.Builder(act, R.style.DialogTheme).setTitle(j.name)
+                .setItems(arrayOf(if (paused) "Продолжить" else "Пауза", "Отменить загрузку")) { _, i ->
+                    if (i == 1) TgDownloads.cancel(k) else if (paused) TgDownloads.resume(k) else TgDownloads.pause(k)
+                }.show()
             return
         }
         TgDownloads.start(act, k, v)
-        act.toast("Скачиваю — прогресс в уведомлении")
+        act.toast(if (TgDownloads.active(k)?.stage == "queued") "В очереди — начнётся, когда закончатся текущие" else "Скачиваю — прогресс в уведомлении")
     }
 
     private inner class Adapter : BaseAdapter() {
@@ -912,9 +955,10 @@ class FeedTab(private val s: MainScreen) {
         // videos: one line each with length, size and the download state
         val videos = post.media.filter { it.video != null }
         videos.forEachIndexed { i, m -> card.addView(videoRow(m, if (videos.size > 1) "Part ${i + 1}" else "Видео")) }
+        if (videos.size > 1) card.addView(partsRow(videos))
 
         // the found post you jumped to (search ▲ ▼) is outlined
-        if (hit in hits.indices && hits[hit] in post.ids) card.foreground = act.getDrawable(R.drawable.fg_selected)
+        if ((hit in hits.indices && hits[hit] in post.ids) || focusId in post.ids) card.foreground = act.getDrawable(R.drawable.fg_selected)
 
         // videos only (Part 1, Part 2…): their own caption isn't needed under the download rows
         val onlyVideos = post.media.isNotEmpty() && post.media.all { it.video != null }
@@ -1014,6 +1058,67 @@ class FeedTab(private val s: MainScreen) {
         return f
     }
 
+    /** Name for the joined video: the parts' file name without «part 1» / «(часть 1 из 2)». */
+    private fun joinName(videos: List<Media>): String {
+        val n = videos.first().video!!.fileName.substringBeforeLast('.')
+            .replace(Regex("""\s*\(часть \d+ из \d+\)"""), "")
+            .replace(Regex("""[\s_.-]*part[\s_.-]*\d+""", RegexOption.IGNORE_CASE), "")
+            .trim()
+        return n.ifBlank { "telegram_${videos.first().msgId}" }
+    }
+
+    /** A post with Part 1, Part 2…: download all (and join them into one video like the original). */
+    private fun partsRow(videos: List<Media>): View {
+        val postKey = key(videos.first())
+        val keys = videos.map { key(it) }
+        val joined = TgDownloads.joined(act, postKey)
+        val joinJob = TgDownloads.active("join:$postKey")
+        val savedCount = keys.count { TgDownloads.saved(act, it) != null }
+        val row = LinearLayout(act).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_row)
+            setPadding((12 * d).toInt(), (8 * d).toInt(), (8 * d).toInt(), (8 * d).toInt())
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (6 * d).toInt() }
+        }
+        row.addView(TextView(act).apply {
+            textSize = 13f
+            setTextColor(act.tc(if (joined != null) R.color.accent else R.color.text))
+            text = when {
+                joinJob != null -> "Соединяю части… ${(joinJob.fraction * 100).toInt()}%"
+                joined != null -> "✓ Соединено в одно видео"
+                savedCount == keys.size -> "Все ${keys.size} части скачаны"
+                TgDownloads.jobs.any { j -> j.key in keys && j.stage == "queued" } -> "Части в очереди на скачивание…"
+                else -> "Целиком: ${keys.size} части · ${size(videos.sumOf { maxOf(it.video!!.video.size, it.video!!.video.expectedSize) })}"
+            }
+        })
+        val buttons = LinearLayout(act).apply { gravity = Gravity.END; setPadding(0, (6 * d).toInt(), 0, 0) }
+        fun btn(t: String, click: () -> Unit) = buttons.addView(Button(act, null, 0, R.style.BtnSecondary).apply {
+            text = t; textSize = 13f; gravity = Gravity.CENTER
+            minHeight = (38 * d).toInt(); minimumHeight = (38 * d).toInt()
+            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { marginStart = (6 * d).toInt() }
+            setOnClickListener { click() }
+        })
+        val parts = videos.map { key(it) to it.video!! }
+        when {
+            joinJob != null -> {}
+            joined != null -> {
+                btn("▶ Целиком") { s.playerTab.play(joined, name = joinName(videos)) }
+                if (savedCount > 0) btn("Удалить части") {
+                    AlertDialog.Builder(act, R.style.DialogTheme).setMessage("Удалить скачанные части ($savedCount)? Целое видео останется.")
+                        .setPositiveButton("Удалить") { _, _ -> TgDownloads.deleteParts(act, keys) }
+                        .setNegativeButton("Отмена", null).show()
+                }
+            }
+            savedCount == keys.size -> btn("Соединить") { TgDownloads.join(act, postKey, keys, joinName(videos)); act.toast("Соединяю — прогресс в уведомлении") }
+            else -> {
+                btn("⬇ Все части") { TgDownloads.startAll(act, postKey, parts, null); act.toast("Части добавлены в загрузки") }
+                btn("⬇ И соединить") { TgDownloads.startAll(act, postKey, parts, joinName(videos)); act.toast("Скачаю все части и соединю в одно видео") }
+            }
+        }
+        if (buttons.childCount > 0) row.addView(buttons)
+        return row
+    }
+
     private fun videoRow(m: Media, label: String): View {
         val v = m.video!!
         val k = key(m)
@@ -1031,6 +1136,8 @@ class FeedTab(private val s: MainScreen) {
         top.addView(TextView(act).apply {
             text = when {
                 job != null && job.stage == "copying" -> "Сохраняю в галерею…"
+                job != null && job.stage == "queued" -> "$label · в очереди"
+                job != null && job.stage == "paused" -> "$label · ⏸ ${(job.fraction * 100).toInt()}%"
                 job != null -> "${(job.fraction * 100).toInt()}% · ${size(job.done)} из ${size(job.total)}"
                 else -> info
             }
@@ -1040,7 +1147,8 @@ class FeedTab(private val s: MainScreen) {
         })
         top.addView(Button(act, null, 0, R.style.BtnSecondary).apply {
             text = when {
-                job != null -> "Отменить"
+                job != null && job.stage == "paused" -> "▶ Дальше"
+                job != null -> "⏸ / ✕"
                 saved != null -> "▶ Смотреть"
                 else -> "⬇ Скачать"
             }
@@ -1051,7 +1159,7 @@ class FeedTab(private val s: MainScreen) {
         row.addView(top)
         if (job != null) row.addView(ProgressBar(act, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000; progress = (job.fraction * 1000).toInt()
-            isIndeterminate = job.stage == "copying"
+            isIndeterminate = job.stage == "copying" || job.stage == "queued"
             progressTintList = android.content.res.ColorStateList.valueOf(act.tc(R.color.primaryBright))
             layoutParams = LinearLayout.LayoutParams(-1, (6 * d).toInt()).apply { topMargin = (6 * d).toInt() }
         })
@@ -1076,10 +1184,11 @@ class FeedTab(private val s: MainScreen) {
         }
         // «Studio - Model A & Model B»: each name is tappable = search the channel for it
         val nameColor = act.tc(R.color.primaryBright)
-        nameRanges(c.text).forEach { (st, en) ->
+        // the studio (first) → search; a model → her page
+        nameRanges(c.text).forEachIndexed { i, (st, en) ->
             val name = c.text.substring(st, en)
             sp.setSpan(object : ClickableSpan() {
-                override fun onClick(w: View) { search(name) }
+                override fun onClick(w: View) { if (i == 0) search(name) else openModel(name) }
                 override fun updateDrawState(ds: TextPaint) { ds.color = nameColor; ds.isUnderlineText = false; ds.isFakeBoldText = true }
             }, st, en, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }

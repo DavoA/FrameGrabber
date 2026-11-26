@@ -124,6 +124,10 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:theme="@style/AppTheme" />
         <activity
+            android:name=".ui.telegram.ModelActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+        <activity
             android:name=".ui.telegram.StatsActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
@@ -137,6 +141,10 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
+        <service
+            android:name=".tgclient.TgPublishService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <service
             android:name=".tgclient.TgDownloadService"
             android:exported="false"

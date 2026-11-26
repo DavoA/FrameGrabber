@@ -409,6 +409,36 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" />
 
+    <TextView
+        style="@style/Label"
+        android:paddingTop="18dp"
+        android:text="РЕЗЕРВНАЯ КОПИЯ"
+        android:letterSpacing="0.1" />
+    <TextView
+        style="@style/SubHint"
+        android:text="Хэштеги, имена, бот и ключи Telegram, папки и метки плеера, цвет, фото моделей — в один файл в Download/FrameGrabber. После переустановки восстанови из него." />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="8dp">
+        <Button
+            android:id="@+id/btnBackupSave"
+            style="@style/BtnSecondary"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Сохранить копию" />
+        <Button
+            android:id="@+id/btnBackupRestore"
+            style="@style/BtnSecondary"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:text="Восстановить" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/btnDone"
         style="@style/BtnPrimary"

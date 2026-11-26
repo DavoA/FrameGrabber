@@ -89,7 +89,7 @@ class TelegramPick(private val s: MainScreen) {
             }.getOrNull() ?: 0L
         } ?: 0L
         val key = com.dave.framegrabber.telegram.PostLog.videoKey(size, s.video.engine?.durationUs ?: 0)
-        s.act.openPostEditor(PostActivity.intent(s.act, picked.map { it.file.path }, picked.map { it.timeUs }, s.video.baseName, key))
+        s.act.openPostEditor(PostActivity.intent(s.act, picked.map { it.file.path }, picked.map { it.timeUs }, s.video.baseName, key, s.video.uri))
     }
 
     /** Posted: leave picking. */

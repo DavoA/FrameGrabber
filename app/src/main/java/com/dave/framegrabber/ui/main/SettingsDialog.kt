@@ -27,6 +27,7 @@ import com.dave.framegrabber.ui.dp
 import com.dave.framegrabber.ui.onTextChanged
 import com.dave.framegrabber.ui.showAnimated
 import com.dave.framegrabber.ui.toast
+import com.dave.framegrabber.ui.shareUri
 import com.dave.framegrabber.ui.widget.SynthwaveView
 
 /**
@@ -88,12 +89,37 @@ class SettingsDialog(private val s: MainScreen) {
         }
         showChoice(AppTheme.get(s.act), animate = false)
         bindSchemes(v)
+        bindBackup(v)
         optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
         optWave.setOnClickListener { choose(AppTheme.WAVE) }
     }
 
     /** Color scheme: green, pink, orange, red, purple — the app is redrawn in it. */
     private var openDlg: AlertDialog? = null
+
+    /** «Резервная копия»: save to Download/FrameGrabber, or restore from a file. */
+    private fun bindBackup(v: View) {
+        v.findViewById<View>(R.id.btnBackupSave).setOnClickListener {
+            s.io.execute {
+                val r = runCatching { com.dave.framegrabber.data.Backup.export(s.act) }
+                s.ui.post {
+                    r.onSuccess {
+                        AlertDialog.Builder(s.act).setTitle("Копия сохранена ✓")
+                            .setMessage("Download/FrameGrabber. В ней токен бота и ключи Telegram — не отправляй файл посторонним.")
+                            .setPositiveButton("OK", null)
+                            .setNeutralButton("Отправить себе") { _, _ -> s.act.shareUri(it, "application/json") }
+                            .show()
+                    }.onFailure { s.act.toast("Не удалось: ${it.message}") }
+                }
+            }
+        }
+        v.findViewById<View>(R.id.btnBackupRestore).setOnClickListener {
+            AlertDialog.Builder(s.act).setTitle("Восстановить из копии?")
+                .setMessage("Текущие настройки заменятся теми, что в файле. Потом приложение перезапустится.")
+                .setPositiveButton("Выбрать файл") { _, _ -> s.act.pickBackup() }
+                .setNegativeButton("Отмена", null).show()
+        }
+    }
 
     private fun bindSchemes(v: View) {
         val row = v.findViewById<android.widget.LinearLayout>(R.id.schemeRow)
