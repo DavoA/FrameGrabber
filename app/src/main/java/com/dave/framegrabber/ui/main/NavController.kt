@@ -55,9 +55,20 @@ class NavController(private val s: MainScreen) {
         val from = page
         page = target
         switchPanel(pages.getValue(from), pages.getValue(target), if (target.ordinal > from.ordinal) 1 else -1)
+        // quick taps on several tabs can leave an animation half-done: settle on the current page
+        s.ui.removeCallbacks(settle)
+        s.ui.postDelayed(settle, 500)
         highlight(from, false, animate = true)
         highlight(target, true, animate = true)
         if (target != Page.CAPTURE) s.video.pausePlayback()
+    }
+
+    private val settle = Runnable {
+        pages.forEach { (p, v) ->
+            if (p == page) {
+                if (v.visibility != View.VISIBLE || v.alpha < 1f) { v.animate().cancel(); v.visibility = View.VISIBLE; v.alpha = 1f; v.translationX = 0f }
+            } else if (v.visibility == View.VISIBLE) { v.animate().cancel(); v.visibility = View.GONE; v.alpha = 1f; v.translationX = 0f }
+        }
     }
 
     private fun highlight(p: Page, on: Boolean, animate: Boolean) {
