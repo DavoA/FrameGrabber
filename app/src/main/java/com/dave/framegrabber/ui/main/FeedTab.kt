@@ -1002,6 +1002,15 @@ class FeedTab(private val s: MainScreen) {
                 else -> {}
             }
         }
+        // «Studio - Model A & Model B»: each name is tappable = search the channel for it
+        val nameColor = act.getColor(R.color.primaryBright)
+        nameRanges(c.text).forEach { (st, en) ->
+            val name = c.text.substring(st, en)
+            sp.setSpan(object : ClickableSpan() {
+                override fun onClick(w: View) { search(name) }
+                override fun updateDrawState(ds: TextPaint) { ds.color = nameColor; ds.isUnderlineText = false; ds.isFakeBoldText = true }
+            }, st, en, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
         // a #tag: tap = search the channel for it
         Regex("#[\\p{L}\\p{N}_]+").findAll(c.text).forEach {
             val tag = it.value
@@ -1014,6 +1023,36 @@ class FeedTab(private val s: MainScreen) {
             sp.setSpan(ForegroundColorSpan(act.getColor(R.color.textDim)), it.range.first, it.range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         return sp
+    }
+
+    /** Where the studio and each model are in the caption's first line (start, end). */
+    private fun nameRanges(text: String): List<Pair<Int, Int>> {
+        var pos = 0
+        for (raw in text.split('\n')) {
+            val line = raw
+            val lineStart = pos
+            pos += raw.length + 1
+            val t = line.trim()
+            if (t.isEmpty() || t.startsWith("#")) continue
+            if (t.all { it == '-' || it == '—' || it == '–' || it == ' ' }) return emptyList()
+            val sep = Regex("""\s+[-–—]\s+""").find(line) ?: return emptyList()
+            val out = ArrayList<Pair<Int, Int>>()
+            fun add(from: Int, to: Int) {
+                var a = from; var b = to
+                while (a < b && line[a].isWhitespace()) a++
+                while (b > a && line[b - 1].isWhitespace()) b--
+                if (b > a) out += (lineStart + a) to (lineStart + b)
+            }
+            add(0, sep.range.first)
+            var start = sep.range.last + 1
+            while (true) {
+                val amp = line.indexOf('&', start)
+                if (amp < 0) { add(start, line.length); break }
+                add(start, amp); start = amp + 1
+            }
+            return out
+        }
+        return emptyList()
     }
 
     private fun size(b: Long): String = when {
