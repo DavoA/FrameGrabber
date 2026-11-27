@@ -19,15 +19,19 @@ jobs:
             curl -sSL -A "$UA" -c cj.txt -b cj.txt -D "out/$i.headers" -o "out/$i.html" "$url" || true
             echo "$i $url" >> out/index.txt
           done < .github/probe-urls.txt
-          # fastpic: follow the «Перейти к изображению» link with the same cookies
-          link=$(grep -o 'href="https://fastpic.org/view/[^"]*\.html?[^"]*"' out/1.html | head -1 | sed 's/href="//; s/"$//')
-          echo "link: $link" >> out/index.txt
-          curl -sSL -A "$UA" -c cj.txt -b cj.txt -e "$(sed -n 1p .github/probe-urls.txt)" -D out/f2.headers -o out/f2.html "$link" || true
-          big=$(grep -o 'https://i[0-9]*\.fastpic\.org/big/[^"'"'"' <>]*' out/f2.html | head -1 | sed 's/&amp;/\&/g')
-          echo "big: $big" >> out/index.txt
-          curl -sS -A "$UA" -e "$link" -D out/img.headers -o out/img.bin "$big" || true
-          file out/img.bin >> out/index.txt; ls -la out/img.bin >> out/index.txt
-          rm -f out/img.bin
+          # fastpic: follow the «Перейти к изображению» link with the same cookies — v4 and v6
+          for ipv in 4 6 any; do
+            o=""; [ "$ipv" != any ] && o="-$ipv"
+            rm -f cj2.txt
+            curl $o -sSL -A "$UA" -c cj2.txt -b cj2.txt -o p1.html "$(sed -n 1p .github/probe-urls.txt)" || true
+            link=$(grep -o 'href="https://fastpic.org/view/[^"]*\.html?[^"]*"' p1.html | head -1 | sed 's/href="//; s/"$//')
+            curl $o -sSL -A "$UA" -c cj2.txt -b cj2.txt -e "$(sed -n 1p .github/probe-urls.txt)" -o p2.html "$link" || true
+            big=$(grep -o 'https://i[0-9]*\.fastpic\.org/big/[^"'"'"' <>]*' p2.html | head -1 | sed 's/&amp;/\&/g')
+            code1=$(curl $o -s -A "$UA" -e "$link" -o img.bin -w '%{http_code} %{content_type} %{size_download}' "$big")
+            code2=$(curl $o -s -A "$UA" -b cj2.txt -e "$link" -o img.bin -w '%{http_code} %{content_type} %{size_download}' "$big")
+            code3=$(curl $o -s -A "$UA" -o img.bin -w '%{http_code} %{content_type} %{size_download}' "$big")
+            echo "ip=$ipv link=$link big=$big | ref: $code1 | ref+cookie: $code2 | bare: $code3" >> out/index.txt
+          done
           ls -la out
       - name: Save to branch «probe»
         run: |
