@@ -423,6 +423,19 @@
     <TextView
         style="@style/Label"
         android:paddingTop="18dp"
+        android:text="ПАМЯТЬ"
+        android:letterSpacing="0.1" />
+    <Button
+        android:id="@+id/btnStorage"
+        style="@style/BtnSecondary"
+        android:layout_width="match_parent"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="Место на телефоне — что сколько занимает" />
+
+    <TextView
+        style="@style/Label"
+        android:paddingTop="18dp"
         android:text="РЕЗЕРВНАЯ КОПИЯ"
         android:letterSpacing="0.1" />
     <TextView

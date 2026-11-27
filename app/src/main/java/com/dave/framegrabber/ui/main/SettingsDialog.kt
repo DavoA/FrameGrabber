@@ -91,6 +91,10 @@ class SettingsDialog(private val s: MainScreen) {
         bindSchemes(v)
         bindBackup(v)
         bindTorrents(v)
+        v.findViewById<View>(R.id.btnStorage).setOnClickListener {
+            openDlg?.dismiss()
+            s.act.startActivity(com.dave.framegrabber.ui.StorageActivity.intent(s.act))
+        }
         optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
         optWave.setOnClickListener { choose(AppTheme.WAVE) }
     }

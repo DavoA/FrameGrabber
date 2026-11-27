@@ -30,4 +30,12 @@ class FollowTest {
         st.toggleFollow("Test Model"); st.toggleFollow("Other Model")
         WatchJob.schedule(ctx)
     }
+
+    /** «Место на телефоне» opens and lists its groups without crashing. */
+    @Test fun storagePage() {
+        val a = inst.startActivitySync(com.dave.framegrabber.ui.StorageActivity.intent(ctx).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        Thread.sleep(4000)
+        a.finish()
+    }
+
 }
