@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths: [ '.github/probe-urls.txt' ]
+permissions:
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -18,5 +20,9 @@ jobs:
             echo "$i $url" >> out/index.txt
           done < .github/probe-urls.txt
           ls -la out
-      - uses: actions/upload-artifact@v4
-        with: { name: pages, path: out }
+      - name: Save to branch «probe»
+        run: |
+          cd out
+          git init -q -b probe && git add -A
+          git -c user.name=ci -c user.email=ci@local commit -qm "pages"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" probe
