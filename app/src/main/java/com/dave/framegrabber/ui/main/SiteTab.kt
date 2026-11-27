@@ -254,7 +254,7 @@ class SiteTab(private val s: MainScreen) {
         add.addView(plus)
         box.addView(add)
         box.addView(TextView(act).apply {
-            text = "Слова ищутся в названии раздачи и разделе. Короткие (до 4 букв, как «ts») — только целым словом."
+            text = "Слова ищутся в названии раздачи и разделе. Короткие (до 5 букв, как «ts», «trans») — только целым словом."
             textSize = 12f; setTextColor(act.tc(R.color.textDim)); setPadding(0, (8 * d).toInt(), 0, 0)
         })
         AlertDialog.Builder(act).setTitle("Скрывать в поиске")

@@ -31,14 +31,14 @@ class SiteStore(ctx: Context) {
         set(v) = sp.edit().putString("hidden", JSONArray(v.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()).toString()).apply()
 
     /**
-     * Does a torrent show a hidden word (in its title or section)? Short words (≤ 4 letters, like
+     * Does a torrent show a hidden word (in its title or section)? Short words (≤ 5 letters, like
      * «ts», «транс») only as whole words, longer ones anywhere («Transsexuals», «Шимейлы»).
      */
     fun isHidden(title: String, forum: String): Boolean {
         if (!hideOn) return false
         val t = (title + " " + forum).lowercase()
         return hidden.any { w ->
-            if (w.length <= 4) Regex("""(?<![\p{L}\p{N}])${Regex.escape(w)}(?![\p{L}\p{N}])""").containsMatchIn(t)
+            if (w.length <= 5) Regex("""(?<![\p{L}\p{N}])${Regex.escape(w)}(?![\p{L}\p{N}])""").containsMatchIn(t)
             else w in t
         }
     }
