@@ -44,6 +44,8 @@ class SiteParseTest {
   Продолжительность: 00:30:00
   <div class="sp-wrap"><div class="sp-title">Скриншоты</div><div class="sp-body">
    <a href="https://i.host/big1.jpg" class="postLink"><var class="postImg" title="https://i.host/t1.jpg">&#10;</var></a>
+   <div class="vsexshop-banner" data-configs="[]"><a href="https://vsexshop.ru/store/index/21"><img src="http://vpipi.com/assets/plab/1.gif" /></a></div><script>var x=1;</script>
+   <a href="https://dynspt.com/x"><img src="https://dynspt.com/b.png"></a>
    <a href="https://fastpic.org/view/1" class="postLink"><var class="postImg" title="https://i1.fastpic.org/thumb/2026/a.jpeg">&#10;</var></a>
   </div></div>
  </div>

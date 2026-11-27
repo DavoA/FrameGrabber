@@ -265,8 +265,15 @@ class SiteTab(private val s: MainScreen) {
         }
         w.setBackgroundColor(0xFF000000.toInt())
         w.webViewClient = object : WebViewClient() {
+            // ads: their requests get an empty answer (nothing loads, nothing is shown)
+            override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): android.webkit.WebResourceResponse? =
+                if (com.dave.framegrabber.site.Ads.isAd(req.url.toString()))
+                    android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                else null
+            override fun onPageCommitVisible(view: WebView, url: String) { hideAds(view) }
             override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
                 val u = req.url
+                if (com.dave.framegrabber.site.Ads.isAd(u.toString())) return true   // an ad link: stay here
                 return when (u.scheme) {
                     "http", "https" -> false
                     else -> { openOutside(u); true }   // magnet:, tg:, …
@@ -277,6 +284,7 @@ class SiteTab(private val s: MainScreen) {
                 progress.visibility = View.VISIBLE
             }
             override fun onPageFinished(view: WebView, url: String) {
+                hideAds(view)
                 progress.visibility = View.GONE
                 urlText.text = url.removePrefix("https://")
                 prefs.edit().putString(KEY_LAST, url).apply()
@@ -338,6 +346,16 @@ class SiteTab(private val s: MainScreen) {
                 save(runCatching { org.json.JSONArray("[$v]").getString(0) }.getOrDefault(v))
             }
         else save(com.dave.framegrabber.site.Lab.lastHtml)
+    }
+
+    /** The site's banner blocks hidden (and kept hidden when the page adds them later). */
+    private fun hideAds(v: WebView) {
+        val css = com.dave.framegrabber.site.Ads.CSS.replace("'", "\\'")
+        v.evaluateJavascript("""(function(){
+            if (!document.getElementById('fg-noads')) { var s=document.createElement('style'); s.id='fg-noads'; s.textContent='$css'; (document.head||document.documentElement).appendChild(s); }
+            document.querySelectorAll('iframe').forEach(function(f){ if (!/pornolab\.net/.test(f.src||'')) f.remove(); });
+            window.open = function(){ return null; };
+        })()""", null)
     }
 
     private fun openOutside(u: Uri) {

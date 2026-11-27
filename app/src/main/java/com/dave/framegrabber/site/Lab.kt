@@ -165,7 +165,8 @@ object Lab {
 
     fun topic(ctx: Context, id: Long): Topic = parseTopic(id, page(ctx, "viewtopic.php?t=$id"))
 
-    fun parseTopic(id: Long, html: String): Topic {
+    fun parseTopic(id: Long, raw: String): Topic {
+        val html = Ads.strip(raw)
         val title = Regex("""id="topic-title"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1)?.let { text(it) }
             ?: Regex("""<title>(.*?)</title>""", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1)?.let { text(it).substringBefore(" :: ") } ?: ""
         // the first post = the release description
@@ -204,13 +205,13 @@ object Lab {
         }
         Regex("""<var class="postImg[^"]*"[^>]*title="([^"]+)"""").findAll(body).forEach { m ->
             val thumb = abs(Html.fromHtml(m.groupValues[1], 0).toString())
-            if (!seen.add(thumb)) return@forEach
+            if (Ads.isAd(thumb) || !seen.add(thumb)) return@forEach
             val href = linked[m.groupValues[1]]?.let { abs(Html.fromHtml(it, 0).toString()) }
             out += Img(thumb, fullOf(thumb, href))
         }
         Regex("""<img[^>]+src="([^"]+)"""").findAll(body).forEach { m ->
             val u = abs(Html.fromHtml(m.groupValues[1], 0).toString())
-            if (u.contains("/smiles/") || u.contains("static.pornolab.net/templates") || !seen.add(u)) return@forEach
+            if (u.contains("/smiles/") || u.contains("static.pornolab.net/templates") || Ads.isAd(u) || !seen.add(u)) return@forEach
             out += Img(u, u)
         }
         return out
