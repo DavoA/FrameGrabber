@@ -235,6 +235,38 @@ object Lab {
 
     private val bigCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
 
+    /** What happened with the last big-picture lookups (for the report). */
+    val bigLog = java.util.concurrent.ConcurrentLinkedDeque<String>()
+
+    /**
+     * A page of another site (an image host), following its redirects ourselves — also
+     * http → https and fastpic.ru → fastpic.org, which Java won't follow on its own.
+     */
+    fun fetchText(ctx: Context, url: String): String? {
+        var u = url.replaceFirst(Regex("^http://"), "https://")
+        repeat(6) {
+            val c = (URL(u).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = false
+                connectTimeout = 15000; readTimeout = 20000
+                setRequestProperty("User-Agent", ua(ctx)); setRequestProperty("Referer", BASE)
+                setRequestProperty("Accept", "text/html,application/xhtml+xml,*/*;q=0.8")
+                setRequestProperty("Accept-Language", "ru,en;q=0.8")
+            }
+            try {
+                val code = c.responseCode
+                if (code in 300..399) {
+                    u = URL(URL(u), c.getHeaderField("Location") ?: return null).toString().replaceFirst(Regex("^http://"), "https://")
+                    return@repeat
+                }
+                if (code !in 200..299) { bigLog.add("$url → HTTP $code"); return null }
+                val cs = c.contentType?.substringAfter("charset=", "")?.trim()?.takeIf { it.isNotEmpty() }
+                    ?.let { runCatching { Charset.forName(it) }.getOrNull() } ?: Charsets.UTF_8
+                return c.inputStream.use { it.readBytes() }.toString(cs).also { if (bigLog.size < 40) bigLog.add("$url → ${it.length} симв.") }
+            } finally { c.disconnect() }
+        }
+        return null
+    }
+
     /**
      * The real full-size picture and the page to send as Referer. Image hosts like fastpic.org
      * only give the big picture through their «view» page (a signed address): that page is read
@@ -244,11 +276,7 @@ object Lab {
         val page = img.page ?: return img.full to BASE
         bigCache[page]?.let { return it }
         val found = runCatching {
-            val c = (URL(page).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15000; readTimeout = 20000
-                setRequestProperty("User-Agent", ua(ctx)); setRequestProperty("Referer", BASE)
-            }
-            val html = try { c.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8) } finally { c.disconnect() }
+            val html = fetchText(ctx, page) ?: return@runCatching null
             val un = { u: String -> Html.fromHtml(u, 0).toString().let { if (it.startsWith("//")) "https:$it" else it } }
             // fastpic: https://iNN.fastpic.org/big/…?md5=…&expires=…
             Regex("""(https?:)?//i\d+\.fastpic\.(?:org|ru)/big/[^"'\s<>]+""").find(html)?.value?.let(un)
@@ -257,6 +285,8 @@ object Lab {
                 ?: Regex("""<img[^>]+src="([^"]+)"[^>]+(?:id|class)="[^"]*(?:main|image|picture|big|full|show)[^"]*"""", RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)?.let(un)
         }.getOrNull()?.takeIf { it.startsWith("http") && !Ads.isAd(it) }
         val r = (found ?: img.full) to page
+        bigLog.add("$page ⇒ ${found ?: "не найдено, беру " + img.full}")
+        while (bigLog.size > 60) bigLog.pollFirst()
         bigCache[page] = r
         return r
     }
@@ -269,7 +299,9 @@ object Lab {
         val html = json.optString("html")
         val out = ArrayList<Img>()
         Regex("""<a[^>]+href="([^"]+)"[^>]*>\s*<img[^>]+src="([^"]+)"""").findAll(html).forEach {
-            out += Img(abs(Html.fromHtml(it.groupValues[2], 0).toString()), abs(Html.fromHtml(it.groupValues[1], 0).toString()))
+            val thumb = abs(Html.fromHtml(it.groupValues[2], 0).toString())
+            val href = abs(Html.fromHtml(it.groupValues[1], 0).toString())
+            if (!Ads.isAd(thumb)) out += Img(thumb, fullOf(thumb, href), href.takeIf { h -> !isImageUrl(h) })
         }
         if (out.isEmpty()) out += images(html)
         return out
@@ -318,14 +350,14 @@ object Lab {
     fun image(ctx: Context, url: String, max: Int, referer: String = BASE): Bitmap? {
         cache.get("$max|$url")?.let { return it }
         val bytes = runCatching {
-            var u = url
+            var u = url.replaceFirst(Regex("^http://"), "https://")
             var data: ByteArray? = null
             repeat(4) {
                 if (data != null) return@repeat
                 val c = open(ctx, u).apply { setRequestProperty("Referer", referer) }
                 try {
                     val code = c.responseCode
-                    if (code in 300..399) { u = URL(URL(u), c.getHeaderField("Location") ?: return@runCatching null).toString() }
+                    if (code in 300..399) { u = URL(URL(u), c.getHeaderField("Location") ?: return@runCatching null).toString().replaceFirst(Regex("^http://"), "https://") }
                     else if (code in 200..299) data = c.inputStream.use { inp -> ByteArrayOutputStream().also { inp.copyTo(it) }.toByteArray() }
                     else return@runCatching null
                 } finally { c.disconnect() }

@@ -95,9 +95,12 @@ class TorrentActivity : Activity() {
             setPadding((12 * d).toInt(), 0, 0, 0)
         }, LinearLayout.LayoutParams(0, -2, 1f))
         bar.addView(icon(R.drawable.ic_web, "Открыть на сайте") { openOnSite("viewtopic.php?t=$id") })
-        bar.addView(icon(R.drawable.ic_share, "Поделиться ссылкой") {
-            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, "${Lab.BASE}viewtopic.php?t=$id"), "Ссылка на раздачу"))
+        bar.addView(icon(R.drawable.ic_more, "Ещё") {
+            android.app.AlertDialog.Builder(this).setItems(arrayOf("Поделиться ссылкой", "Отчёт для исправлений (страница + картинки)")) { _, i ->
+                if (i == 0) startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, "${Lab.BASE}viewtopic.php?t=$id"), "Ссылка на раздачу"))
+                else saveReport()
+            }.show()
         })
         content.addView(bar)
         body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding((14 * d).toInt(), (4 * d).toInt(), (14 * d).toInt(), (28 * d).toInt()) }
@@ -116,12 +119,54 @@ class TorrentActivity : Activity() {
         setResult(RESULT_OK, Intent().putExtra(EXTRA_OPEN_URL, Lab.BASE + path)); finish()
     }
 
+    private var pageHtml = ""
+    private var topic: Lab.Topic? = null
+
+    /**
+     * Everything needed to fix the reading of this page: the page itself, the pictures found
+     * (small / big / host page) and what the hosts answered → Download/FrameGrabber, then share.
+     */
+    private fun saveReport() {
+        toast("Собираю отчёт…")
+        io.execute {
+            val t = topic
+            val sb = StringBuilder()
+            sb.append("=== FrameGrabber: отчёт о раздаче t=$id\n")
+            if (t != null) {
+                sb.append("poster: ${t.poster?.thumb} | ${t.poster?.full} | ${t.poster?.page}\n")
+                (listOfNotNull(t.poster) + t.images).take(6).forEach { img ->
+                    val (big, ref) = runCatching { Lab.bigOf(applicationContext, img) }.getOrElse { "ошибка: ${it.message}" to "" }
+                    val ok = runCatching { Lab.image(applicationContext, big, 400, ref) != null }.getOrDefault(false)
+                    sb.append("img: thumb=${img.thumb}\n     full=${img.full}\n     page=${img.page}\n     big=$big (загрузилась: $ok)\n")
+                    img.page?.let { p -> Lab.fetchText(applicationContext, p)?.let { h -> sb.append("     --- страница хостинга (начало):\n").append(h.take(6000)).append("\n") } }
+                }
+            }
+            sb.append("\n=== журнал:\n").append(Lab.bigLog.joinToString("\n"))
+            sb.append("\n\n=== страница раздачи:\n").append(pageHtml)
+            val r = runCatching {
+                com.dave.framegrabber.data.Output.write(this, "pornolab-report-$id.txt", "text/plain", com.dave.framegrabber.data.Output.Kind.DOWNLOAD) { o ->
+                    o.stream().use { it.write(sb.toString().toByteArray()) }
+                }
+            }
+            runOnUiThread {
+                r.onSuccess { uri ->
+                    android.app.AlertDialog.Builder(this).setTitle("Отчёт сохранён")
+                        .setMessage("Download/${Prefs.ALBUM}/pornolab-report-$id.txt — пришли его мне в чат.")
+                        .setPositiveButton("Отправить") { _, _ ->
+                            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
+                                .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Отчёт"))
+                        }.setNegativeButton("OK", null).show()
+                }.onFailure { toast("Не удалось: ${it.message}") }
+            }
+        }
+    }
+
     private fun load() {
         io.execute {
-            val r = runCatching { Lab.topic(applicationContext, id) }
+            val r = runCatching { Lab.topic(applicationContext, id).also { pageHtml = Lab.lastHtml } }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
-                r.onSuccess { show(it) }.onFailure { e ->
+                r.onSuccess { topic = it; show(it) }.onFailure { e ->
                     status.text = if (e is Lab.NeedLogin) "Нужно войти на сайт" else "Не удалось открыть: ${e.message}"
                     body.addView(Button(this, null, 0, R.style.BtnPrimary).apply {
                         text = if (e is Lab.NeedLogin) "Войти на сайте" else "Открыть на сайте"; gravity = Gravity.CENTER
