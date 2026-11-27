@@ -421,28 +421,7 @@ class TorrentActivity : Activity() {
         }
     }
 
-    private fun chooseFiles(t: Lab.Topic, bytes: ByteArray) {
-        val (name, files) = runCatching { com.dave.framegrabber.torrent.TorrentEngine.files(bytes) }.getOrElse { toast("Торрент не читается: ${it.message}"); return }
-        val E = com.dave.framegrabber.torrent.TorrentEngine
-        val videos = files.filter { E.isVideo(it.second) }
-        val checked = BooleanArray(files.size) { i -> if (videos.isEmpty()) true else E.isVideo(files[i].second) }
-        val labels = files.map { (_, p, sz) -> p.substringAfter('/').ifBlank { p } + "  ·  " + E.size(sz) }.toTypedArray()
-        fun total() = files.filterIndexed { i, _ -> checked[i] }.sumOf { it.third }
-        val dlg = android.app.AlertDialog.Builder(this)
-            .setTitle("Что скачать? (${files.size} файл.)")
-            .setMultiChoiceItems(labels, checked) { d, i, on -> checked[i] = on; (d as android.app.AlertDialog).setTitle("Выбрано: " + E.size(total())) }
-            .setPositiveButton("Скачать") { _, _ ->
-                val sel = files.indices.filter { checked[it] }
-                if (sel.isEmpty()) { toast("Ничего не выбрано"); return@setPositiveButton }
-                runCatching { E.add(this, bytes, t.title.ifBlank { name }, sel) }
-                    .onSuccess { toast("Качаю в приложении — прогресс в уведомлении и в «Сайт» → ★ → Загрузки") }
-                    .onFailure { toast("Не удалось начать: ${it.message}") }
-            }
-            .setNegativeButton("Отмена", null)
-            .create()
-        dlg.show()
-        dlg.setTitle("Выбрано: " + E.size(total()) + if (videos.isNotEmpty()) " (видео)" else "")
-    }
+    private fun chooseFiles(t: Lab.Topic, bytes: ByteArray) = TorrentsActivity.choose(this, bytes, t.title)
 
     private fun section(t: String) = TextView(this).apply {
         text = t; textSize = 15f; setTextColor(tc(R.color.accent)); typeface = Typeface.DEFAULT_BOLD

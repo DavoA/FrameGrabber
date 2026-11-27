@@ -86,7 +86,7 @@ class SavedActivity : Activity() {
             setBackgroundResource(R.drawable.bg_segment_group)
             setPadding((3 * d).toInt(), (3 * d).toInt(), (3 * d).toInt(), (3 * d).toInt())
         }
-        tabs = listOf("★ Закладки", "👁 Модели", "⬇ Загрузки").mapIndexed { i, t ->
+        tabs = listOf("★ Закладки", "👁 Модели").mapIndexed { i, t ->
             TextView(this).apply {
                 text = t; gravity = Gravity.CENTER; textSize = 14f
                 setPadding(0, (9 * d).toInt(), 0, (9 * d).toInt())
@@ -109,7 +109,7 @@ class SavedActivity : Activity() {
             t.setTextColor(tc(if (i == tab) R.color.text else R.color.textDim))
         }
         body.removeAllViews()
-        when (tab) { 0 -> bookmarks(); 1 -> models(); else -> downloads() }
+        when (tab) { 0 -> bookmarks(); else -> models() }
     }
 
     // ================================================================ torrent downloads (in the app)

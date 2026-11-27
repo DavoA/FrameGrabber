@@ -247,7 +247,7 @@ class TorrentService : Service() {
                 .setSmallIcon(R.drawable.ic_play)
                 .setContentTitle("Скачано ✓")
                 .setContentText(j.title.ifBlank { j.name } + " — в «Плеере»")
-                .setContentIntent(PendingIntent.getActivity(ctx, 3, Intent(ctx, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
+                .setContentIntent(PendingIntent.getActivity(ctx, 3, Intent(ctx, com.dave.framegrabber.ui.site.TorrentsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE))
                 .setAutoCancel(true).build())
         }
     }
@@ -291,7 +291,7 @@ class TorrentService : Service() {
             .setContentText("${(done * 100 / total)}% · ${TorrentEngine.size(done)} из ${TorrentEngine.size(total)} · ${TorrentEngine.size(rate)}/с")
             .setProgress(1000, (done * 1000 / total).toInt(), false)
             .setOngoing(true).setOnlyAlertOnce(true)
-            .setContentIntent(PendingIntent.getActivity(this, 2, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
+            .setContentIntent(PendingIntent.getActivity(this, 2, Intent(this, com.dave.framegrabber.ui.site.TorrentsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE))
             .addAction(Notification.Action.Builder(null, "Пауза",
                 PendingIntent.getService(this, 4, Intent(this, TorrentService::class.java).setAction(ACTION_PAUSE), PendingIntent.FLAG_IMMUTABLE)).build())
             .build()

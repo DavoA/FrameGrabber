@@ -75,6 +75,9 @@ class SiteTab(private val s: MainScreen) {
         s.h<View>(R.id.btnSiteHome).setOnClickListener { showNative() }
         s.h<View>(R.id.btnSiteWeb).setOnClickListener { showWeb(null) }
         s.h<View>(R.id.btnSiteSort).setOnClickListener { chooseSort() }
+        s.h<View>(R.id.btnSiteTorrents).setOnClickListener {
+            act.startActivityForResult(com.dave.framegrabber.ui.site.TorrentsActivity.intent(act), com.dave.framegrabber.MainActivity.REQ_TORRENT)
+        }
         s.h<View>(R.id.btnSiteSaved).setOnClickListener {
             act.startActivityForResult(com.dave.framegrabber.ui.site.SavedActivity.intent(act), com.dave.framegrabber.MainActivity.REQ_TORRENT)
         }

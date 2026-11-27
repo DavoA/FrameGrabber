@@ -32,24 +32,32 @@
             <ImageButton
                 android:id="@+id/btnSiteSort"
                 style="@style/IconBtn"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_marginStart="6dp"
                 android:contentDescription="Сортировка"
                 android:src="@drawable/ic_list" />
             <ImageButton
+                android:id="@+id/btnSiteTorrents"
+                style="@style/IconBtn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="Торренты"
+                android:src="@drawable/ic_download" />
+            <ImageButton
                 android:id="@+id/btnSiteSaved"
                 style="@style/IconBtn"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_marginStart="6dp"
                 android:contentDescription="Закладки и модели"
                 android:src="@drawable/ic_bookmark" />
             <ImageButton
                 android:id="@+id/btnSiteWeb"
                 style="@style/IconBtn"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_marginStart="6dp"
                 android:contentDescription="Сайт как есть"
                 android:src="@drawable/ic_web" />
