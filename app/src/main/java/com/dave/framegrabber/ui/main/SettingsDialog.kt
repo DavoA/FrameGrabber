@@ -92,6 +92,7 @@ class SettingsDialog(private val s: MainScreen) {
         bindBackup(v)
         bindTorrents(v)
         bindLock(v)
+        bindUpdate(v)
         v.findViewById<View>(R.id.btnStorage).setOnClickListener {
             openDlg?.dismiss()
             s.act.startActivity(com.dave.framegrabber.ui.StorageActivity.intent(s.act))
@@ -102,6 +103,35 @@ class SettingsDialog(private val s: MainScreen) {
 
     /** Color scheme: green, pink, orange, red, purple — the app is redrawn in it. */
     private var openDlg: AlertDialog? = null
+
+    /** «Обновление»: the installed version, check now, check by itself at start. */
+    private fun bindUpdate(v: View) {
+        val box = v.findViewById<android.widget.LinearLayout>(R.id.updateBox)
+        val d = s.act.resources.displayMetrics.density
+        val U = com.dave.framegrabber.data.Updater
+        fun build() {
+            box.removeAllViews()
+            box.addView(TextView(s.act).apply {
+                text = "Установлена версия ${U.current(s.act)}"; textSize = 13f; setTextColor(s.act.tc(R.color.textDim))
+                setPadding(0, (4 * d).toInt(), 0, 0)
+            })
+            box.addView(android.widget.Button(s.act, null, 0, R.style.BtnSecondary).apply {
+                text = "Проверить обновления"; gravity = android.view.Gravity.CENTER
+                layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (8 * d).toInt() }
+                setOnClickListener { openDlg?.dismiss(); U.checkNow(s.act) }
+            })
+            val auto = U.auto(s.act)
+            box.addView(TextView(s.act).apply {
+                text = (if (auto) "● " else "○ ") + "Проверять при запуске приложения"; textSize = 15f
+                setTextColor(s.act.tc(if (auto) R.color.text else R.color.textDim))
+                setBackgroundResource(R.drawable.bg_option); isSelected = auto
+                setPadding((14 * d).toInt(), (12 * d).toInt(), (14 * d).toInt(), (12 * d).toInt())
+                layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (8 * d).toInt() }
+                setOnClickListener { U.setAuto(s.act, !auto); build() }
+            })
+        }
+        build()
+    }
 
     /** «Защита»: PIN on entry, fingerprint, how soon it locks again. */
     private fun bindLock(v: View) {

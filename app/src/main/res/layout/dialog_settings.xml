@@ -436,6 +436,17 @@
     <TextView
         style="@style/Label"
         android:paddingTop="18dp"
+        android:text="ОБНОВЛЕНИЕ"
+        android:letterSpacing="0.1" />
+    <LinearLayout
+        android:id="@+id/updateBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        style="@style/Label"
+        android:paddingTop="18dp"
         android:text="ЗАЩИТА"
         android:letterSpacing="0.1" />
     <TextView

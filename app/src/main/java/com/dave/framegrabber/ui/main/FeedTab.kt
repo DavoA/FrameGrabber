@@ -72,6 +72,12 @@ class FeedTab(private val s: MainScreen) {
     private val searchEdit = s.h<EditText>(R.id.editFeedSearch)
     private val hitsText = s.h<TextView>(R.id.txtFeedHits)
     private val btnDown = s.h<View>(R.id.btnFeedDown)
+    private val btnFavs = s.h<android.widget.ImageButton>(R.id.btnFeedFavs)
+    private val favs = com.dave.framegrabber.tgclient.FeedFavs(act)
+    /** «Любимые»: only the posts marked ♥ are shown; [saved] keeps the whole feed meanwhile. */
+    private var favMode = false
+    /** New posts came while the favorites were shown: refresh when going back. */
+    private var missedNew = false
 
     /** Search mode: what is searched (null = the normal feed) and where the next page starts. */
     private var query: String? = null
@@ -145,7 +151,9 @@ class FeedTab(private val s: MainScreen) {
             if (adapter.count - list.lastVisiblePosition < 8) list.smoothScrollToPosition(adapter.count - 1)
             else list.setSelection(adapter.count - 1)
         }
+        btnFavs.setOnClickListener { if (favMode) closeFavs() else openFavs() }
         s.h<View>(R.id.btnFeedSearch).setOnClickListener {
+            if (favMode) closeFavs()
             searchRow.visibility = View.VISIBLE
             searchEdit.requestFocus()
             (act.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
@@ -389,6 +397,7 @@ class FeedTab(private val s: MainScreen) {
         if (name.isEmpty()) { askChannel(); return }
         posts.clear(); oldest = 0; reachedEnd = false; loadError = null; chatId = 0; userScrolled = false
         query = null; saved = null; searchRow.visibility = View.GONE; hits = emptyList(); hit = -1; pendingJump = 0
+        favMode = false; missedNew = false; favIcon()
         title.text = "@$name"; sub.text = "Загрузка…"
         adapter.notifyDataSetChanged()
         loading = true
@@ -416,6 +425,7 @@ class FeedTab(private val s: MainScreen) {
 
     private fun onNewMessage(m: TdApi.Message) {
         if (chatId == 0L || m.chatId != chatId) return
+        if (favMode) { missedNew = true; return }
         if (posts.any { m.id in it.ids }) return
         val media = mediaOf(m)
         val cap = captionOf(m.content)?.takeIf { it.text.isNotBlank() }
@@ -499,6 +509,7 @@ class FeedTab(private val s: MainScreen) {
      */
     private fun refreshInPlace() {
         if (Tg.state != Tg.State.READY || chatId == 0L) { reload(); return }
+        if (favMode) { loadFavs(); return }
         if (loading) return
         val chat = chatId
         val until = oldest
@@ -534,6 +545,85 @@ class FeedTab(private val s: MainScreen) {
         }
     }
 
+    // ================================================================ «Любимые»
+
+    private fun favIcon() {
+        btnFavs.setImageResource(if (favMode) R.drawable.ic_heart else R.drawable.ic_heart_outline)
+        btnFavs.imageTintList = if (favMode) android.content.res.ColorStateList.valueOf(act.tc(R.color.accent)) else null
+    }
+
+    private fun toggleFav(post: Post, icon: ImageView) {
+        if (chatId == 0L) return
+        val on = favs.toggle(chatId, post.ids)
+        icon.animate().scaleX(1.35f).scaleY(1.35f).setDuration(110).withEndAction {
+            icon.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+        }.start()
+        icon.setImageResource(if (on) R.drawable.ic_heart else R.drawable.ic_heart_outline)
+        icon.setColorFilter(act.tc(if (on) R.color.accent else R.color.textDim))
+        if (!on && favMode) {
+            // unmarked while looking at the favorites: it leaves the list
+            posts.remove(post)
+            adapter.notifyDataSetChanged()
+            sub.text = "♥ Любимые · ${posts.size}"
+        }
+        act.toast(if (on) "Добавлено в любимые" else "Убрано из любимых")
+    }
+
+    private fun openFavs() {
+        if (chatId == 0L) { act.toast("Сначала дождись загрузки канала"); return }
+        if (favs.count(chatId) == 0) { act.toast("Любимых пока нет — нажми ♡ под постом"); return }
+        if (query != null) closeSearch()
+        saved = Saved(ArrayList(posts), oldest, reachedEnd, list.firstVisiblePosition, list.getChildAt(0)?.top ?: 0)
+        favMode = true; missedNew = false
+        favIcon()
+        posts.clear()
+        loadFavs()
+    }
+
+    /** Fetches every favorite post from Telegram (albums whole), oldest at the top like the feed. */
+    private fun loadFavs() {
+        val chat = chatId
+        val all = favs.list(chat).flatMap { it.ids }.distinct()
+        loading = true
+        sub.text = "♥ Любимые…"
+        adapter.notifyDataSetChanged()
+        net.execute {
+            val got = ArrayList<TdApi.Message>()
+            var error: String? = null
+            all.chunked(100).forEach { part ->
+                val r = Tg.call(TdApi.GetMessages(chat, part.toLongArray()))
+                val m = r as? TdApi.Messages
+                if (m == null) error = Tg.errorOf(r) else got += m.messages.filterNotNull()
+            }
+            val ms = got.distinctBy { it.id }.sortedByDescending { it.id }
+            val grouped = group(ms)
+            s.ui.post {
+                loading = false
+                if (chat != chatId || !favMode) return@post
+                // posts deleted from the channel leave the favorites
+                if (error == null) favs.keepOnly(chat, ms.map { it.id }.toSet())
+                posts.clear(); posts += grouped
+                sub.text = "♥ Любимые · ${posts.size}"
+                adapter.notifyDataSetChanged()
+                list.setSelection(adapter.count - 1)
+                error?.let { act.toast(it) }
+            }
+        }
+    }
+
+    private fun closeFavs() {
+        if (!favMode) return
+        favMode = false
+        favIcon()
+        sub.text = "@$chatName"
+        val sv = saved; saved = null
+        posts.clear()
+        if (sv != null) { posts += sv.posts; oldest = sv.oldest; reachedEnd = sv.end }
+        adapter.notifyDataSetChanged()
+        if (sv != null) list.setSelectionFromTop(sv.pos, sv.top)
+        if (missedNew) { missedNew = false; refreshInPlace() }
+    }
+
     // ================================================================ search (like Telegram)
 
     /** Found message ids, newest first; [hit] = the one shown now. */
@@ -550,6 +640,7 @@ class FeedTab(private val s: MainScreen) {
     fun search(text: String) {
         val q = text.trim()
         if (q.isEmpty() || chatId == 0L) return
+        if (favMode) closeFavs()
         searchEdit.hideKeyboard()
         searchRow.visibility = View.VISIBLE
         if (searchEdit.text.toString() != q) searchEdit.setText(q)
@@ -611,6 +702,7 @@ class FeedTab(private val s: MainScreen) {
 
     fun jumpToMessage(id: Long) {
         if (chatId == 0L) return
+        if (favMode) closeFavs()
         closeSearch()
         focusId = id
         adapter.notifyDataSetChanged()
@@ -632,7 +724,7 @@ class FeedTab(private val s: MainScreen) {
     }
 
     private fun loadMore(untilId: Long = 0L) {
-        if (loading || reachedEnd || chatId == 0L) return
+        if (loading || reachedEnd || chatId == 0L || favMode) return
         loading = true
         adapter.notifyDataSetChanged()
         val chat = chatId
@@ -825,6 +917,8 @@ class FeedTab(private val s: MainScreen) {
             text = when {
                 loading -> "Загрузка…"
                 loadError != null -> loadError
+                favMode && posts.isEmpty() -> "Нет любимых постов"
+                favMode -> "♥ Любимые посты: ${posts.size}"
                 reachedEnd && posts.isEmpty() -> "Постов нет"
                 reachedEnd -> "Это самый первый пост"
                 else -> ""
@@ -875,6 +969,15 @@ class FeedTab(private val s: MainScreen) {
             contentDescription = "Удалить пост"
             setOnClickListener { askDelete(post) }
         }, LinearLayout.LayoutParams((32 * d).toInt(), (32 * d).toInt()))
+        val fav = favs.isFav(chatId, post.ids)
+        bottom.addView(ImageView(act).apply {
+            setImageResource(if (fav) R.drawable.ic_heart else R.drawable.ic_heart_outline)
+            setColorFilter(act.tc(if (fav) R.color.accent else R.color.textDim))
+            setBackgroundResource(R.drawable.btn_icon_glass)
+            val p = (6 * d).toInt(); setPadding(p, p, p, p)
+            contentDescription = if (fav) "Убрать из любимых" else "В любимые"
+            setOnClickListener { toggleFav(post, this) }
+        }, LinearLayout.LayoutParams((32 * d).toInt(), (32 * d).toInt()).apply { marginStart = (8 * d).toInt() })
         bottom.addView(TextView(act).apply {
             text = DATE.format(Date(post.date * 1000L))
             textSize = 11.5f

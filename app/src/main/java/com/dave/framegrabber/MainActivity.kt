@@ -68,6 +68,7 @@ class MainActivity : Activity() {
         }
 
         handleIncoming(intent)
+        if (savedInstanceState == null) com.dave.framegrabber.data.Updater.autoCheck(this)   // a new version on GitHub?
     }
 
     /**
@@ -96,6 +97,7 @@ class MainActivity : Activity() {
         super.onResume()
         bgView.running = AppTheme.get(this) == AppTheme.WAVE
         screen.onResume()
+        com.dave.framegrabber.data.Updater.onResume(this)   // back from «allow installing apps»
         // back in the app on the tracker: fresh results if they are old
         if (screen.nav.page == NavController.Page.SITE) screen.site.onShown()
     }
