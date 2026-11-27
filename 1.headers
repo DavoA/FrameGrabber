@@ -1,0 +1,10 @@
+HTTP/2 200 
+server: nginx
+date: Fri, 27 Nov 2026 07:20:56 GMT
+content-type: text/html; charset=windows-1251
+cache-control: private, pre-check=0, post-check=0, max-age=0
+expires: 0
+pragma: no-cache
+strict-transport-security: max-age=31536000;
+set-cookie: plm=1; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax
+

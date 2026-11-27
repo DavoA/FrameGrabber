@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<link rel="preconnect" href="//static.pornolab.net">
+<link rel="dns-prefetch" href="//i122.fastpic.org">
+<link rel="dns-prefetch" href="//i114.fastpic.org">
+<link rel="dns-prefetch" href="//i124.fastpic.org">
+<link rel="dns-prefetch" href="//images2.imgbox.com">
+<title>Правила пользования ресурсом PornoLab.net :: PornoLab.Net</title>
+
+<link rel="stylesheet" href="//static.pornolab.net/templates/default/css/main.css?v=56" type="text/css">
+<link rel="stylesheet" href="//static.pornolab.net/templates/default/css/theme.css?v=56" type="text/css">
+<link rel="shortcut icon" href="//static.pornolab.net/favicon.ico" type="image/x-icon">
+
+<link rel="search" type="application/opensearchdescription+xml" title="Поиск на Pornolab.net" href="//static.pornolab.net/opensearch.xml">
+
+<link rel="stylesheet" href="//static.pornolab.net/templates/default/css/fontawesome.css" type="text/css">
+<link rel="stylesheet" href="//static.pornolab.net/templates/default/css/font-awesome-animation.min.css" type="text/css">
+
+<script type="text/javascript" src="//static.pornolab.net/js/jquery.pack.js?v=30"></script>
+
+<script type="text/javascript">
+// jQuery 1.12: an exception inside one ready handler aborts every handler queued after it
+// (jQuery 3 isolates them). Isolate here, so one broken block cannot take the quick reply
+// buttons (posting_editor) or anything else down with it; the failure goes to the console
+// and, once per page, to jserr.php (log/js_ready_err.log) - that is how the culprit gets found.
+(function ($) {
+	if (!$ || !$.fn || !$.fn.ready) return;
+	var origReady = $.fn.ready, reported = 0;
+	function report (e) {
+		try { if (window.console && console.error) console.error('ready handler failed:', e); } catch (e2) {}
+		if (reported++ || !window.navigator || !navigator.sendBeacon || !window.URLSearchParams) return;
+		try {
+			var b = new URLSearchParams();
+			b.append('m', String((e && e.message) || e));
+			b.append('s', String((e && e.stack) || '').slice(0, 1500));
+			b.append('u', String(location.href).slice(0, 300));
+			navigator.sendBeacon("/forum/jserr.php", b);
+		} catch (e3) {}
+	}
+	$.fn.ready = function (fn) {
+		if (typeof fn !== 'function') return origReady.apply(this, arguments);
+		return origReady.call(this, function () {
+			try { return fn.apply(this, arguments); } catch (e) { report(e); }
+		});
+	};
+})(window.jQuery);
+</script>
+
+<script type="text/javascript" src="//static.pornolab.net/js/main.js?v=30"></script>
+
+<script type="text/javascript" src="//static.pornolab.net/js/bbcode.js?v=30"></script>
+<script type="text/javascript" src="//static.pornolab.net/js/bbmedia.js?v=2"></script>
+<style type="text/css">
+/* автовосстановленные скриншоты ([autoscreens] -> div.sp-wrap.ascr, содержимое из screens_view.php) */
+div.ascr-imgs a.ascr-a { display: inline-block; margin: 2px 3px; vertical-align: top; }
+div.ascr-imgs img.ascr-img { max-width: 100%; border: 1px solid rgba(128,128,128,0.35); }
+div.ascr-imgs a.ascr-txt { margin-right: 10px; }
+div.ascr-cap { font-size: 10px; opacity: 0.75; margin: 4px 2px 2px; }
+div.ascr-sheets { margin: 2px 0 4px; }
+div.ascr-sheets div.ascr-sheet { display: inline-block; vertical-align: top; margin: 2px 8px 4px 2px; max-width: 100%; }
+div.ascr-sheets img.ascr-sheet-img { max-width: 100%; border: 1px solid rgba(128,128,128,0.35); }
+div.ascr-sheets div.ascr-sheet-cap { font-size: 10px; opacity: 0.75; margin: 2px 0 0; }
+div.ascr-frames-h { font-size: 10px; opacity: 0.75; margin: 6px 2px 2px; }
+div.ascr-msg { margin: 6px 2px; opacity: 0.85; }
+span.ascr-err { color: #c33; }
+span.ascr-wait { opacity: 0.7; }
+div.ascr-media { margin: 8px 2px 2px; border-top: 1px solid rgba(128,128,128,0.3); padding-top: 6px; }
+div.ascr-media-h { font-size: 10px; opacity: 0.75; margin-bottom: 4px; }
+table.ascr-mt { border-collapse: collapse; font-size: 11px; }
+table.ascr-mt td { padding: 2px 10px 2px 0; vertical-align: top; }
+table.ascr-mt td.ascr-fn { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.ascr-mt td.ascr-ml { opacity: 0.9; }
+a.ascr-mi-on { font-weight: bold; }
+pre.ascr-pre { margin: 6px 0 2px; padding: 6px 8px; max-height: 340px; overflow: auto; font: 11px/1.35 Consolas, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.3); }
+/* thumbnail previews in posts (fastpic /thumb/, imgbox/imagebam/pixhost thumbs*) - no bigger than 350px by the larger side; moderators' request 28.08.2026. Full-size images and non-thumb URLs untouched */
+img.postImg[src*="/thumb/"], img.postImg[src*="thumbs"] { max-width: 350px; max-height: 350px; width: auto; height: auto; }
+</style>
+
+<script type="text/javascript">
+var postImg_MaxWidth = screen.width - 220;
+var postImgAligned_MaxWidth = Math.round(screen.width/3);
+var hidePostImg =	false;
+
+jQuery.expr[':'].regex = function(elem, index, match) {
+    var matchParams = match[3].split(','),
+        validLabels = /^(data|css):/,
+        attr = {
+            method: matchParams[0].match(validLabels) ? 
+                        matchParams[0].split(':')[0] : 'attr',
+            property: matchParams.shift().replace(validLabels,'')
+        },
+        regexFlags = 'ig',
+        regex = new RegExp(matchParams.join('').replace(/^\s+|\s+$/g,''), regexFlags);
+    return regex.test(jQuery(elem)[attr.method](attr.property));
+}
+
+function initPost(context)
+{
+	$('span.post-hr', context).html('<hr align="left" />');
+	initQuotes(context);
+	initExternalLinks(context);
+	initPostImages(context);
+	initPostVideos(context);
+	if (window.initPostMedia) initPostMedia(context);
+	initSpoilers(context);
+}
+function initQuotes(context)
+{
+	$('div.q', context).each(function(){
+		var $q = $(this);
+		var name = $(this).attr('head');
+		$q.before('<div class="q-head"><span>' + (name ? '<b>'+name+'</b> писал(а):' : '<b>Цитата:</b>') +'</span></div>');
+		
+		var quoted_pid;
+		if (quoted_pid = $q.children('u.q-post:first').text()) {
+			var href = 'viewtopic.php?p=' + quoted_pid + '#' + quoted_pid;
+			$q.siblings('div.q-head').find('span')
+				.prepend('<img src="//static.pornolab.net/templates/default/images/icon_latest_reply.gif" class="icon2" alt="->">')
+				.wrap('<a href="' + href + '" title="Перейти к цитируемому сообщению"></a>');
+		}
+	});
+}
+function initPostImages(context)
+{
+	if (hidePostImg) return;
+	var $in_spoilers = $('div.sp-body var.postImg', context);
+	$('var.postImg', context).not($in_spoilers).each(function(){
+		var $v = $(this);
+		var src = $v.attr('title');
+		var $img = $('<img src="'+ src +'" class="'+ $v.attr('class') +'" alt="pic" />');
+		$img = fixPostImage($img);
+		var maxW = ($v.hasClass('postImgAligned')) ? postImgAligned_MaxWidth : postImg_MaxWidth;
+		$img.bind('click', function(){ imgFit(this, maxW); });
+		if (user.opt_js.i_aft_l) {
+			$('#preload').append($img);
+			var loading_icon = '<a href="'+ src +'" target="_blank"><img src="//static.pornolab.net/templates/default/images/loading_3.gif" alt="" /></a>';
+			$v.html(loading_icon);
+			if ($.browser.msie) {
+				$v.after('<wbr>');
+			}
+			$img.one('load', function(){
+				imgFit(this, maxW);
+				$v.empty().append(this);
+			});
+		}
+		else {
+			$img.one('load', function(){ imgFit(this, maxW) });
+			$v.empty().append($img);
+			if ($.browser.msie) {
+				$v.after('<wbr>');
+			}
+		}
+	});
+}
+function initPostVideos(context)
+{
+	if (hidePostImg) return;
+	var $in_spoilers = $('div.sp-body var.postVideo', context);
+	$('var.postVideo', context).not($in_spoilers).each(function(){
+		var $v = $(this);
+		var src = $v.attr('title');
+		var $vid = $('<video class="'+ $v.attr('class') +'" controls alt="video"><source src="'+ src +'">Ваш браузер не поддерживает просмотр видео</video>');
+		$v.empty().append($vid);
+	});
+}
+function initSpoilers(context)
+{
+	$('div.sp-body', context).each(function(){
+		var $sp_body = $(this);
+		if ($sp_body.prev('div.sp-head').length) return;   // already initialised (re-init of a replaced post) - a second pass would add a second head
+		var name = $.trim(this.title) || 'скрытый текст';
+
+		var picUrlRegexStr = "((http)?s?&#58;(\/\/[^\"'].*?\.(?:png|jpg|jpeg|gif|png|svg)))";
+		var picUrlRegex    = new RegExp(picUrlRegexStr, "gi");
+		if (name.match(picUrlRegex)) {
+			name = name.replace(picUrlRegex, "<var class='postImg sp-pic-var' title='$1'><img src='$1' class='sp-pic' alt='pic'></var>"); // .replace + /g: String.prototype.replaceAll is missing in older browsers (FF<77, Safari<13.1) and broke the whole ready handler
+		}
+		this.title = '';
+		var $sp_head = $('<div class="sp-head folded clickable">'+ name +'</div>');
+		$sp_head.insertBefore($sp_body).click(function(e){
+			e.preventDefault();   // спойлер внутри ссылки ([url=…][spoiler]…, Viewer 19.10.2026, t=3317681): клик по шапке всплывал до <a> и открывал ссылку в новой вкладке, а «показывать спойлер открытым» (.click() на каждой шапке) открывал её сам при загрузке темы; preventDefault отменяет и переход, и нативный click() после jQuery-обработчиков
+			if (!$sp_body.hasClass('inited')) {
+				initPostImages($sp_body);
+				initPostVideos($sp_body);
+				var $sp_fold_btn = $('<div class="sp-fold clickable">[свернуть]</div>').click(function(e){
+					e.preventDefault();
+					$.scrollTo($sp_head, { duration:200, axis:'y', offset:-200 });
+					$sp_head.click().animate({opacity: 0.1}, 500).animate({opacity: 1}, 700);
+				});
+				$sp_body.prepend('<div class="clear"></div>').append('<div class="clear"></div>').append($sp_fold_btn).addClass('inited');
+			}
+			if (e.shiftKey) {
+				e.stopPropagation();
+				e.shiftKey = false;
+				var fold = $(this).hasClass('unfolded');
+				$('div.sp-head', $($sp_body.parents('td')[0])).filter( function(){ return $(this).hasClass('unfolded') ? fold : !fold } ).click();
+			} else {
+				$(this).toggleClass('unfolded');
+				//$sp_body.slideToggle('fast');
+				// no duration: an animated toggle() in jQuery 1.12 also animates WIDTH from 0, and a big pre-wrap/break-all
+				// [code] (400 KB base64, p=25433051) re-laid out char-per-line every frame - O(n^2), the tab hung (27.09.2026)
+				$sp_body.toggle();
+			}
+		});
+	});
+}
+// Автовосстановленные скриншоты: тег [autoscreens=topic_id]...[/autoscreens] рендерится спойлером
+// div.sp-wrap.ascr БЕЗ URL кадров (bbcode.php); по первому раскрытию содержимое берётся POST-ом из
+// screens_view.php — сервер отдаёт кадры только залогиненным с «живым» аккаунтом (посты/трафик),
+// модераторам и автору; гостю и пустому аккаунту показывается объяснение. 25.08.2026
+function ascrLoad($w)
+{
+	var $slot = $('div.ascr-slot', $w);
+	$w.data('ascrBusy', 1);
+	$slot.html('<span class="ascr-wait">загрузка...</span>');
+	$.ajax({ url: 'screens_view.php', type: 'POST', data: { t: $w.attr('data-t') }, dataType: 'json', timeout: 20000,
+		success: function(r) {
+			$w.data('ascrBusy', 0);
+			if (r && r.ok) {
+				$slot.html(r.html);
+					initSpoilers($slot);
+				if (hidePostImg) {
+					$('a.ascr-s', $slot).each(function(i){ $(this).text('скринлист ' + (i + 1)).addClass('ascr-txt'); });
+					$('a.ascr-a:not(.ascr-s)', $slot).each(function(i){ $(this).text('кадр ' + (i + 1)).addClass('ascr-txt'); });
+				}
+				$w.data('ascrDone', 1);
+			}
+			else {
+				var msg = (r && r.error) ? r.error : 'ошибка';
+				$slot.html('<div class="ascr-msg">' + msg + '</div>');
+				if (r && (r.code == 'guest' || r.code == 'inactive' || r.code == 'quota' || r.code == 'noaccess')) $w.data('ascrDone', 1);
+			}
+		},
+		error: function() {
+			$w.data('ascrBusy', 0);
+			$slot.html('<span class="ascr-err">не удалось загрузить, попробуйте ещё раз</span>');
+		}
+	});
+}
+$(function(){
+	// шапку спойлера создаёт initSpoilers() и вешает свой click — наш делегированный срабатывает после него
+	$(document).on('click', 'div.ascr > div.sp-head', function(){
+		var $w = $(this).closest('div.ascr');
+		if ($w.data('ascrDone') || $w.data('ascrBusy')) return;
+		if ($(this).hasClass('unfolded')) ascrLoad($w);
+	});
+	// «MediaInfo» у файла — показать/скрыть его <pre> (остальные прячем, чтобы не разъезжалось)
+	$(document).on('click', 'a.ascr-mi', function(e){
+		e.preventDefault();
+		var $m = $(this).closest('div.ascr-media'), i = $(this).attr('data-i'), $p = $('pre.ascr-pre[data-i="' + i + '"]', $m), vis = $p.is(':visible');
+		$('pre.ascr-pre', $m).hide();
+		$('a.ascr-mi', $m).removeClass('ascr-mi-on');
+		if (!vis) { $p.show(); $(this).addClass('ascr-mi-on'); }
+	});
+});
+// Mirror-aware rewrite of our own URLs inside posts (30.08.2026, moderator via Viewer, p=25407377): every pool
+// domain (pornolab.net/cc/biz/lib, any subdomain - static., dl., images.) becomes the CURRENT host with the
+// CURRENT page scheme. The lib mirror (EmerDNS, haproxy :80 only) has no https at all, so the old code, which
+// swapped the domain but kept the scheme, produced https://static.pornolab.lib/... that never loads (half of
+// the rank images in the FAQ post); on the https main site the same rule turns http:// images into https.
+var plPoolRe = /^https?:\/\/((?:[a-z0-9-]+\.)*?)(?:www\.)?pornolab.(lib|biz|cc|net)(?=[\/:?#]|$)/i;   // regex LITERAL: inside a string the template compiler eats '\' and '\.' turns into any-char = exponential backtracking on long URLs (30.08.2026 incident)
+function plLocalUrl(u)
+{
+	var host = window.location.hostname.replace(/^www\./, '');
+	return String(u).replace(plPoolRe, function(m, sub){ return window.location.protocol + '//' + sub + host; });
+}
+function initExternalLinks(context)
+{
+	$('a.postLink', context).each(function(){
+		var h = this.getAttribute('href') || '';
+		if (plPoolRe.test(h)) this.setAttribute('href', plLocalUrl(h));
+	});
+	$("a.postLink:not([href*='"+ window.location.hostname +"/'])", context).attr({ target: '_blank' });
+	$('img', context).each(function(){
+		var s = this.getAttribute('src') || '';
+		if (plPoolRe.test(s)) this.setAttribute('src', plLocalUrl(s));
+	});
+	$('var.postImg', context).each(function(){
+		if (plPoolRe.test(this.title)) this.title = plLocalUrl(this.title);
+	});
+}
+function fixPostImage ($img)
+{
+ var banned_image_hosts = /imagebanana|hidebehind|imageshack/i;
+	var src = $img[0].src;
+	if (src.match(banned_image_hosts)) {
+		$img.wrap('<a href="'+ this.src +'" target="_blank"></a>').attr({ src: "//static.pornolab.net/smiles/tr_oops.gif", title: "Прочтите правила выкладывания скриншотов!" });
+	}
+	return $img;
+}
+$(function(){
+	$('div.post_body, div.signature').each(function(){ initPost( $(this) ) });
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initPostVideos();
+    });
+
+    function initPostVideos(root) {
+        // root — контейнер, если посты подгружаются аяксом
+        var container = document;
+        var nodes = container.querySelectorAll('var.postVideo');
+
+        nodes.forEach(function (node) {
+            var url = node.getAttribute('title');
+            if (!url) return;
+
+            var isHls = /\.m3u8(\?|$)/i.test(url);
+
+            var video = document.createElement('video');
+            // сохраняем старые классы + добавляем embded-video
+            video.className = node.className + ' embded-video';
+            video.controls = true;
+            video.preload = 'metadata';
+
+            if (isHls) {
+                // HLS
+                if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Safari / iOS: native HLS when hls.js (cdn.jsdelivr) did not load - it is blocked for part of the audience
+                    if (window.Hls) {
+                        var hls = new Hls();
+                        hls.loadSource(url);
+                        hls.attachMedia(video);
+                    } else {
+                        video.src = url;
+                    }
+                } else if (window.Hls && Hls.isSupported()) {
+                    // Chrome / Firefox / Edge
+                    var hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                } else {
+                    // Совсем старый браузер — хотя бы ссылка
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.textContent = 'Скачать видео';
+                    node.parentNode.replaceChild(link, node);
+                    return;
+                }
+            } else {
+                // Обычное видео (mp4/webm)
+                video.src = url;
+            }
+
+            node.parentNode.replaceChild(video, node);
+        });
+    }
+</script>
+
+<script>
+	function is_touch_device() {
+		return (('ontouchstart' in window) ||
+				(navigator.maxTouchPoints > 0) ||
+				(navigator.msMaxTouchPoints > 0));
+	}
+</script>
+<script type="text/javascript">
+var BB            = {};
+var BB_ROOT       = "./";
+var cookieDomain  = ".pornolab.net";
+var cookiePath    = "/forum/";
+var cookieSecure  = 0;
+var cookiePrefix  = "bb_";
+var LOGGED_IN     = 0;
+var InfoWinParams = 'width=780,height=510,resizable=yes';
+
+var user = {
+	opt_js: {},
+
+	set: function(opt, val, days, reload) {
+		this.opt_js[opt] = val;
+		setCookie('opt_js', $.toJSON(this.opt_js), days);
+		if (reload) {
+			window.location.reload();
+		}
+	}
+}
+
+$(function(){
+	$('a.dl-stub').each(function(){
+		var $a = $(this);
+		var href = $a.attr('href');
+		var t_id = href.slice( href.lastIndexOf('=')+1 );
+		var event = ($.browser.opera) ? 'mouseover' : 'mousedown';
+		$a.bind(event, function(){
+			setCookie('bb_dl', t_id, 'SESSION')
+		});
+		/*$a.click(function(){
+			$('#dl-form').attr('action', href);
+			$('#dl-form').submit();
+			return false;
+		});*/
+	});
+			$("div.jumpbox").html('\
+		<span id="jumpbox-container"> \
+		<select id="jumpbox"> \
+			<option id="jumpbox-title" value="-1">&nbsp;&raquo;&raquo; Выберите форум для перехода &nbsp;</option> \
+		</select> \
+		</span> \
+		<input id="jumpbox-submit" type="button" value="Перейти" /> \
+	');
+	$('#jumpbox-container').one('click', function(){
+		$('#jumpbox-title').html('&nbsp;&nbsp; Загружается... &nbsp;');
+		var jumpbox_src = './../html/ajax/' + (0 ? 'jumpbox_user.html' : 'jumpbox_guest.html');
+		$(this).load(jumpbox_src);
+		$('#jumpbox-submit').click(function(){ window.location.href='./viewforum.php?f='+$('#jumpbox').val(); });
+	});
+	
+	$('.sp-open-all').click(function () {
+		var fold = $(this).hasClass('sp-open-uncollapsed');
+		$('div.sp-head').filter( function(){ return $(this).hasClass('unfolded') ? fold : !fold } ).click();
+		$(this).toggleClass('sp-open-uncollapsed');
+
+		if (!$(this).hasClass('sp-open-uncollapsed')) {
+			var $_this = $(this);
+			setTimeout(function() {
+				const y = $_this.offset().top - 100;
+				window.scrollTo({top: y, behavior: 'smooth'});
+			}, 200);
+		}
+		return false;
+	});
+});
+
+var ajax = new Ajax('ajax.php', 'POST', 'json');
+
+function getElText (e)
+{
+	var t = '';
+	if (e.textContent !== undefined) {
+		t = e.textContent;
+	}
+	else if (e.innerText !== undefined) {
+		t = e.innerText;
+	}
+	else {
+		t = jQuery(e).text();
+	}
+	return t;
+}
+function escHTML (txt) {
+	return txt.replace(/</g, '&lt;');
+}
+function cfm (txt)
+{
+	return window.confirm(txt);
+}
+function post2url (url, params) {
+	params = params || {};
+	var f = document.createElement('form');
+	f.setAttribute('method', 'post');
+	f.setAttribute('action', url);
+	params['form_token'] = '';
+	for (var k in params) {
+		var h = document.createElement('input');
+		h.setAttribute('type', 'hidden');
+		h.setAttribute('name', k);
+		h.setAttribute('value', params[k]);
+		f.appendChild(h);
+	}
+	document.body.appendChild(f);
+	f.submit();
+	return false;
+}
+</script>
+
+<!--[if lte IE 6]><script type="text/javascript">
+$(ie6_make_clickable_labels);
+
+$(function(){
+	$('div.menu-sub').prepend('<iframe class="ie-fix-select-overlap"></iframe>'); // iframe for IE select box z-index issue
+	Menu.iframeFix = true;
+});
+</script><![endif]-->
+
+
+<!--[if gte IE 7]><style type="text/css">
+input[type="checkbox"] { margin-bottom: -1px; }
+</style><![endif]-->
+
+<!--[if lte IE 6]><style type="text/css">
+.forumline th { height: 24px; padding: 2px 4px; }
+.menu-sub iframe.ie-fix-select-overlap { display: none; display/**/: block; position: absolute; z-index: -1; filter: mask(); }
+</style><![endif]-->
+
+<!--[if IE]><style type="text/css">
+.post-hr { margin: 2px auto; }
+.fieldsets div > p { margin-bottom: 0; }
+</style><![endif]-->
+
+<style type="text/css">
+img.t-spacer { width: 142px; margin-top: -1px; }
+.hidden, .menu-sub, #ajax-loading, #ajax-error, var.ajax-params, .sp-title, .q-post { display: none; }
+#adriver-240x120 { width: 240px; height: 120px; padding-bottom: 2px; margin-right: -2px; }
+#adriver-468x60, #pr-468x60  { width: 468px; height: 60px; }
+#dd-900x90 { width: 980px; }
+@media screen and (max-width: 1100px) {
+	#dd-900x90, #dd-900x90 > object { width: 620px; }
+}
+#latest_news table { width: 100%; }
+#sidebar1_wrap { margin-top: -4px; }
+/* temp */
+
+
+/* temp end */
+</style>
+
+</head>
+
+<body>
+
+<script type="text/javascript" src="//static.pornolab.net/js/bottom_message.js?v=30"></script>
+
+
+
+<!--cse-->
+<script type="text/javascript">
+$(function(){
+	// $('#cse-search-btn, #cse-search-btn-top').click(function(){
+	// 	var text_match_input_id = $(this).attr('href');
+	// 	var text_match = $('#'+text_match_input_id).val();
+	// 	if (text_match == '') {
+	// 		$('#'+text_match_input_id).addClass('hl-err-input').focus();
+	// 		return false;
+	// 	}
+	// 	$('#cse-text-match').val( text_match );
+	// 	$('#cse-submit-btn').click();
+	// 	return false;
+	// });
+
+	$('#quick-search').submit(function(){
+		var action = $('#search-action').val();
+		var txt = $('#search-text').val();
+		if (txt=='поиск...' || txt == '') {
+			$('#search-text').val('').addClass('hl-err-input').focus();
+			return false;
+		}
+		// if (action == 'cse') {
+		// 	$('#cse-search-btn-top').click();
+		// 	return false;
+		// }
+		// else {
+		// 	$(this).attr('action', action);
+		// }
+        $(this).attr('action', action);
+	});
+
+
+    // External search links (Google / DuckDuckGo). The input id comes from data-input (it used to sit in href,
+    // so "open in new tab" / middle click landed on /forum/text_match_input = 404, DrInch 11.09.2026).
+    // href is kept equal to the live search URL, so plain click, middle click, new tab and "copy link" all work.
+    function extSearchBind(sel, base) {
+        var $b = $(sel);
+        if (!$b.length) return;
+        var inputId = $b.attr('data-input') || $b.attr('href');
+        var $inp = $('#' + inputId);
+        function upd() {
+            $b.attr('href', base + encodeURIComponent($inp.val() || ''));
+        }
+        $b.attr({ 'data-input': inputId, target: '_blank', rel: 'noopener' });
+        upd();
+        $b.on('mousedown focus mouseenter', upd);
+        $inp.on('input change keyup', upd);
+    }
+    extSearchBind('#cse-search-btn', 'https://www.google.com/search?q=site:pornolab.net+');
+    extSearchBind('#ddg-search-btn', 'https://duckduckgo.com/?q=site:pornolab.net+');
+});
+</script>
+<div id="cse-form-holder" style="display: none;">
+<form action="search_cse.php" id="cse-search-box" accept-charset="utf-8">
+	<input type="hidden" name="cx" value="9187e436392724367" />
+	<input type="hidden" name="cof" value="FORID:9" />
+	<input type="hidden" name="ie" value="utf-8" />
+	<input type="text" name="q" size="60" value="" id="cse-text-match" />
+	<input type="submit" name="sa" value="Поиск в Google" id="cse-submit-btn" />
+</form>
+
+</div>
+<!--/cse-->
+
+<!-- <form method="post" action="" id="dl-form" style="display: none;"></form> -->
+
+
+<div id="preload" style="position: absolute; overflow: hidden; top: 0; left: 0; height: 1px; width: 1px;"></div>
+
+<div id="body_container">
+
+<!--
+    <div class="bypass-alert">
+        <div class="dCenter nowrap">
+        <a href="//pornolab.net/forum/viewtopic.php?t=2324898" style="color: red !important;">Просьба о помощи с переоформлением раздач</a>
+        </div>
+    </div>
+-->
+    <div class="bypass-alert" style="display: none;">
+        <div class="dCenter">
+			<a href="//pornolab.net/forum/viewtopic.php?t=3292788" style="color: darkred;">Если не работает Порнолаб - зайдите на Рутрекер!</a>
+            <a href="javascript: void(0)" onclick="store.set('bypass-alert-hide', 1); $('.bypass-alert').hide();" style="font-size: 10px; position: relative; top: -5px; margin-left: 10px; text-decoration: none;">[ Cкрыть ]</a>
+        </div>
+        <script>
+            $(function(){
+                if (!store.get('bypass-alert-hide')) {
+                    $('.bypass-alert').show();
+                }
+            });
+        </script>
+    </div>
+
+
+<!--************************************************************************-->
+<!--=COMMON_HEADER==========================================================-->
+
+<script type="text/javascript">
+if (top != self) {
+	allowed_top = /translate/i;
+	if (top.location.hostname != self.location.hostname && !top.location.hostname.match(allowed_top)) {
+		alert('in frame!'+'\n\n'+top.location.hostname);
+		top.location.href = self.document.location;
+	}
+}
+</script>
+
+
+
+<div id="pl-speedbar" style="display: block;"><table cellspacing="0" width="100%"><tr>
+	<!--<td style="padding: 1px 0 0 12px;"><img src="//static.pornolab.net/002/play-me.gif" width="16" height="16" alt="" /></td>-->
+	<td style="padding: 14px 12px 15px 12px; text-align: left;"><b id="pl-speedbar-a">&nbsp;</b></td>
+</tr></table></div>
+<script type="text/javascript">
+$(document).ready(function(){
+	var i    = 0;
+	var t    = 'target="_blank"';
+	var bn   = [];
+
+//			<a href="//pornolab.net/forum/viewtopic.php?t=2253962" style="color: blue;">Если не можешь залогиниться, почисти в браузере кэш и куки. Не пользуйся для входа appspot.com и адресом с dl. в начале !</a>
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=swingers_and_sexwifes_ru" target="_blank" style="color: red; font-size: 11pt;">Свингеры и сексвайф</a>'; i++;
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=swingers_and_sexwifes_en" target="_blank" style="color: blue; font-size: 11pt;">Свингеры и sexwife</a>'; i++;
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=sexwifes_ru_and_swingers" target="_blank" style="color: green; font-size: 11pt;">Сексвайф и свингеры</a>'; i++;
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=sexwifes_en_and_swingers" target="_blank" style="color: darkblue; font-size: 11pt;">Sexwife и свингеры</a>'; i++;
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=real_sex_dating" target="_blank" style="color: red; font-size: 11pt;">Реальные Секс-знакомства</a>'; i++;
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=sex_dating_swingers" target="_blank" style="color: blue; font-size: 11pt;">Секс-знакомства свингеров</a>'; i++;
+//	bn[i] = '<a href="http://www.swing-zone.com?utm_source=plab&utm_medium=sbar&utm_campaign=sex_dating_sexwifes" target="_blank" style="color: green; font-size: 11pt;">Секс-знакомства с сексвайф</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/konyak-opredelennogo-vozrasta/?promo_id=356754" target="_blank" style="color: red; font-size: 11pt;">Коньяк от 3-х лет до 60-ти лет</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/cognaq/?promo_id=356754" target="_blank" style="color: blue; font-size: 11pt;">Молдавский коньяк от 3-х лет до 60-ти лет</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/cognaq/?promo_id=356754" target="_blank" style="color: red; font-size: 11pt;">Коньяк от ординарного до коллекционного </a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/grand-vintazh-2007-cr-sh/?promo_id=356754" target="_blank" style="color: blue; font-size: 11pt;">Шампанское к Новому Году</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/shampanskoe/?promo_id=356754" target="_blank" style="color: red; font-size: 11pt;">Шампанское от ординарного до коллекционного</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/vino-opredelennogo-goda/?promo_id=356754" target="_blank" style="color: blue; font-size: 11pt;">Вино года рождения именинника</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/kalvados/?promo_id=356754" target="_blank" style="color: red; font-size: 11pt;">Кальвадос от 3-х до 7-и лет выдержки </a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/ledyanoe-vino/?promo_id=356754" target="_blank" style="color: blue; font-size: 11pt;">Ледяные вина - Ice Wine</a>'; i++;
+//	bn[i] = '<a href="http://www.onlyall.net/webasyst/category/vino/?promo_id=356754" target="_blank" style="color: red; font-size: 11pt;">Вино ординарное, марочное и коллекционное</a>'; i++;
+//	bn[i] = '<a href="http://vkadre.com" target="_blank" style="color: red; font-size: 11pt;">Вкадре - Здесь можно наблюдать за интимной жизнью других людей </a>'; i++;
+//	bn[i] = '<a href="http://vkadre.com" target="_blank" style="color: blue; font-size: 11pt;">Бесплатное порно видео с просмотром порно онлайн без регистраций </a>'; i++;
+//	bn[i] = '<a href="http://vkadre.com" target="_blank" style="color: blue; font-size: 11pt;">Нравится смотреть порно видео? Смотри порно онлайн на vkadre.com</a>'; i++;
+//	bn[i] = '<a href="http://gorodsex.ru" target="_blank" style="color: blue; font-size: 11pt;">Новый набор девушек в СЕКС ПО ТЕЛЕФОНУ! Будь у нее первым!</a>'; i++;
+//	bn[i] = '<a href="http://gorodsex.ru" target="_blank" style="color: red; font-size: 11pt;">Антикризисное меню девушек в СЕКС ПО ТЕЛЕФОНУ! Новый набор развратниц.</a>'; i++;
+//	bn[i] = '<a href="http://gorodsex.ru" target="_blank" style="color: blue; font-size: 11pt;">Секс По Телефону! Познакомься на линии, разведи на секс в реале!</a>'; i++;
+//	bn[i] = '<a href="http://gorodsex.ru" target="_blank" style="color: red; font-size: 11pt;">Извращенцам дешевле! Впервые в СЕКСе ПО ТЕЛЕФОНУ разврат по бросовым ценам!</a>'; i++;
+//	bn[i] = '<a href="http://gorodsex.ru" target="_blank" style="color: blue; font-size: 11pt;">Мамочки обожают СЕКС по ТЕЛЕФОНУ! Узнай, сколько осталось свободных!</a>'; i++;
+//	bn[i] = '<a href="http://gorodsex.ru" target="_blank" style="color: red; font-size: 11pt;">Последний Секс По Телефону в России. Звони, пока можно!</a>'; i++;
+//	bn[i] = '<a href="http://gomakemerich2.com/?s=35&ref=wp_w14196p143_plab1&url=%23popup-reg" target="_blank" style="color: blue; font-size: 11pt;">Вулкан Удачи - знаменитые игровые автоматы. Только в июне, внеси депозит от 100р и получи СУПЕРБОНУС!</a>'; i++;
+//	bn[i] = '<a href="http://gomakemerich2.com/?s=35&ref=wp_w14196p143_plab2&url=%23popup-reg" target="_blank" style="color: red; font-size: 11pt;">Игровые автоматы ВУЛКАН. Высокий % отдачи. СУПЕРБОНУС в июне при пополнении депозита от 100р!</a>'; i++;
+//	bn[i] = '<a href="http://reptilicus.net" target="_blank"><b style="color: blue;">Полный контроль над телефоном! Чтение SMS, VIBER, VK, OK. Запись звонков. Не дай ворам шанса!</b></a>'; i++;
+//	bn[i] = '<a href="//pornolab.net/forum/info.php?show=advert" target="_blank" style="color: red; font-size: 11pt;">Рекламное место сдается!</a>'; i++;
+//	bn[i] = '<iframe src="http://intimlife.net/pornlab-iframe-toplink.html" frameborder=0 vspace=0 hspace=0 width="700px" height="20px" marginwidth=0 marginheight=0 scrolling=no></iframe>'; i++;
+//	bn[i] = '<a href="http://intimlife.net/escort/Москва--Россия/independent?utm_source=pornolab_net&utm_medium=banner&utm_campaign=i_ind_msk" target="_blank"><b style="color: red;">Intimlife - проститутки в Москве от 4000 руб в час. Выбрать »</b></a>'; i++;
+//	bn[i] = '<a href="http://intimlife.net/escort/Москва--Россия/trans?utm_source=pornolab.net&utm_campaign=intimlife&utm_content=section5" target="_blank"><b style="color: red;">Intimlife: Хочешь секс с транссексуалкой в Москве? Не отказывай себе. От 3000р</b></a>'; i++;
+//	bn[i] = '<a href="https://juliadates.com/land/adaptive_69?p=29&j1=pornsite&j2=pornolab&j3=1" target="_blank"><b style="color: blue;">JuliaDates - самая большая база содержанок в СНГ</b></a>'; i++;
+//	bn[i] = '<a href="https://juliadates.com/land/adaptive_69?p=29&j1=pornsite&j2=pornolab&j3=2" target="_blank"><b style="color: red;">JuliaDates - найди содержанку в Москве и Питере</b></a>'; i++;
+//	bn[i] = '<a href="https://juliadates.com/land/adaptive_69?p=29&j1=pornsite&j2=pornolab&j3=3" target="_blank"><b style="color: blue;">Доступные девушки для секс встреч JuliaDates</b></a>'; i++;
+//	bn[i] = '<a href="https://juliadates.com/land/adaptive_69?p=29&j1=pornsite&j2=pornolab&j3=4" target="_blank"><b style="color: red;">Элитные эскортницы на JuliaDates</b></a>'; i++;
+//	bn[i] = '<a href="https://juliadates.com/land/adaptive_69?p=29&j1=pornsite&j2=pornolab&j3=5" target="_blank"><b style="color: blue;">JuliaDates - большая база содержанок и эскортниц</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?utm_source=pornolab&utm_medium=textup&utm_campaign=masturbators&utm_content=text1" target="_blank"><b style="color: red;">Рекомендуемое сообщество - Кисок</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?utm_source=pornolab&utm_medium=textup&utm_campaign=masturbators&utm_content=text2" target="_blank"><b style="color: darkred;">Рекомендуемое сообщество - Toy69.ru</b></a>'; i++;
+//	bn[i] = '<a href="httpstext3" target="_blank"><b style="color: darkred;">Мы рекомендуем!!!  - Toy69.ru</b></a>'; i++;
+//	bn[i] = '<a href="httpstext4" target="_blank"><b style="color: red;">ПОРНОЛАБ рекомендует !!! - Toy69.ru</b></a>'; i++;
+//	bn[i] = '<a href="https://www.intimshop.ru/catalog/muzhskie_seks_igrushki/?partner=20639&utm_source=plabnet&utm_medium=text&utm_campaign=delivery" target="_blank"><b style="color: MediumVioletRed;">Товары для самых взрослых с анонимной доставкой по всему миру</b></a>'; i++;
+//	bn[i] = '<a href="https://www.intimshop.ru/catalog/muzhskie_seks_igrushki/?partner=20639&utm_source=plabnet&utm_medium=text&utm_campaign=promo" target="_blank"><b style="color: MediumVioletRed;">Мастурбатор в подарок и скидка 5% по промокоду LIKE</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?sort=p.price?der=ASC?utm_source=pornolab&utm_medium=textup&utm_campaign=masturbators&utm_content=text1" target="_blank"><b style="color: MediumVioletRed;">Тут продаются Японки!</b></a>'; i++;
+	bn[i] = '<a href="https://pornolab.net/forum/info.php?show=advert" target="_blank"><b style="color: red;">Здесь могла бы быть ваша реклама!</b></a>'; i++;
+//	bn[i] = '<a href="https://www.gsdeluxe.com/" target="_blank"><b style="color: MediumVioletRed;">Казино GlobalSlots DELUXE</b></a>'; i++;
+	
+	$('#pl-speedbar-a').html(bn[Math.round(Math.random()*(bn.length-1))]); //.parent().css('text-align', 'center');
+});
+
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){
+//var rnd = Math.round(Math.random()*1000000000);
+//var ref = document.referrer ? escape(document.referrer) : 'unknown';
+//240x120
+	var bn   = [];
+	var t    = 'target="_blank"';
+	var wh   = 'width="240" height="120" alt="" target="_blank"';
+	var base = '//static.pornolab.net/004/ruscams/';
+
+		bn.push( '<a href="http://ruscams.net.ru" '+t+'><img src="'+base+'11.gif" '+wh+' /></a>' );
+	bn.push( '<a href="http://video-girl.net.ru" '+t+'><img src="'+base+'12.gif" '+wh+' /></a>' );
+
+	//$('#adriver-240x120').html('<iframe src="http://vsexshop.ru/store/pornolab_all_banner" width="240" height="120" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" hspace="0" vspace="0"></iframe>');
+	//$('#adriver-240x120').html('<img src="http://static.pornolab.net/004/bl_240_120.gif" />');
+	//$('#adriver-240x120').html('<iframe src="http://static.pornolab.net/004/traffic.ru/if2.html?new" width="240" height="120" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" hspace="0" vspace="0"></iframe>');
+	//$('#adriver-240x120').html(bn[Math.round(Math.random()*(bn.length-1))]);
+});
+</script>
+
+<!--page_container-->
+<div id="page_container">
+<a name="top"></a>
+
+<!--page_header-->
+<div id="page_header">
+
+<!--main_nav-->
+<div id="main-nav" style="height: 17px;">
+	<table width="100%" cellpadding="0" cellspacing="0">
+	<tr>
+		<td class="nowrap">
+			<a href="./index.php"><b>Главная</b></a>&#0183;
+			<a href="tracker.php?f[]=-1"><b>Трекер</b></a>&#0183;
+			<a href="tags.php"><b>Теги</b></a>&#0183;
+			<a href="search.php"><b>Поиск</b></a>&#0183;
+			<a href="viewtopic.php?t=980423"><b>Правила</b></a>&#0183;
+			<a href="viewforum.php?f=566"><b style="color: #993300;">FAQ</b></a>&#0183;
+			<a href="privmsg.php?folder=inbox"><b>ЛС</b></a>&#0183;
+			<a href="groupcp.php"><b>Группы</b></a>&#0183;
+			<a href="viewtopic.php?t=2947333"><i class="fas fa-heart" style="color: red;"></i>&nbsp;<b style="color: #993300;">Donate</b></a>&#0183;
+									<a href="https://bongacams4.com/track?c=607068" target="_blank"><b style="color: blue;">Секс-чат</b></a>
+								</td>
+	</tr>
+	</table>
+</div>
+<!--/main-nav-->
+
+
+<div style="position: absolute; top: 4px; right: 9px;">
+	</form>
+<a style="display: none;" id="cse-search-btn-top" href="search-text">&nbsp;</a>
+</div>
+
+<!--logo-->
+<div id="logo">
+	<table width="100%" cellpadding="0" cellspacing="0">
+	<tr>
+		<td id="logo-td">
+						<a href="./index.php" style="text-decoration: none;"><img src="//static.pornolab.net/images/logo/autumn/logo_autumn-16.gif" class="site-logo" alt="" /></a>
+						<!-- <a href="./index.php"><img src="//static.pornolab.net/images/logo/logo.gif" width="353" height="131" alt="" /></a> -->
+		</td>
+		<td width="100%" class="tCenter" style="padding: 0 6px 0 6px;">
+
+			
+			
+			<table cellpadding="0" cellspacing="0" class="bCenter" style="padding: 4px 6px 0 6px;">
+
+						<tr>
+				<td>
+					<div id="bn-hirovpn-1" data-max_width="728" class="tCenter bCenter" style="padding: 0;"></div>
+  <script type="text/javascript">
+  $(document).ready(function(){
+    var i    = 0;
+    var t    = 'target="_blank" rel="noopener"';
+    var wh   = 'width="728" height="90"';
+    var bn   = [];
+    var base = '//static.pornolab.net/004/hiro_vpn/20260902/';
+
+    bn[i] = '<a href="https://storage.googleapis.com/hirovpn/start.html" '+t+'><video src="'+base+'01.mp4" '+wh+' autoplay muted loop playsinline preload="auto" style="display:block;border:0;"></video></a>'; i++;
+
+    $('#bn-hirovpn-1').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+    var $block = $('#bn-hirovpn-1');
+    var logoWidth = Math.max($('#logo-td').width(), 250);
+    var frameWidth = Math.min($(window).width() - logoWidth - 50, $block.data('max_width'));
+
+    $block.find('video').css({
+      'max-width': frameWidth + 'px',
+      'height': 'auto'
+    });
+
+    $block.css({
+      'min-width': frameWidth + 'px',
+      display: 'inline-block'
+    });
+  });
+  </script>				</td>
+			</tr>
+						</table>
+
+				</td>
+	</tr>
+	</table>
+</div>
+<!--/logo-->
+
+<!--topmenu-->
+<div class="topmenu">
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+	
+		<td class="tCenter pad_2">
+		<a href="profile.php?mode=register"><b>Регистрация</b></a>
+		&nbsp;&#0183;&nbsp;
+		<form method="post" action="/forum/login.php">
+						Имя: <input type="text" name="login_username" size="12" accesskey="l" />
+			Пароль: <input type="password" name="login_password" size="12" />
+			<!-- <label id="ses-short" title="Короткая сессия (автовыход через полчаса неактивности)"><input type="checkbox" name="ses_short" value="1" onclick="$('#ses-short').css({color: this.checked ? '#0000FF' : '#000000'});" /> Не запоминать</label>&nbsp; -->
+			<input type="submit" name="login" value="Вход" />
+		</form>
+		&nbsp;&#0183;&nbsp;
+		<a href="profile.php?mode=sendpassword">Забыли пароль?</a>
+	</td>
+	
+	</tr>
+</table>
+</div><!--/topmenu-->
+    
+<noscript>
+	<style type="text/css">
+	.sp-body, .sp-title { display: block; }
+	</style>
+</noscript>
+
+
+<!--breadcrumb-->
+<!--<div id="breadcrumb"></div>-->
+<!--/breadcrumb-->
+
+
+</div>
+<!--/page_header-->
+
+
+<!--page_content-->
+<div id="page_content">
+<table cellspacing="0" cellpadding="0" border="0" style="width: 100%;"><tr>
+
+
+<!--main_content-->
+<td id="main_content">
+<div id="main_content_wrap">
+
+
+<!--========================================================================-->
+<!--************************************************************************-->
+
+
+
+<!-- page_header.tpl END -->
+<!-- module_xx.tpl START -->
+
+
+
+
+
+
+
+
+<table cellpadding="2" cellspacing="0" width="100%">
+	<tr>
+		<td valign="bottom" width="100%">
+			<h1 class="maintitle"><a id="topic-title" href="./viewtopic.php?t=980423">Правила пользования ресурсом PornoLab.net<wbr></a></h1>
+						<p class="small" style="margin: 12px 4px 8px;"><b>Страницы: &nbsp;1</b></p>
+			
+			<table cellpadding="2" cellspacing="0" width="100%">
+				<tr>
+					<td><a href="posting.php?mode=reply&amp;t=980423"><img src="//static.pornolab.net/templates/default/images/reply_locked.gif" class="btn-reply" alt="Тема закрыта" /></a></td>
+					<td class="nav" width="100%">
+						&nbsp;<a href="./index.php">Список форумов pornolab.net</a>
+												<em>&raquo;</em>&nbsp;<a href="./viewforum.php?f=566">Правила, инструкции, FAQ-и / Rules &amp; FAQ&#039;s</a>
+					</td>
+				</tr>
+			</table>
+
+		</td>
+		<td>
+			<div id="adriver-240x120">
+								
+<a style='font-size: 13px;' data-sX0Gzf864m='m468fzG0X'>Pornolab рекомендует </a>
+<span style='font-size: 13px;' data-sX0Gzf864m='m468fzG0X'>Скачай попку-мастурбатор</span>
+
+<style>
+#rX0Gzf864m {
+height: 120px;
+margin-right: -2px;
+padding-bottom: 2px;
+width: 240px;
+max-width: 240px;
+
+font-size: 24px;
+font-style: italic;
+display: inline-block;
+float: right;
+}
+
+#rX0Gzf864m a {
+	min-width: 141px;
+  max-width: 240px;
+
+  font-weight:bold;font-style: italic;
+}
+
+#rX0Gzf864m + a:link {
+	min-width: 141px;
+	max-width: 238px;
+
+  max-width: 240px;
+
+  font-weight:bold;font-style: italic;
+}
+
+#rX0Gzf864m + a:focus, #m468fzG0X  + a:visited {
+}
+
+header>a {
+  color: #f139c3;
+  cursor: pointer;
+}
+
+header>span {
+  color: #f139c3;
+  cursor: pointer;
+}
+
+.vs_link_class {
+  color: #f139c3 !important;
+  pointer-events: none;
+}
+</style>
+
+<script>
+
+var sOuter=function(){
+	h="http://vsexshop.ru/store/partner_sale_category/66003?category=3";
+  window.location.assign(h);
+}
+
+$("a[data-sX0Gzf864m='m468fzG0X']").bind( "click", function() {
+	sOuter();
+});
+
+var vs_first_page = false;
+if ($('#latest_news').length){
+  vs_first_page = true;
+};
+if(vs_first_page){
+  $( "footer" ).insertBefore( $("#latest_news").first() );
+  $( "footer" ).css("position","absolute");
+  $( "footer" ).css("padding-left","600px");
+} else {
+  if($('.maintitle').length){
+    $( "footer" ).insertBefore( ".maintitle" );
+  };
+}
+
+$($( "#rX0Gzf864m>a" )[0]).addClass( "vs_link_class" );
+$($( "#rX0Gzf864m>a" )[1]).addClass( "vs_link_class" );
+</script>			</div>		</td>
+	</tr>
+</table>
+
+
+
+					</td>
+
+				</tr>
+			</table>
+
+		</td>
+	</tr>
+</table>
+
+
+
+<table class="topic" id="topic_main" cellpadding="0" cellspacing="0">
+	<tr>
+		<th class="thHead td1">Автор<img src="//static.pornolab.net/templates/default/images/spacer.gif" class="spacer t-spacer" alt="" /></th>
+		<th class="thHead td2">Сообщение</th>
+	</tr>
+
+		
+	<tbody id="post_10667664" class="row1">
+	<tr>
+		<td class="poster_info td1"><a name="10667664"></a>
+						<p class="nick">Slayder</p>
+			
+			<br />			
+		</td>
+		<td class="message td2" rowspan="2">
+
+			
+			<div class="post_wrap" id="p-10667664">
+				<div class="post_body" id="p-20862-1">
+					<div class="mc-note" id="mc-10667664" data-raw=""></div>
+					<div class="post-user-message">
+						<span class="post-color-text" style="color: darkred;"><span style="font-size: 20px; line-height: normal;"><span style="font-family: Arial;"><span class="post-b">Правила пользования ресурсом PornoLab.net:</span></span></span></span><span class="post-br"><br /></span>Настоящие Правила созданы с целью упорядочивания общения в данном форуме.<br />
+Правила являются обязательными для исполнения всеми присутствующими на форуме.<br />
+Администрация оставляет за собой право редактировать и удалять сообщения пользователей, если эти сообщения не отвечают основным требованиям и тематике данного форума.<br />
+Администрация оставляет за собой право отключать от форума лиц, нарушающих Порядок и Правила.<br />
+Кроме того, Администрация оставляет за собой право изменять данные Правила.<span class="post-br"><br /></span><span class="post-color-text" style="color: darkred;"><span style="font-size: 16px; line-height: normal;"><span class="post-b">1. Регистрация.</span></span></span><br />
+<a name="11" id="11"></a><span class="post-b">1.1.</span> Регистрация является неотъемлемой частью присутствия на форуме. Прохождение регистрации автоматически обозначает ваше согласие как с данными Правилами, так и с <a href="http://pornolab.net/forum/info.php?show=user_agreement" class="postLink">Пользовательским соглашением</a>. (Если вы не согласны с данными Правилами либо Пользовательским соглашением, напишите <a href="http://pornolab.net/forum/profile.php?mode=viewprofile&amp;u=2" class="postLink">Администратору форума</a> и ваша учетная запись будет деактивирована).<br />
+<a name="12" id="12"></a><span class="post-b">1.2. Если имя, которое вы выбрали для участия в форуме:</span><br />
+- нарушает нормы приличия и морали (такие Ники как: Гитлер, Алах-акбар, и.т.д.)<br />
+- несет в себе рекламу сайтов<br />
+- содержит ненормативную лексику<br />
+- сходно до степени смешения с именем модератора или координатора форума или носителя звания VIP,<br />
+<span class="post-b">то ваша учётная запись будет деактивирована без предупреждения.</span><br />
+<a name="13" id="13"></a><span class="post-b">1.3.</span> Пользователь обязуется не передавать другим лицами свои персональные данные, полученные при регистрации (логин и пароль, пасскей) для входа/идентификации на ресурсе и несет полную ответственность за утерю, пропажу, исчезновение или передачу иными способами персональных данных, а также за последствия связанные с данным деянием.<span class="post-br"><br /></span><span class="post-color-text" style="color: darkred;"><span style="font-size: 16px; line-height: normal;"><span class="post-b">2. Аватара и подпись.</span></span></span><br />
+<a name="21" id="21"></a><span class="post-b">2.1.</span> Содержание. Недопустимы: насилие, угрозы (на демографической, национальной, религиозной или политической основе), сквернословия (ненормативная лексика, обзывательства, грубость и т.д.), нарушение норм приличия и морали, дискриминация в любых проявлениях, пропаганда наркотиков, коммерческая реклама и рекламные тексты, имитация званий/рангов этого ресурса, намеренная схожесть с аватарами членов администрации, а также изображения провокационного толка, в т.ч. с использованием политической и нацистской символики.<br />
+<a name="22" id="22"></a><span class="post-b">2.2.</span> Анимация: сильно мигающие аватары и подписи запрещены (степень мигания определяется Администрацией).<br />
+<a name="23" id="23"></a><span class="post-b">2.3.</span> Максимальный размер аватары: 100х100 точек; вес: до 15 Кб.<br />
+<a name="24" id="24"></a><span class="post-b">2.4.</span> Максимальная высота подписи: 80 точек (другими словами, не больше четырех юзербаров или восьми строк текста (размер шрифта 10); ширина: 750 точек. Общий вес изображений, содержащихся в подписи, не должен превышать 150 Kb.<br />
+<a name="25" id="25"></a><span class="post-b">2.5.</span> Подпись под вашими сообщениями не может быть использована для создания ссылок на какие-либо ресурсы сети. Если вы создадите ссылку в вашей подписи и откажетесь её удалить, то вам может быть запрещён показ подписи. Информация о сборе пожертвований разрешена исключительно участникам группы <a href="https://pornolab.net/forum/viewtopic.php?t=2565922" class="postLink"><span class="post-b">Donate</span></a>.<br />
+<a name="26" id="26"></a><span class="post-b">2.6.</span> Категорически запрещено размещение в подписи и в сообщениях изображений, на самом деле являющимися разнообразными счетчиками, IP-логерами и т.п.. Т.е. ситуация, когда сервер-хостер изображения собирает и классифицирует информацию о просматривающих изображение посетителях. А единственная цель изображения - "снять" любую доступную информацию о посетителях. Нарушение данного пункта ведет к безусловному отключению подписи, вплоть до полного бана при злоупотреблении подобными изображениями в сообщениях.<span class="post-br"><br /></span><span class="post-color-text" style="color: darkred;"><span style="font-size: 16px; line-height: normal;"><span class="post-b">3. Ограничения на форуме.</span></span></span><br />
+<span style="font-size: 14px; line-height: normal;">Всем участникам данного форума <span class="post-color-text" style="color: red;"><span class="post-b">ЗАПРЕЩАЕТСЯ</span></span>:</span><br />
+<a name="31" id="31"></a><span class="post-b">3.1.</span> Оскорблять участников форума в любой форме. Запрещено проявление любой грубости, угроз, личных оскорблений и нецензурных высказываний, в том числе и в скрытой форме, как в отношении юридических, так и конкретных физических лиц. Участники должны соблюдать уважительную форму общения.<br />
+<a name="32" id="32"></a><span class="post-b">3.2.</span> Пользоваться в общении на форуме матерными выражениями и словами, в том числе и в завуалированной форме.<br />
+<a name="33" id="33"></a><span class="post-b">3.3.</span> Заниматься оверпостингом и размножением офф-топиков.<br />
+<a name="34" id="34"></a><span class="post-b">3.4.</span> Создавать темы с названиями, не объясняющим вкратце ее сути: "помогите", "проблема" и им подобными.<br />
+<a name="35" id="35"></a><span class="post-b">3.5.</span> Писать рекламные тексты и сообщения коммерческого характера.<br />
+<a name="36" id="36"></a><span class="post-b">3.6.</span> Заниматься коммерцией при помощи форума.<br />
+<a name="37" id="37"></a><span class="post-b">3.7.</span> Использовать форум как почтовую доску объявлений для сообщений приватного характера, адресованных конкретному участнику (для этого есть почта).<br />
+<a name="38" id="38"></a><span class="post-b">3.8.</span> Проявлять расовую, национальную и религиозную неприязнь, призывать к самоубийству, пропагандировать терроризм, экстремизм, наркотики и прочие темы, несовместимые с общепринятыми законами морали и приличия; писать сообщения на современные политические темы.<br />
+<a name="39" id="39"></a><span class="post-b">3.9.</span> Ссылаться на другие ресурсы сети, особенно, если существует раздача на данном форуме (исключениями могут являться ссылки на информацию, описание фильма, а также сэмплы и скриншоты), а также публиковать magnet-ссылки.<br />
+<a name="310" id="310"></a><span class="post-b">3.10.</span> Использовать в общении на форуме язык, отличный от русского, и шрифт, отличный от кириллического (комментарии на английском языке в некоторых случаях допустимы). В форум встроены Виртуальная русская клавиатура и транслит, кроме того, в Интернете существует целый ряд подобных сервисов, если наш вас не устраивает по каким-либо причинам. Модераторы и Координаторы имеют право редактировать или удалять сообщения, написанные на языке, отличном от русского, и шрифтом, отличным от кириллического, без предупреждения.<br />
+<a name="311" id="311"></a><span class="post-b">3.11.</span> Публично предъявлять претензии и обсуждать действия <a href="https://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модератора</a> или <a href="https://pornolab.net/forum/groupcp.php?g=104792" class="postLink">Координатора</a>. Участник форума, несогласный с действиями Модератора, может высказать своё несогласие Модератору по почте или в личном сообщении. Если от Модератора нет ответа или ответ, по мнению участника, необоснованный, последний вправе переписку с Модератором отправить Координатору. Конечное решение принимает Координатор. Это решение является окончательным и необсуждаемым.<br />
+<a name="312" id="312"></a><span class="post-b">3.12.</span> Редактировать/удалять комментарии <a href="https://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модератора</a> или <a href="https://pornolab.net/forum/groupcp.php?g=104792" class="postLink">Координатора</a>.<br />
+<a name="313" id="313"></a><span class="post-b">3.13.</span> Обсуждать или применять приемы, использование которых приводит к неполному или неправильному учету трафика на трекере, и программы, предназначенные для этих целей.<br />
+<a name="314" id="314"></a><span class="post-b">3.14.</span> Обсуждать методы блокировки рекламы, и программы, предназначенные для этих целей.<br />
+<a name="315" id="315"></a><span class="post-b">3.15.</span> Указывать в сообщениях явным образом, скриншотом или в виде ссылок на социальные сети и прочие ресурсы сети Интернет любые личные данные моделей или пользователей форума (реальные ФИО, адрес, копии или номера документов, удостоверяющих личность, и т.д.), а также рассылать эти данные через ЛС.<br />
+<a name="316" id="316"></a><span class="post-b">3.16.</span> Использовать в сообщениях укорачиватели ссылок.<span class="post-br"><br /></span><span class="post-color-text" style="color: darkred;"><span style="font-size: 16px; line-height: normal;"><span class="post-b">4. Ограничения на трекере.</span></span></span><br />
+Все создающие раздачу (выкладывающие файл для общедоступного скачивания) обязаны контролировать содержимое этой раздачи и качество (соответствие содержимого названию и Правилам, отсутствие звука в фильмах, несинхроность изображения и звука, качество изображения).<span class="post-br"><br /></span><span style="font-size: 14px; line-height: normal;">Всем участникам раздач на данном трекере <span class="post-color-text" style="color: red;"><span class="post-b">ЗАПРЕЩАЕТСЯ</span></span>:</span><br />
+<span class="post-color-text" style="color: red;"><span style="font-size: 14px; line-height: normal;"><span class="post-b">4.1.</span> Раздавать и запрашивать видео и фото педофилии, некрофилии и зоофилии, а также содержащие сцены насилия и членовредительства</span></span> (за исключением анимации и рисунков).<br />
+<a name="42" id="42"></a><span class="post-b">4.2.</span> Создавать и размещать для скачивания раздачу, повторяющую или дублирующую то, что уже существует на трекере. Повторяющей считается не отличающаяся ни по содержанию, ни по качеству информация. Дублирующей считается незначительно отличающаяся по качеству информация.<br />
+<a name="43" id="43"></a><span class="post-b">4.3.</span> Создавать и размещать для скачивания раздачу, торрент которой зарегистрирован на другом трекере.<br />
+<a name="44" id="44"></a><span class="post-b">4.4.</span> Выкладывать для общедоступного скачивания более двадцати раздач одновременно (исключение делается для пользователей с очень широким каналом, по личному разрешению Администрации).<br />
+<a name="45" id="45"></a><span class="post-b">4.5.</span> Закрывать канал на отдачу. Следует поддерживать отношение объема отданной информации к объему скачанной больше, чем 0,3. После окончания скачивания оставайтесь на раздаче до появления 3-4-х следующих закачавших. Также запрещается техническими или иными средствами препятствовать файлообмену. В противном случае ваша учётная запись может быть деактивирована без предупреждения.<br />
+<a name="46" id="46"></a><span class="post-b">4.6.</span> Если после начала раздачи полный источник отсутствует более суток, и при этом не указана уважительная причина, раздача может быть закрыта.<br />
+<a name="47" id="47"></a><span class="post-b">4.7.</span> Использовать для закачки торрента любые менеджеры закачек.<br />
+<a name="48" id="48"></a><span class="post-b">4.8.</span> Использовать в имени файлов названия сторонних ресурсов, за исключением названия сайта-издателя материала. Также в торрент-файлах запрещены рекламные файлы сторонних ресурсов (html ярлыки или ссылки, тексты в текстовом файле и т.п.).<br />
+<a name="49" id="49"></a><span class="post-b">4.9.</span> Самовольно перезаливать торрент-файл в закрытой Модератором раздаче без устранения причин, по которым раздача была закрыта, а также перерегистрировать торрент-файлы в уже проверенных раздачах без объективных на то причин. А также, в интересах пользователей трекера, авторам запрещается удалять оформление и торрент-файлы релизов со статусом отличным от "не проверено".<span class="post-br"><br /></span><span class="post-color-text" style="color: darkred;"><span style="font-size: 16px; line-height: normal;"><span class="post-b">5. Модераторы и Координаторы.</span></span></span><br />
+<a name="51" id="51"></a><span class="post-b">5.1.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модераторы</a> выбираются из числа наиболее активных и грамотных пользователей ресурса.<br />
+<a name="52" id="52"></a><span class="post-b">5.2.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модератор</a> может быть переведен в категорию <a href="http://pornolab.net/forum/groupcp.php?g=6" class="postLink">VIP</a> при отсутствии активной модераторской деятельности в течение двух месяцев и более.<br />
+<a name="53" id="53"></a><span class="post-b">5.3.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модераторы</a> следят за соблюдением <a href="http://pornolab.net/forum/viewtopic.php?t=980423" class="postLink">Правил форума</a>.<br />
+Полномочия <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модераторов</a> распространяются на разделы и подразделы форума, которые закреплены за ними.<br />
+Полномочия <a href="http://pornolab.net/forum/groupcp.php?g=104792" class="postLink">Координаторов</a> распространяются на весь форум.<br />
+<a name="54" id="54"></a><span class="post-b">5.4.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модератор</a> может отредактировать или удалить сообщение пользователя, если сочтет необходимым.<br />
+<a name="55" id="55"></a><span class="post-b">5.5.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модератор</a> может закрыть тему, если тема потеряла актуальность, если участники отклонились от ее сути или по другим причинам.<br />
+<a name="56" id="56"></a><span class="post-b">5.6.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104787" class="postLink">Модератор</a> может переместить тему в наиболее подходящую категорию.<br />
+<a name="57" id="57"></a><span class="post-b">5.7.</span> Вышеуказанные действия могут быть осуществлены и <a href="http://pornolab.net/forum/groupcp.php?g=104792" class="postLink">Координатором</a>.<br />
+<a name="58" id="58"></a><span class="post-b">5.8.</span> <a href="http://pornolab.net/forum/groupcp.php?g=104841" class="postLink">Техническая помощь</a> - группа с частичными модераторскими правами; предназначена для осуществления технической помощи посетителям ресурса.					</div>
+										
+					
+					<div class="clear"></div>
+					<div class="spacer_6"></div>
+					
+																			</div><!--/post_body-->
+											</div><!--/post_wrap-->
+
+		</td>
+	</tr>
+	<tr>
+		<td class="poster_btn td3">
+
+						&nbsp;
+			
+		</td>
+	</tr>
+	</tbody>
+	
+	
+</table><!--/topic_main-->
+
+<script type="text/javascript">
+		$('#guest-dl-tip').prepend('Вы сможете скачать .torrent файл сразу после регистрации<br />');
+	</script>
+<script type="text/javascript">$('img.smile').remove();</script>
+
+
+
+
+
+
+
+
+<style type="text/css">
+.mc-note { margin: 0 0 12px; padding: 6px 10px; border-left: 3px solid rgba(192, 57, 43, 0.75); background: rgba(200, 60, 60, 0.1); }
+.mc-note:empty { display: none; }
+.mc-note .mc-t { font-weight: bold; color: #b03a2e; }
+.mc-note .mc-m { color: #8a939c; font-size: 11px; }
+.mc-note .mc-x { margin-top: 3px; }
+.mc-form { margin: 0 0 12px; }
+.mc-form textarea { width: 96%; max-width: 640px; height: 58px; }
+.mc-form .mc-cnt { color: #8a939c; font-size: 11px; margin-left: 4px; }
+.post-react { margin: 14px 0 2px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.post-react a { cursor: pointer; text-decoration: none !important; }
+.post-react .r-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(128, 138, 148, 0.4); border-radius: 999px; padding: 2px 10px; font-size: 14px; line-height: 1.4; }
+.post-react .r-chip i { font-style: normal; font-size: 11.5px; opacity: 0.75; }
+.r-eggw { position: relative; display: inline-block; font-size: 0.85em; }
+.r-eggw b { position: absolute; top: -0.8em; left: -0.65em; font-size: 0.58em; font-weight: normal; transform: rotate(180deg); pointer-events: none; }
+.r-chip .r-eggw { font-size: 0.66em; position: relative; top: 2px; margin-left: 2px; }
+.r-chip .r-eggw b { top: -0.45em; left: -0.6em; }
+.post-react .r-chip.r-my { border-color: #5a87b5; background: rgba(90, 135, 181, 0.16); }
+.post-react .r-chip:hover { border-color: #5a87b5; }
+.r-add-wrap { position: relative; display: inline-flex; }
+.post-react .r-add { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #8a939c; opacity: 0.65; }
+.r-add-wrap:hover .r-add, .r-add-wrap.open .r-add { opacity: 1; }
+.r-pal { display: none; position: absolute; bottom: 100%; right: -4px; margin-bottom: 5px; background: #fff; border: 1px solid rgba(128, 138, 148, 0.45); border-radius: 999px; padding: 4px 9px; white-space: nowrap; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); z-index: 50; }
+.r-add-wrap.open .r-pal { display: block; }
+.r-pal:after { content: ""; position: absolute; left: -6px; right: -6px; top: 100%; height: 9px; }
+.r-pal .r-pick { display: inline-block; font-size: 19px; padding: 1px 4px; transition: transform 0.1s; }
+.r-pal .r-pick:hover { transform: scale(1.3); }
+</style>
+
+
+
+
+	</div><!--/main_content_wrap-->
+	</td><!--/main_content-->
+
+	
+	</tr></table>
+	</div>
+	<!--/page_content-->
+
+	<!--page_footer-->
+	<div id="page_footer">
+
+		
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+	var rnd = Math.round(Math.random()*1000000000);
+
+	// Text rotate
+	var i    = 0;
+	var j    = 0;
+	var t    = 'target="_blank"';
+	var bn   = [];
+	var bm   = [];
+	var url  = 'http://putana.cz/index.php?partner=9975';
+
+//		j    = 0;
+//		bm   = [];
+//		bm[j] = '<a href="http://ebistika.tv/" target="_blank"><b style="color: darkred;">Порнуха HD на Ebistika.tv</b></a>'; j++;
+//		$('#ebistika').html(bm[Math.round(Math.random()*(bm.length-1))]);
+
+	j    = 0;
+	bm   = [];
+	bm[j] = '<a href="https://mega-porno.me/categories/" target="_blank"><b style="color: red;">Мега Порно Онлайн</b></a>'; j++;
+	$('#mega').html(bm[Math.round(Math.random()*(bm.length-1))]);
+
+//	i   = 0;
+//	bn  = [];
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?sort=p.price&order=ASC?utm_source=pornolab&utm_medium=textdown&utm_campaign=masturbators&utm_content=text1" target="_blank"><b style="color: darkred;">МЫ рекомендуем!!!  - Японский секс шоп</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?sort=p.price&order=ASC?utm_source=pornolab&utm_medium=textdown&utm_campaign=masturbators&utm_content=text2" target="_blank"><b style="color: darkred;">Японский Секс Шоп !!! Pornolab рекомендует</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?sort=p.price&order=ASC?utm_source=pornolab&utm_medium=textdown&utm_campaign=masturbators&utm_content=text3" target="_blank"><b style="color: darkred;">Мы рекомендуем!!!  - Toy69.ru</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?sort=p.price&order=ASC?utm_source=pornolab&utm_medium=textdown&utm_campaign=masturbators&utm_content=text4" target="_blank"><b style="color: darkred;">Toy69.ru!!! ПОРНОЛАБ рекомендует</b></a>'; i++;
+//	bn[i] = '<a href="https://toy69.ru/dlya-nego/masturbatory/iskusstvennoe-vlagalishche/?sort=p.price&order=ASC?utm_source=pornolab&utm_medium=textdown&utm_campaign=masturbators&utm_content=text1" target="_blank"><b style="color: LimeGreen;">Купи ЯПОНКУ!</b></a>'; i++;
+//	$('#toy69').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+//	i   = 0;
+//	bn  = [];
+//	bn[i] = '<div style="color:#FF4F03;">ZADROCHI: 2025 sex <a href="https://zadrochi.net" target="_blank"><b style="color:#0273f1;">porn</b></a> videos online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Erotica 2025: seks <a href="https://xn--80apgojn8e.video" target="_blank"><b style="color:#0279f1;">erotika</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">XXX.report: 2025 porn <a href="https://xxx.report" target="_blank"><b style="color:#0259f1;">xxx</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Erotica videos: 2025 porno <a href="https://erotika.video" target="_blank"><b style="color:#0257f1;">erotika</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Porno zavod: 2025 seks <a href="https://pornozavod.ru" target="_blank"><b style="color:#0255f1;">porno</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">TubSexer: 2025 free <a href="https://tubsexer.vip" target="_blank"><b style="color:#0253f1;">porn</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">EROkrad: 2025 sex <a href="https://erokrad.ru" target="_blank"><b style="color:#0251f1;">porno</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Marcopolo-uss: 2025 xxx <a href="https://marcopolo-uss.ru" target="_blank"><b style="color:#0357f1;">porno</b></a> video online!'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Sex 2025! XXX HD: Free porn <a href="https://www.brazzer.film" target="_blank"><b style="color:#1317a2;">Brazzers</b></a>.com 2025 watch video online.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Lenta-ua: Главные <a href="https://lenta-ua.net" target="_blank"><b style="color:#0137f0;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">MaOnline: Главные <a href="https://maonline.ru" target="_blank"><b style="color:#0137f5;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Crime-Research: Главные <a href="https://crime-research.ru" target="_blank"><b style="color:#0137f6;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">OSRadio: Главные <a href="https://osradio.ru" target="_blank"><b style="color:#0137f7;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">9TV: Главные <a href="https://9tv.ru" target="_blank"><b style="color:#0137f8;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">BNN-NEWS: Главные <a href="https://bnn-news.ru" target="_blank"><b style="color:#0135f0;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Morning-News: Главные <a href="https://morning-news.ru" target="_blank"><b style="color:#0135f1;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">APN-NN: Главные <a href="https://apn-nn.ru" target="_blank"><b style="color:#0135f2;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">RosRegistr: Главные <a href="http://rosregistr.ru" target="_blank"><b style="color:#0135f3;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Oxpaha: Главные <a href="https://oxpaha.ru" target="_blank"><b style="color:#0135f5;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Itartass-Sib: Главные <a href="http://itartass-sib.ru" target="_blank"><b style="color:#0135f7;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">I-Stroy: Главные <a href="https://www.i-stroy.ru" target="_blank"><b style="color:#0135f8;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">Fresher: Главные <a href="https://www.fresher.ru" target="_blank"><b style="color:#0135f9;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">MoscowOUT: Главные <a href="https://www.moscowout.ru" target="_blank"><b style="color:#0133f9;">новости</b></a> сегодня.</div>'; i++;
+//	bn[i] = '<div style="color:#FF4F03;">E-Rus: Главные <a href="https://e-rus.ru" target="_blank"><b style="color:#0132f7;">новости</b></a> сегодня.</div>'; i++;
+//	$('#brazzer').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+	i    = 0;
+	bn   = [];
+	bn[i] = '<a href="//pornolab.net/forum/info.php?show=advert" target="_blank"><b style="color: blue;">Здесь могла бы быть ваша реклама!</b></a>'; i++;
+	$('#advert').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+	i    = 0;
+	bn   = [];
+	bn[i] = '<a href="https://www.24xxx.me/katu/" target="_blank"><b style="color: blue;">СМОТРИ НОВОЕ ПОРНО ВИДЕО ТУТ: www.24xxx.me</b></a>'; i++;
+	$('#24xxx').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+//	j    = 0;
+//	bm   = [];
+//	bm[j] = '<a href="https://zen.yandex.ru/media/id/5eb86dfaf5177f4668b8ac68/emercoin--blokchein-i-servisy-industrialnogo-urovnia-61774747c7e7c051c1911913" target="_blank"><b style="color: blue;">Блокчейн-сервисы индустриального уровня</b></a>'; j++;
+//	bm[j] = '<a href="https://zen.yandex.ru/media/id/5eb86dfaf5177f4668b8ac68/kak-obogatitsia-na-treidinge-6147d9b59d150d6120097500" target="_blank"><b style="color: blue;">Как обогатиться на трейдинге</b></a>'; j++;
+//	bm[j] = '<a href="https://zen.yandex.ru/media/id/5eb86dfaf5177f4668b8ac68/emerdns-platforma-dlia-interneta-bez-cenzury-613e88a0f4c485538e21f02a" target="_blank"><b style="color: blue;">Как обогатиться на трейдинге</b></a>'; j++;
+//	bm[j] = '<a href="https://zen.yandex.ru/media/id/5eb86dfaf5177f4668b8ac68/blokchein-protiv-blokirovok-61367c945a15184a849007e8" target="_blank"><b style="color: blue;">Блокчейн против блокировок</b></a>'; j++;
+//	$('#emercoin').html(bm[Math.round(Math.random()*(bm.length-1))]);
+
+//	i    = 0;
+//	bn   = [];
+//	if (document.location.pathname == "/forum/index.php") {
+//		bn[i] = '<a href="http://vsexshop.ru" '+t+'><b style="color: red;">Секс шоп с доставкой товаров по Москве и России</b></a>'; i++;
+//	} else {
+//		bn[i] = '<a href="http://vsexshop.ru/store/index/5-vibratory" '+t+'><b style="color: red;">Вибратор с доставкой по Москве и России</b></a>'; i++;
+//		bn[i] = '<a href="http://vsexshop.ru/store/index/25-eroticheskoe-zhenskoe-intimnoe-bele" '+t+'><b style="color: red;">Женское эротическое белье</b></a>'; i++;
+//	}
+//	//bn[i] = '<a href="http://vsexshop.ru/store/index/25-eroticheskoe-zhenskoe-intimnoe-bele" '+t+'><b style="color: red;">Эротическое белье, женское и мужское</b></a>'; i++;
+//	//bn[i] = '<a href="http://vsexshop.ru/store/index/12-lyubrikanty-smazki" '+t+'><b style="color: red;">Смазки для секса</b></a>'; i++;
+//	$('#vsexshop-1').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+	i    = 0;
+	bn   = [];
+	bn[i] = '<a href="https://bigboss.video/kategorii/" target="_blank"><b style="color: red;">Новое порно видео 2024</b></a>'; i++;
+	$('#bigboss').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+//	j   = 0;
+//	bm  = [];
+//	bm[j] = '<a href="http://ilinker.n6611.hostest.ru/lp.php?p=1&o=1&c=1" target="_blank"><b style="color: darkred;">Увидел баннер - получи за это деньги!</b></a>'; j++;
+//	bm[j] = '<a href="http://ilinker.n6611.hostest.ru/lp.php?p=1&o=2&c=1" target="_blank"><b style="color: darkred;">Броди по любимым сайтам и получай за это деньги!</b></a>'; j++;
+//	bm[j] = '<a href="http://ilinker.n6611.hostest.ru/lp.php?p=1&o=3&c=1" target="_blank"><b style="color: darkred;">Хочешь продать свой взгляд за живые деньги?</b></a>'; j++;
+//	bm[j] = '<a href="http://ilinker.n6611.hostest.ru/lp.php?p=2&o=1&c=2" target="_blank"><b style="color: darkred;">Получить займ на карту за 15 минут онлайн</b></a>'; j++;
+//	bm[j] = '<a href="http://ilinker.n6611.hostest.ru/lp.php?p=2&o=2&c=2" target="_blank"><b style="color: darkred;">Оформить займ онлайн. Быстро!</b></a>'; j++;
+//	$('#surfearner').html(bm[Math.round(Math.random()*(bm.length-1))]);
+
+	i    = 0;
+	bn   = [];
+	bn[i] = '<b style="color: blue;">Photo collection of pornstars <a href="https://www.pornpics.com/pornstars/ " target="_blank">- PornPics</a></b>'; i++;
+	$('#pornpics').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+	i    = 0;
+	bn   = [];
+	bn[i] = '<b style="color: DeepPink;">Naked Girls & Nude Women Photos on <a href="https://naked.pics/" target="_blank">Naked.Pics</a></b>'; i++;
+	$('#nakedpics').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+//	i    = 0;
+//	bn   = [];
+//	bn[i] = '<a href="https://www.pornozavod.cc/categories/" target="_blank"><b style="color: DeepPink;">Порно завод</b></a>'; i++;
+//	$('#pornozavod').html(bn[Math.round(Math.random()*(bn.length-1))]);
+
+});
+</script>
+
+<div class="tCenter nowrap mrg_12">
+	<table style="margin: 8px auto 6px;"><tr>
+		<td id="mega"></td>
+	</tr></table>
+</div>
+
+<div class="tCenter nowrap mrg_12">
+	<table style="margin: 8px auto 6px;"><tr>
+		<td id="24xxx"></td>
+	</tr></table>
+</div>
+
+<div class="tCenter nowrap mrg_12">
+	<table style="margin: 8px auto 6px;"><tr>
+		<td id="bigboss"></td>
+	</tr></table>
+</div>
+
+<div class="tCenter nowrap mrg_12">
+	<table style="margin: 8px auto 6px;"><tr>
+		<td id="pornpics"></td>
+	</tr></table>
+</div>
+
+<div class="tCenter nowrap mrg_12">
+	<table style="margin: 8px auto 6px;"><tr>
+		<td id="pornozavod"></td>
+	</tr></table>
+</div>
+
+<div class="tCenter nowrap mrg_12">
+	<table style="margin: 8px auto 6px;"><tr>
+		<td id="nakedpics"></td>
+	</tr></table>
+</div>
+
+
+		<div style="margin: 6px; padding: 8px; border: 1px solid #B7C0C5;">
+			<table style="margin: 8px auto 6px;"><tr>
+								<td valign="top"><div><a href="https://vsexshop.ru/store/index/66"><img src="https://vpipi.com/assets/plab/new_pack_BDSM_468x60.gif" /></a></div></td>
+				<td>&nbsp;</td>
+				<td valign="top"><div><a href="https://vsexshop.ru/store/index/3"><img src="https://vpipi.com/assets/plab/Masturbat_468.gif" /></a></div></td>
+			</tr></table>
+			<script>
+$(function () {
+	var imgMaxWidth = $(window).width() - 50;
+	$('#bn-page-bottom-block').css({
+		'max-width': imgMaxWidth + 'px'
+	});
+});
+</script>
+<div style="width: 98%; margin: auto 0; text-align: center;">
+<iframe scrolling="no" frameborder="0" width="1400" height="245" src="https://dynspt.com/promo.php?c=825616&type=dynamic_banner&new_banner=0&db%5Bwidth%5D=1400&db%5Bheight%5D=245&db%5Btype%5D=live&db%5Bmodel_zone%5D=free&db%5Bheader%5D=0&db%5Bfooter%5D=footer_text_5&db%5Bmlang%5D=0&db%5Bfullscreen%5D=&db%5Bmname%5D=1&db%5Bmlink%5D=1&db%5Bmstatus%5D=1&db%5Bmsize%5D=auto&db%5Bmpad%5D=15&db%5Bmwidth%5D=156&db%5Bcolor_scheme%5D=default&db%5Bmborder%5D=none&db%5Bmborder_color%5D=%23ffffff&db%5Bmborder_over_color%5D=%23a02239&db%5Bmshadow%5D=0&db%5Bmodels_by_geo%5D=0&db%5Bautoupdate%5D=1&db%5Btopmodels%5D=1&db%5Blanding%5D=chat&db%5Blogo_color%5D=default&db%5Blogo_align%5D=left&db%5Bbg_color%5D=none&db%5Bfont_family%5D=Arial&db%5Btext_align%5D=center&db%5Btext_color%5D=%230066ff&db%5Blink_color%5D=%23ff002f&db%5Beffect%5D=auto&db%5Beffect_speed%5D=optimal&db%5Bmode%5D=mode1&db%5Badaptive%5D=0&db%5Bslider%5D=0&db%5Bchat%5D=0"></iframe>
+</div>		</div>
+
+		
+		<div class="clear"></div>
+
+		<br />
+
+				<div class="med bold tCenter pad_4">
+			<a href="info.php?show=user_agreement" onclick="window.open(this.href, '', InfoWinParams); return false;">Пользовательское Соглашение</a>
+									<span class="normal">&nbsp;|&nbsp;</span>
+			<a href="info.php?show=reg_problems" onclick="window.open(this.href, '', InfoWinParams); return false;">При проблемах с регистрацией</a>
+									<span class="normal">&nbsp;|&nbsp;</span>
+			<a href="viewtopic.php?t=2947333" target="_blank">Помощь ресурсу</a>
+									<span class="normal">&nbsp;|&nbsp;</span>
+			<a href="info.php?show=advert" onclick="window.open(this.href, '', InfoWinParams); return false;">Реклама на сайте</a>
+					</div>
+		<br />
+		
+		
+		<table width="99%" cellpadding="0" cellspacing="0" class="bCenter">
+		<tr>
+
+			<td width="50%" class="vBottom">
+				<div class="copyright">
+					<p><a href="groupcp.php?g=104792">Координаторы</a> &middot; <a href="groupcp.php?g=104787">Модераторы</a> &middot; <a href="groupcp.php?g=104841">Техническая помощь</a></p>
+				</div>
+			</td>
+			<td class="vBottom">
+
+						<table class="bCenter" cellspacing="0" cellpadding="2" border="0">
+			<tr>
+				<td class="vBottom nowrap" style="padding: 0 4px;">
+
+					<!--LiveInternet counter-->
+					<script type="text/javascript">
+						document.write('<a href="//www.liveinternet.ru/stat/pornolab.net/" '+ 'target=_blank><img src="//counter.yadro.ru/hit?t14.6;r'+escape(document.referrer)+((typeof(screen)=='undefined')?'':';s'+screen.width+'*'+screen.height+'*'+(screen.colorDepth?screen.colorDepth:screen.pixelDepth))+';'+Math.random()+'" alt="liveinternet.ru" '+'border=0 width=88 height=31></a>');
+					</script>
+					<!--/LiveInternet-->
+					
+
+				</td>
+			</tr>
+			</table>
+
+			
+			</td>
+			 <td width="50%" class="vBottom" style="text-align: right !important;">
+					<div style="font-size: 10px; color: #444444; letter-spacing: -1px;">
+					    &nbsp;
+					    <b><a href="https://5porno.pro/categories/">HD порно ролики 5porno.pro</a></b>
+					    &nbsp;
+					    Новое порно на <b><a href="http://porno365.plus/categories">Порно 365</a></b>
+					    &nbsp;
+					    <b><a href="http://www.mega-xxx.tv/categories/">mega-xxx.tv</a></b>
+					    &nbsp;
+					    <b><a href="https://www.topfapgirls.com/">TopFapGirls</a></b> is the best OnlyFans leaks
+					    &nbsp;
+					    <b><a href="https://thepornplus.com">Порно видео</a></b>
+					    &nbsp;
+					    <b><a href="https://sex.batsa.pro/xxx">Порно на русском</a></b>
+					</div>
+			</td>
+		</tr>
+		</table>
+
+	</div>
+	<!--/page_footer-->
+
+	</div>
+	<!--/page_container-->
+
+
+
+
+
+
+
+<div id="ajax-loading"><b>Loading...</b></div>
+<div id="ajax-error"><b>Error</b></div>
+<style>
+#bb-alert-box {
+	width: auto;
+	max-width: 800px;
+	line-height: 18px;
+	display: none;
+}
+#bb-alert-msg {
+	min-width: 400px;
+	max-height: 400px;
+	margin: 50px 20px;
+	padding: 10px;
+	overflow: auto;
+	text-align: center;
+}
+.bb-alert-err {
+	color: #7E0000;
+	background: #FFEEEE;
+	box-shadow: 0 0 20px #B85353;
+	font-weight: bold;
+}
+</style>
+<div id="bb-alert-box">
+	<div id="bb-alert-msg"></div>
+</div>
+<div id="modal-blocker"></div>
+
+	</div><!--/body_container-->
+
+</body>
+</html>
