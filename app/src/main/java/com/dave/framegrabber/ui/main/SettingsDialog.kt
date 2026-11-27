@@ -91,6 +91,7 @@ class SettingsDialog(private val s: MainScreen) {
         bindSchemes(v)
         bindBackup(v)
         bindTorrents(v)
+        bindLock(v)
         v.findViewById<View>(R.id.btnStorage).setOnClickListener {
             openDlg?.dismiss()
             s.act.startActivity(com.dave.framegrabber.ui.StorageActivity.intent(s.act))
@@ -101,6 +102,58 @@ class SettingsDialog(private val s: MainScreen) {
 
     /** Color scheme: green, pink, orange, red, purple — the app is redrawn in it. */
     private var openDlg: AlertDialog? = null
+
+    /** «Защита»: PIN on entry, fingerprint, how soon it locks again. */
+    private fun bindLock(v: View) {
+        val box = v.findViewById<android.widget.LinearLayout>(R.id.lockBox)
+        val d = s.act.resources.displayMetrics.density
+        val L = com.dave.framegrabber.data.AppLock
+        val Lock = com.dave.framegrabber.ui.LockActivity
+        fun open(mode: Int) { openDlg?.dismiss(); s.act.startActivity(Lock.intent(s.act, mode)) }
+        fun btn(t: String, onClick: () -> Unit) = android.widget.Button(s.act, null, 0, R.style.BtnSecondary).apply {
+            text = t; gravity = android.view.Gravity.CENTER; setOnClickListener { onClick() }
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (8 * d).toInt() }
+        }
+        fun build() {
+            box.removeAllViews()
+            if (!L.enabled(s.act)) { box.addView(btn("Поставить PIN-код на вход") { open(Lock.MODE_SET) }); return }
+            // fingerprint on / off
+            val bio = L.bio(s.act)
+            box.addView(TextView(s.act).apply {
+                text = (if (bio) "● " else "○ ") + "Отпечаток пальца вместо PIN"; textSize = 15f
+                setTextColor(s.act.tc(if (bio) R.color.text else R.color.textDim))
+                setBackgroundResource(R.drawable.bg_option); isSelected = bio
+                setPadding((14 * d).toInt(), (12 * d).toInt(), (14 * d).toInt(), (12 * d).toInt())
+                layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (8 * d).toInt() }
+                setOnClickListener { L.setBio(s.act, !bio); build() }
+            })
+            box.addView(TextView(s.act).apply {
+                text = "Снова спрашивать, если приложение было свёрнуто дольше:"; textSize = 12f; setTextColor(s.act.tc(R.color.textDim))
+                setPadding(0, (12 * d).toInt(), 0, 0)
+            })
+            val row = android.widget.LinearLayout(s.act)
+            val cur = L.delay(s.act)
+            L.DELAYS.forEach { (sec, t) ->
+                row.addView(TextView(s.act).apply {
+                    text = t; textSize = 13f; gravity = android.view.Gravity.CENTER
+                    setTextColor(s.act.tc(if (sec == cur) R.color.text else R.color.textDim))
+                    setBackgroundResource(R.drawable.bg_option); isSelected = sec == cur
+                    setPadding(0, (10 * d).toInt(), 0, (10 * d).toInt())
+                    layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins((3 * d).toInt(), (6 * d).toInt(), (3 * d).toInt(), 0) }
+                    setOnClickListener { L.setDelay(s.act, sec); build() }
+                })
+            }
+            box.addView(row)
+            box.addView(TextView(s.act).apply {
+                text = "Выключил экран — закроется сразу."; textSize = 12f; setTextColor(s.act.tc(R.color.textDim)); setPadding(0, (6 * d).toInt(), 0, 0)
+            })
+            val two = android.widget.LinearLayout(s.act)
+            two.addView(btn("Сменить PIN") { open(Lock.MODE_CHANGE) }.apply { layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { topMargin = (8 * d).toInt(); rightMargin = (4 * d).toInt() } })
+            two.addView(btn("Выключить") { open(Lock.MODE_OFF) }.apply { layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { topMargin = (8 * d).toInt(); leftMargin = (4 * d).toInt() } })
+            box.addView(two)
+        }
+        build()
+    }
 
     /** «Торренты»: download in the app / open in a torrent app / only save the .torrent. */
     private fun bindTorrents(v: View) {

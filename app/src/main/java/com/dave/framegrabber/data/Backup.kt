@@ -18,7 +18,7 @@ import java.util.Locale
  */
 object Backup {
 
-    private val SKIP_PREFS = setOf("thumbmeta")
+    private val SKIP_PREFS = setOf("thumbmeta", "applock")
     /** Files and folders (in the app's storage) that go into the backup. */
     private val FILES = listOf("tg_posts.json", "player", "models")
 

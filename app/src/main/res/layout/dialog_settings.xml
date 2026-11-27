@@ -436,6 +436,20 @@
     <TextView
         style="@style/Label"
         android:paddingTop="18dp"
+        android:text="ЗАЩИТА"
+        android:letterSpacing="0.1" />
+    <TextView
+        style="@style/SubHint"
+        android:text="PIN-код (и отпечаток пальца) при входе в приложение. Картинка приложения в списке недавних скрывается." />
+    <LinearLayout
+        android:id="@+id/lockBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        style="@style/Label"
+        android:paddingTop="18dp"
         android:text="РЕЗЕРВНАЯ КОПИЯ"
         android:letterSpacing="0.1" />
     <TextView
