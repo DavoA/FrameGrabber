@@ -219,6 +219,9 @@ class ScreenshotTest {
             com.dave.framegrabber.tgclient.TgKeys(appCtx).apiId = 0
             inst.runOnMainSync { com.dave.framegrabber.tgclient.Tg.restart(a) }
         }
+        // 19. «Сайт»
+        inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navSite).performClick() }
+        Thread.sleep(6000); shot("19_site")
         inst.runOnMainSync { a.findViewById<android.view.View>(R.id.navTools).performClick() }
         Thread.sleep(600)
 

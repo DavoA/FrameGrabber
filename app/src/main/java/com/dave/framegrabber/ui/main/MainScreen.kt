@@ -78,6 +78,7 @@ class MainScreen(val act: MainActivity) {
     val split = SplitPanel(this)
     val playerTab = PlayerTab(this)
     val feed = FeedTab(this)
+    val site = SiteTab(this)
     val rangeClips = RangeCard(this, h(R.id.rangeClips)) { clips.updateGifInfo() }
     val rangeBatch = RangeCard(this, h(R.id.rangeBatch)) { batch.updateHint() }
     val format = CaptureFormat(this)

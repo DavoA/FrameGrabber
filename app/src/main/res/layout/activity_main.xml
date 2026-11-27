@@ -116,6 +116,7 @@
             <include layout="@layout/page_tools" />
             <include layout="@layout/page_player" />
             <include layout="@layout/page_feed" />
+            <include layout="@layout/page_site" />
 
             <!-- «Пост в Telegram»: picking 6 frames on the «Кадры» page -->
             <LinearLayout
@@ -249,6 +250,17 @@
                 <ImageView android:id="@+id/navFeedIcon" style="@style/NavIcon" android:src="@drawable/ic_send" />
             </FrameLayout>
             <TextView android:id="@+id/navFeedLabel" style="@style/NavLabel" android:text="Канал" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/navSite"
+            style="@style/NavItem">
+            <FrameLayout
+                android:layout_width="60dp"
+                android:layout_height="32dp">
+                <View android:id="@+id/navSitePill" style="@style/NavPill" />
+                <ImageView android:id="@+id/navSiteIcon" style="@style/NavIcon" android:src="@drawable/ic_web" />
+            </FrameLayout>
+            <TextView android:id="@+id/navSiteLabel" style="@style/NavLabel" android:text="Сайт" />
         </LinearLayout>
         </LinearLayout>
     </LinearLayout>

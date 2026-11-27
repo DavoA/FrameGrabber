@@ -15,7 +15,7 @@ import com.dave.framegrabber.ui.switchPanel
 /** Bottom bar: «Съёмка» / «Кадры» / «Клипы» / «Инструменты», with a frame counter on «Кадры». */
 class NavController(private val s: MainScreen) {
 
-    enum class Page { CAPTURE, FRAMES, CLIPS, TOOLS, PLAYER, FEED }
+    enum class Page { CAPTURE, FRAMES, CLIPS, TOOLS, PLAYER, FEED, SITE }
 
     var page = Page.CAPTURE
         private set
@@ -29,6 +29,7 @@ class NavController(private val s: MainScreen) {
         Page.TOOLS to s.pinned<View>(R.id.pageTools),
         Page.PLAYER to s.pinned<View>(R.id.pagePlayer),
         Page.FEED to s.pinned<View>(R.id.pageFeed),
+        Page.SITE to s.pinned<View>(R.id.pageSite),
     )
     private val items = mapOf(
         Page.CAPTURE to item(R.id.navCapture, R.id.navCapturePill, R.id.navCaptureIcon, R.id.navCaptureLabel),
@@ -37,6 +38,7 @@ class NavController(private val s: MainScreen) {
         Page.TOOLS to item(R.id.navTools, R.id.navToolsPill, R.id.navToolsIcon, R.id.navToolsLabel),
         Page.PLAYER to item(R.id.navPlayer, R.id.navPlayerPill, R.id.navPlayerIcon, R.id.navPlayerLabel),
         Page.FEED to item(R.id.navFeed, R.id.navFeedPill, R.id.navFeedIcon, R.id.navFeedLabel),
+        Page.SITE to item(R.id.navSite, R.id.navSitePill, R.id.navSiteIcon, R.id.navSiteLabel),
     )
     private val badge = s.pinned<TextView>(R.id.navBadge)
 
@@ -57,6 +59,7 @@ class NavController(private val s: MainScreen) {
         if (target == Page.PLAYER) s.playerTab.refresh() else s.playerTab.stopPreview()
         if (target == Page.FEED) s.feed.onShown() else s.feed.onHidden()
         if (target == Page.CLIPS) s.clips.onShown()
+        if (target == Page.SITE) s.site.onShown()
         if (target == page) return
         val from = page
         page = target

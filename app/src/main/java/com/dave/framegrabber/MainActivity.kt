@@ -112,6 +112,8 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         if (screen.viewer.selected != null) {
             screen.viewer.close()
+        } else if (screen.nav.page == NavController.Page.SITE && screen.site.back()) {
+            // went back a page on the site
         } else if (screen.nav.page != NavController.Page.CAPTURE) {
             screen.nav.show(NavController.Page.CAPTURE)
         } else {
