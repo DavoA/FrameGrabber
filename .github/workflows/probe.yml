@@ -19,6 +19,15 @@ jobs:
             curl -sSL -A "$UA" -c cj.txt -b cj.txt -D "out/$i.headers" -o "out/$i.html" "$url" || true
             echo "$i $url" >> out/index.txt
           done < .github/probe-urls.txt
+          # fastpic: follow the «Перейти к изображению» link with the same cookies
+          link=$(grep -o 'href="https://fastpic.org/view/[^"]*\.html?[^"]*"' out/1.html | head -1 | sed 's/href="//; s/"$//')
+          echo "link: $link" >> out/index.txt
+          curl -sSL -A "$UA" -c cj.txt -b cj.txt -e "$(sed -n 1p .github/probe-urls.txt)" -D out/f2.headers -o out/f2.html "$link" || true
+          big=$(grep -o 'https://i[0-9]*\.fastpic\.org/big/[^"'"'"' <>]*' out/f2.html | head -1 | sed 's/&amp;/\&/g')
+          echo "big: $big" >> out/index.txt
+          curl -sS -A "$UA" -e "$link" -D out/img.headers -o out/img.bin "$big" || true
+          file out/img.bin >> out/index.txt; ls -la out/img.bin >> out/index.txt
+          rm -f out/img.bin
           ls -la out
       - name: Save to branch «probe»
         run: |
