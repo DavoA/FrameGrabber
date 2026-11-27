@@ -146,7 +146,8 @@ class TorrentActivity : Activity() {
             box.minimumHeight = (w * 0.6f).toInt()
             box.setOnClickListener { gallery(listOf(p) + t.images, 0) }
             io.execute {
-                val b = Lab.image(applicationContext, p.thumb, 1400)
+                val (big, ref) = Lab.bigOf(applicationContext, p)
+                val b = Lab.image(applicationContext, big, 1400, ref) ?: Lab.image(applicationContext, p.thumb, 1400)
                 runOnUiThread { if (!isDestroyed) { spin.visibility = View.GONE; if (b != null) { iv.setImageBitmap(b); box.minimumHeight = 0 } } }
             }
         }
@@ -214,8 +215,10 @@ class TorrentActivity : Activity() {
                         val index = ri * 3 + i
                         cell.setOnClickListener { gallery(pics, index) }
                         io.execute {
-                            val b = Lab.image(applicationContext, img.thumb, 360)
-                            runOnUiThread { if (!isDestroyed && b != null) iv.setImageBitmap(b) }
+                            // the small one at once, then the real picture (sharper in the cell, ready for the gallery)
+                            Lab.image(applicationContext, img.thumb, 360)?.let { b -> runOnUiThread { if (!isDestroyed) iv.setImageBitmap(b) } }
+                            val (big, ref) = Lab.bigOf(applicationContext, img)
+                            if (big != img.thumb) Lab.image(applicationContext, big, 720, ref)?.let { b -> runOnUiThread { if (!isDestroyed) iv.setImageBitmap(b) } }
                         }
                     }
                     line.addView(cell)
@@ -251,8 +254,12 @@ class TorrentActivity : Activity() {
 
     private fun gallery(list: List<Lab.Img>, start: Int) {
         PhotoPager.show(this, list.size, start,
-            preview = { i -> Lab.cached(list[i].thumb, 360) ?: Lab.cached(list[i].thumb, 1400) },
-            full = { i -> Lab.image(applicationContext, list[i].full, 2400) ?: Lab.image(applicationContext, list[i].thumb, 2400) })
+            preview = { i -> Lab.cachedBig(list[i], 720) ?: Lab.cachedBig(list[i], 1400) ?: Lab.cached(list[i].thumb, 360) ?: Lab.cached(list[i].thumb, 1400) },
+            // the real big picture (via the host's page for fastpic & co), else the small one
+            full = { i ->
+                val (url, ref) = Lab.bigOf(applicationContext, list[i])
+                Lab.image(applicationContext, url, 2400, ref) ?: Lab.image(applicationContext, list[i].full, 2400) ?: Lab.image(applicationContext, list[i].thumb, 2400)
+            })
     }
 
     private class Square(c: Context) : FrameLayout(c) {

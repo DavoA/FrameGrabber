@@ -80,7 +80,8 @@ class SiteParseTest {
         assertEquals("https://i.host/poster.jpg", t.poster?.thumb)
         assertEquals(2, t.images.size)
         assertEquals("https://i.host/big1.jpg", t.images[0].full)
-        assertEquals("https://i1.fastpic.org/big/2026/a.jpeg", t.images[1].full)
+        // fastpic: the big picture comes from its «view» page
+        assertEquals("https://fastpic.org/view/1", t.images[1].page)
         assertEquals("2 GB", t.sizeText)
         assertEquals(15, t.seeds); assertEquals(3, t.leech)
         assertEquals("magnet:?xt=urn:btih:ABC&tr=x", t.magnet)

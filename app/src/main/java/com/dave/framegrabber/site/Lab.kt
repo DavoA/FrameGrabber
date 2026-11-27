@@ -155,7 +155,8 @@ object Lab {
 
     // ================================================================ torrent page
 
-    class Img(val thumb: String, val full: String)
+    /** A picture: its small version, a direct big one if known, and the host's page of it (fastpic «view»…). */
+    class Img(val thumb: String, val full: String, val page: String? = null)
 
     class Topic(
         val id: Long, val title: String, val poster: Img?, val images: List<Img>,
@@ -207,7 +208,7 @@ object Lab {
             val thumb = abs(Html.fromHtml(m.groupValues[1], 0).toString())
             if (Ads.isAd(thumb) || !seen.add(thumb)) return@forEach
             val href = linked[m.groupValues[1]]?.let { abs(Html.fromHtml(it, 0).toString()) }
-            out += Img(thumb, fullOf(thumb, href))
+            out += Img(thumb, fullOf(thumb, href), href?.takeIf { !isImageUrl(it) })
         }
         Regex("""<img[^>]+src="([^"]+)"""").findAll(body).forEach { m ->
             val u = abs(Html.fromHtml(m.groupValues[1], 0).toString())
@@ -218,10 +219,46 @@ object Lab {
     }
 
     /** The big picture: a direct link to an image, or the thumbnail itself (hosts' «view» pages can't be shown). */
+    private fun isImageUrl(u: String) = Regex("""\.(jpe?g|png|gif|webp)(\?.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(u)
+
     private fun fullOf(thumb: String, href: String?): String {
-        if (href != null && Regex("""\.(jpe?g|png|gif|webp)(\?.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(href)) return href
-        // common hosts: thumbs → big
-        return thumb.replace("/thumb/", "/big/").takeIf { "fastpic" in thumb } ?: thumb
+        if (href != null && isImageUrl(href)) return href
+        // hosts where the big picture's address follows from the small one
+        Regex("""^https?://thumbs(\d*)\.imgbox\.com/(.+)_t\.(\w+)$""").find(thumb)?.let { m ->
+            return "https://images${m.groupValues[1]}.imgbox.com/${m.groupValues[2]}_o.${m.groupValues[3]}"
+        }
+        Regex("""^https?://t(\d+)\.pixhost\.to/thumbs/(.+)$""").find(thumb)?.let { m ->
+            return "https://img${m.groupValues[1]}.pixhost.to/images/${m.groupValues[2]}"
+        }
+        return thumb
+    }
+
+    private val bigCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
+
+    /**
+     * The real full-size picture and the page to send as Referer. Image hosts like fastpic.org
+     * only give the big picture through their «view» page (a signed address): that page is read
+     * and the big picture's address taken from it. Blocking.
+     */
+    fun bigOf(ctx: Context, img: Img): Pair<String, String> {
+        val page = img.page ?: return img.full to BASE
+        bigCache[page]?.let { return it }
+        val found = runCatching {
+            val c = (URL(page).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 15000; readTimeout = 20000
+                setRequestProperty("User-Agent", ua(ctx)); setRequestProperty("Referer", BASE)
+            }
+            val html = try { c.inputStream.use { it.readBytes() }.toString(Charsets.UTF_8) } finally { c.disconnect() }
+            val un = { u: String -> Html.fromHtml(u, 0).toString().let { if (it.startsWith("//")) "https:$it" else it } }
+            // fastpic: https://iNN.fastpic.org/big/…?md5=…&expires=…
+            Regex("""(https?:)?//i\d+\.fastpic\.(?:org|ru)/big/[^"'\s<>]+""").find(html)?.value?.let(un)
+                ?: Regex("""<meta[^>]+property="og:image"[^>]+content="([^"]+)"""").find(html)?.groupValues?.get(1)?.let(un)
+                ?: Regex("""<img[^>]+(?:id|class)="[^"]*(?:main|image|picture|big|full|show)[^"]*"[^>]+src="([^"]+)"""", RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)?.let(un)
+                ?: Regex("""<img[^>]+src="([^"]+)"[^>]+(?:id|class)="[^"]*(?:main|image|picture|big|full|show)[^"]*"""", RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)?.let(un)
+        }.getOrNull()?.takeIf { it.startsWith("http") && !Ads.isAd(it) }
+        val r = (found ?: img.full) to page
+        bigCache[page] = r
+        return r
     }
 
     /** The «autoscreens» frames of a torrent (shown to logged-in users). */
@@ -274,15 +311,18 @@ object Lab {
 
     fun cached(url: String, max: Int): Bitmap? = cache.get("$max|$url")
 
+    /** The real picture if it's already loaded for a grid cell. */
+    fun cachedBig(img: Img, max: Int): Bitmap? = (img.page?.let { bigCache[it]?.first } ?: img.full).let { cache.get("$max|$it") }
+
     /** A picture from the web, fitted into [max] px (blocking). */
-    fun image(ctx: Context, url: String, max: Int): Bitmap? {
+    fun image(ctx: Context, url: String, max: Int, referer: String = BASE): Bitmap? {
         cache.get("$max|$url")?.let { return it }
         val bytes = runCatching {
             var u = url
             var data: ByteArray? = null
             repeat(4) {
                 if (data != null) return@repeat
-                val c = open(ctx, u)
+                val c = open(ctx, u).apply { setRequestProperty("Referer", referer) }
                 try {
                     val code = c.responseCode
                     if (code in 300..399) { u = URL(URL(u), c.getHeaderField("Location") ?: return@runCatching null).toString() }
