@@ -438,8 +438,10 @@ class PostActivity : Activity() {
                 })
                 // this picture was in an earlier post
                 // small rounded «⚠ было» pill in the free top-right corner
+                // (the cover's top-left chip «1 · обложка» is wide: there just «⚠», at the bottom left)
+                val cover = i == 0
                 if (f.path in dupPaths) tile.addView(TextView(this).apply {
-                    text = "⚠ было"
+                    text = if (cover) "⚠" else "⚠ было"
                     setTextColor(tc(R.color.warn)); textSize = 10f
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
                     includeFontPadding = false
@@ -449,7 +451,9 @@ class PostActivity : Activity() {
                         setStroke((1 * d).toInt().coerceAtLeast(1), tc(R.color.warn))
                     }
                     setPadding((7 * d).toInt(), (3 * d).toInt(), (7 * d).toInt(), (3 * d).toInt())
-                    layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END)
+                    layoutParams = if (cover) FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START)
+                        .apply { setMargins((5 * d).toInt(), 0, 0, (5 * d).toInt()) }
+                    else FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END)
                         .apply { setMargins(0, (5 * d).toInt(), (5 * d).toInt(), 0) }
                 })
                 tile.setOnClickListener { tapPhoto(i) }
