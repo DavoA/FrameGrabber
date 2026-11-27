@@ -32,11 +32,12 @@ class WatchJob : JobService() {
             val js = ctx.getSystemService(JobScheduler::class.java)
             if (SiteStore(ctx).followed.isEmpty()) { js.cancel(JOB_ID); return }
             if (js.getPendingJob(JOB_ID) != null) return
-            js.schedule(JobInfo.Builder(JOB_ID, ComponentName(ctx, WatchJob::class.java))
+            // never take the app down because of the schedule
+            runCatching { js.schedule(JobInfo.Builder(JOB_ID, ComponentName(ctx, WatchJob::class.java))
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setPeriodic(24L * 60 * 60 * 1000)
                 .setPersisted(true)
-                .build())
+                .build()) }
         }
 
         /**
