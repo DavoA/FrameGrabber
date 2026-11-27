@@ -11,6 +11,38 @@ import org.json.JSONObject
 class SiteStore(ctx: Context) {
     private val sp = ctx.applicationContext.getSharedPreferences("site", Context.MODE_PRIVATE)
 
+    // ================================================================ hidden words (search filter)
+
+    companion object {
+        /** Hidden by default: trans content (title tags and section names, Latin and Russian). */
+        val DEFAULT_HIDDEN = listOf(
+            "transsexual", "shemale", "transgender", "tranny", "tgirl", "t-girl", "ladyboy", "trans", "ts",
+            "транссексуал", "транссексуалы", "трансгендер", "шимейл", "трансы", "транс",
+        )
+    }
+
+    var hideOn: Boolean
+        get() = sp.getBoolean("hideOn", true)
+        set(v) = sp.edit().putBoolean("hideOn", v).apply()
+
+    var hidden: List<String>
+        get() = sp.getString("hidden", null)?.let { s -> runCatching { JSONArray(s).let { a -> List(a.length()) { a.getString(it) } } }.getOrNull() }
+            ?: DEFAULT_HIDDEN
+        set(v) = sp.edit().putString("hidden", JSONArray(v.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()).toString()).apply()
+
+    /**
+     * Does a torrent show a hidden word (in its title or section)? Short words (≤ 4 letters, like
+     * «ts», «транс») only as whole words, longer ones anywhere («Transsexuals», «Шимейлы»).
+     */
+    fun isHidden(title: String, forum: String): Boolean {
+        if (!hideOn) return false
+        val t = (title + " " + forum).lowercase()
+        return hidden.any { w ->
+            if (w.length <= 4) Regex("""(?<![\p{L}\p{N}])${Regex.escape(w)}(?![\p{L}\p{N}])""").containsMatchIn(t)
+            else w in t
+        }
+    }
+
     // ================================================================ bookmarks
 
     class Bookmark(val id: Long, val title: String, val poster: String?, val size: String, val added: Long)

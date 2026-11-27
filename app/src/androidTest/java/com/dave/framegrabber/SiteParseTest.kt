@@ -88,4 +88,15 @@ class SiteParseTest {
         assertEquals("https://pornolab.net/forum/dl.php?t=101", t.torrent)
         assertTrue(t.text, "Продолжительность: 00:30:00" in t.text && "▸ Скриншоты" in t.text && "второй пост" !in t.text)
     }
+
+    @Test fun hiddenWords() {
+        val st = com.dave.framegrabber.site.SiteStore(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
+        st.hideOn = true; st.hidden = com.dave.framegrabber.site.SiteStore.DEFAULT_HIDDEN
+        assertTrue(st.isHidden("Kim [2026, Shemale, Anal, 1080p]", ""))
+        assertTrue(st.isHidden("Some clip", "Транссексуалы / Transsexuals"))
+        assertTrue(st.isHidden("Anna TS solo", ""))
+        assertTrue(!st.isHidden("Hot Tub Sessions [2026, Blonde]", "Клипы"))   // «ts» only as a word
+        assertTrue(!st.isHidden("Transparent dress", ""))                     // «trans» only as a word
+    }
+
 }

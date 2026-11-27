@@ -75,6 +75,7 @@ class SiteTab(private val s: MainScreen) {
         s.h<View>(R.id.btnSiteHome).setOnClickListener { showNative() }
         s.h<View>(R.id.btnSiteWeb).setOnClickListener { showWeb(null) }
         s.h<View>(R.id.btnSiteSort).setOnClickListener { chooseSort() }
+        status.setOnClickListener { refresh() }   // a tap on the line under the search: read again
         s.h<View>(R.id.btnSiteTorrents).setOnClickListener {
             act.startActivityForResult(com.dave.framegrabber.ui.site.TorrentsActivity.intent(act), com.dave.framegrabber.MainActivity.REQ_TORRENT)
         }
@@ -99,9 +100,19 @@ class SiteTab(private val s: MainScreen) {
         s.h<View>(R.id.btnSiteMenu).setOnClickListener { menu() }
     }
 
+    /** When the results were last read: coming back after a while reads them again (the site changes). */
+    private var loadedAt = 0L
+    private var hiddenCount = 0
+    private val siteStore by lazy { com.dave.framegrabber.site.SiteStore(act) }
+
     fun onShown() {
-        if (!started) { started = true; search("") }
+        if (!started) { started = true; search(""); return }
+        // back on the tab after a minute or more: fresh results (same search, same place on top)
+        if (nativeBox.visibility == View.VISIBLE && !loading && System.currentTimeMillis() - loadedAt > 60_000) refresh()
     }
+
+    /** The same search again, from the first page. */
+    fun refresh() { search(query) }
 
     /** «Назад»: on the site a page back, then from the site to the search. */
     fun back(): Boolean {
@@ -132,7 +143,7 @@ class SiteTab(private val s: MainScreen) {
     fun search(q: String) {
         started = true
         if (searchEdit.text.toString() != q.trim()) searchEdit.setText(q.trim())
-        query = q.trim(); page = 0; total = -1; end = false
+        query = q.trim(); page = 0; total = -1; end = false; hiddenCount = 0
         rows.clear(); posters.clear(); askedPoster.clear()
         searchEdit.hideKeyboardSafe()
         adapter.notifyDataSetChanged()
@@ -146,20 +157,29 @@ class SiteTab(private val s: MainScreen) {
         loading = true
         val q = query; val p = page; val so = sort
         io.execute {
-            val r = runCatching { com.dave.framegrabber.site.Lab.search(act.applicationContext, q, so, true, p) }
+            // the hidden words also go to the site's own search («-word»), when there is a query
+            val minus = if (q.isNotEmpty() && siteStore.hideOn) siteStore.hidden.filter { it.length > 2 && ' ' !in it }
+                .joinToString("") { " -$it" }.take(220) else ""
+            val r = runCatching { com.dave.framegrabber.site.Lab.search(act.applicationContext, q + minus, so, true, p) }
             s.ui.post {
                 loading = false
                 if (q != query || so != sort) return@post
                 r.onSuccess { res ->
                     loginBtn.visibility = View.GONE
-                    rows += res.rows; page++; total = res.total
+                    // hidden words: those torrents aren't shown
+                    val keep = res.rows.filterNot { siteStore.isHidden(it.title, it.forum) }
+                    hiddenCount += res.rows.size - keep.size
+                    rows += keep; page++; total = res.total
+                    loadedAt = System.currentTimeMillis()
                     if (res.rows.size < 50) end = true
                     status.text = when {
                         rows.isEmpty() && p == 0 -> if (q.isEmpty()) "Раздач не видно — сайт мог поменять страницу (⋮ на сайте)" else "Ничего не найдено"
                         q.isEmpty() -> "Новые раздачи · ${so.title.lowercase()}"
                         else -> "«$q» · найдено ${if (res.total >= 0) res.total else rows.size} · ${so.title.lowercase()}"
-                    }
+                    } + (if (hiddenCount > 0) " · скрыто $hiddenCount" else "")
                     adapter.notifyDataSetChanged()
+                    // a page that was mostly hidden: read the next one right away
+                    if (!end && keep.size < 20 && rows.size < 30) s.ui.post { more() }
                 }.onFailure { e ->
                     end = true
                     if (e is com.dave.framegrabber.site.Lab.NeedLogin) {
@@ -171,7 +191,87 @@ class SiteTab(private val s: MainScreen) {
         }
     }
 
+    /** The list button: sort, hidden words, refresh. */
     private fun chooseSort() {
+        AlertDialog.Builder(act).setItems(arrayOf(
+            "⟳ Обновить",
+            "Сортировка: ${sort.title.lowercase()}",
+            "🚫 Скрывать слова (${if (siteStore.hideOn) siteStore.hidden.size.toString() else "выкл."})",
+        )) { _, i -> when (i) { 0 -> refresh(); 1 -> sortDialog(); else -> hiddenDialog() } }.show()
+    }
+
+    /** Words whose torrents are never shown (title or section), applied to every search. */
+    private fun hiddenDialog() {
+        val box = android.widget.LinearLayout(act).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding((20 * d).toInt(), (8 * d).toInt(), (20 * d).toInt(), 0)
+        }
+        val words = siteStore.hidden.toMutableList()
+        val sw = android.widget.Switch(act).apply {
+            text = "Скрывать раздачи с этими словами"; isChecked = siteStore.hideOn; textSize = 15f
+            setTextColor(act.tc(R.color.text))
+        }
+        box.addView(sw)
+        val flow = android.widget.LinearLayout(act).apply { orientation = android.widget.LinearLayout.VERTICAL }
+        fun fill() {
+            flow.removeAllViews()
+            var line: android.widget.LinearLayout? = null
+            var used = 0
+            val maxW = act.resources.displayMetrics.widthPixels - (110 * d).toInt()
+            words.forEach { w ->
+                val chip = TextView(act).apply {
+                    text = "$w  ✕"; textSize = 13f; setTextColor(act.tc(R.color.text))
+                    setBackgroundResource(R.drawable.bg_chip)
+                    setPadding((10 * d).toInt(), (5 * d).toInt(), (10 * d).toInt(), (5 * d).toInt())
+                    setOnClickListener { words.remove(w); fill() }
+                }
+                chip.measure(0, 0)
+                val cw = chip.measuredWidth + (6 * d).toInt()
+                if (line == null || used + cw > maxW) {
+                    line = android.widget.LinearLayout(act).apply { setPadding(0, (6 * d).toInt(), 0, 0) }
+                    flow.addView(line); used = 0
+                }
+                line!!.addView(chip, android.widget.LinearLayout.LayoutParams(-2, -2).apply { marginEnd = (6 * d).toInt() })
+                used += cw
+            }
+        }
+        fill()
+        box.addView(flow)
+        val add = android.widget.LinearLayout(act).apply { gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, (10 * d).toInt(), 0, 0) }
+        val e = android.widget.EditText(act, null, 0, R.style.Input).apply { hint = "Добавить слово"; gravity = android.view.Gravity.CENTER_VERTICAL; isSingleLine = true }
+        add.addView(e, android.widget.LinearLayout.LayoutParams(0, -2, 1f))
+        val plus = android.widget.Button(act, null, 0, R.style.BtnSecondary).apply {
+            text = "＋"; gravity = android.view.Gravity.CENTER
+            layoutParams = android.widget.LinearLayout.LayoutParams(-2, -2).apply { marginStart = (8 * d).toInt() }
+        }
+        val doAdd = {
+            e.text.toString().split(',', ' ').map { it.trim().trimStart('-').lowercase() }.filter { it.length >= 2 }
+                .forEach { if (it !in words) words += it }
+            e.setText(""); fill()
+        }
+        plus.setOnClickListener { doAdd() }
+        e.setOnEditorActionListener { _, _, _ -> doAdd(); true }
+        add.addView(plus)
+        box.addView(add)
+        box.addView(TextView(act).apply {
+            text = "Слова ищутся в названии раздачи и разделе. Короткие (до 4 букв, как «ts») — только целым словом."
+            textSize = 12f; setTextColor(act.tc(R.color.textDim)); setPadding(0, (8 * d).toInt(), 0, 0)
+        })
+        AlertDialog.Builder(act).setTitle("Скрывать в поиске")
+            .setView(android.widget.ScrollView(act).apply { addView(box) })
+            .setPositiveButton("Сохранить") { _, _ ->
+                if (e.text.isNotBlank()) doAdd()
+                siteStore.hidden = words; siteStore.hideOn = sw.isChecked
+                search(query)
+            }
+            .setNeutralButton("Стандартные") { _, _ ->
+                siteStore.hidden = com.dave.framegrabber.site.SiteStore.DEFAULT_HIDDEN; siteStore.hideOn = true
+                search(query)
+            }
+            .setNegativeButton("Отмена", null).show()
+    }
+
+    private fun sortDialog() {
         val all = com.dave.framegrabber.site.Lab.Sort.entries
         AlertDialog.Builder(act).setTitle("Сортировка")
             .setSingleChoiceItems(all.map { it.title }.toTypedArray(), all.indexOf(sort)) { dlg, i ->
