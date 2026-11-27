@@ -14,7 +14,7 @@ android {
         // CI passes the build number: every build gets its own version (1.42 → code 42)
         val build = (System.getenv("BUILD_NUMBER") ?: "0").toInt()
         versionCode = maxOf(1, build)
-        versionName = "2.$build"
+        versionName = System.getenv("APP_VERSION") ?: "3.$build"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }

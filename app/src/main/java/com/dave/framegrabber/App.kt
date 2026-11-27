@@ -7,6 +7,5 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         ColorScheme.install(this)
-        ColorScheme.applyIcon(this)   // e.g. after restoring a backup with another color
     }
 }

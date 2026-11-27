@@ -147,7 +147,7 @@ class SettingsDialog(private val s: MainScreen) {
             item.setOnClickListener {
                 if (sc == com.dave.framegrabber.data.ColorScheme.get(s.act)) return@setOnClickListener
                 com.dave.framegrabber.data.ColorScheme.set(s.act, sc)
-                com.dave.framegrabber.data.ColorScheme.applyIcon(s.act)
+                // (the home screen icon follows when you leave the app: switching it now would close the app)
                 openDlg?.dismiss()
                 s.act.recreate()
             }

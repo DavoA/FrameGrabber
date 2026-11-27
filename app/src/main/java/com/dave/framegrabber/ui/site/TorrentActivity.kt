@@ -280,8 +280,34 @@ class TorrentActivity : Activity() {
                     .onFailure { e -> body.addView(TextView(this).apply { text = "Кадры: ${e.message}"; textSize = 12f; setTextColor(tc(R.color.textDim)) }, body.indexOfChild(picsBox) + 1) }
             }
         }
-        // description
-        if (t.text.isNotBlank()) {
+        // the release info (above the screenshots): label / value rows
+        if (t.info.isNotEmpty()) {
+            body.addView(section("О раздаче"), body.indexOfChild(picsTitle))
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_row)
+                setPadding((14 * d).toInt(), (6 * d).toInt(), (14 * d).toInt(), (6 * d).toInt())
+            }
+            t.info.forEachIndexed { i, (label, value) ->
+                if (i > 0) card.addView(View(this).apply { setBackgroundColor(tc(R.color.stroke)) },
+                    LinearLayout.LayoutParams(-1, maxOf(1, (0.7f * d).toInt())))
+                card.addView(LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, (8 * d).toInt(), 0, (8 * d).toInt())
+                    if (label.isNotBlank()) addView(TextView(this@TorrentActivity).apply {
+                        text = label; textSize = 12f; setTextColor(tc(R.color.accent))
+                    })
+                    addView(TextView(this@TorrentActivity).apply {
+                        text = value; textSize = 15f; setTextColor(tc(R.color.text)); setLineSpacing(0f, 1.1f)
+                        setTextIsSelectable(true)
+                        setPadding(0, if (label.isNotBlank()) (2 * d).toInt() else 0, 0, 0)
+                    })
+                })
+            }
+            body.addView(card, body.indexOfChild(picsTitle))
+        }
+        // full description only when the info couldn't be read
+        if (t.info.isEmpty() && t.text.isNotBlank()) {
             body.addView(section("Описание"))
             body.addView(TextView(this).apply {
                 text = t.text; textSize = 14f; setTextColor(tc(R.color.text)); setLineSpacing(0f, 1.15f)

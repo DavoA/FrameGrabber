@@ -50,15 +50,22 @@ enum class ColorScheme(val key: String, val title: String, val style: Int, val s
             }
         }
 
+        /** Screens on view now; the home icon is switched only when this drops to 0. */
+        private var visible = 0
+
         /** Call once from Application.onCreate. */
         fun install(app: Application) {
             app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityPreCreated(a: Activity, b: Bundle?) { a.theme.applyStyle(get(a).style, true) }
                 override fun onActivityCreated(a: Activity, b: Bundle?) {}
-                override fun onActivityStarted(a: Activity) {}
+                override fun onActivityStarted(a: Activity) { visible++ }
                 override fun onActivityResumed(a: Activity) {}
                 override fun onActivityPaused(a: Activity) {}
-                override fun onActivityStopped(a: Activity) {}
+                override fun onActivityStopped(a: Activity) {
+                    visible = (visible - 1).coerceAtLeast(0)
+                    // switching the launcher entry closes the app it runs from — so only once it's in the background
+                    if (visible == 0 && !a.isChangingConfigurations) applyIcon(a.applicationContext)
+                }
                 override fun onActivitySaveInstanceState(a: Activity, b: Bundle) {}
                 override fun onActivityDestroyed(a: Activity) {}
             })

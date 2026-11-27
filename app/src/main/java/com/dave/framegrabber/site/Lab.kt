@@ -162,6 +162,8 @@ object Lab {
         val id: Long, val title: String, val poster: Img?, val images: List<Img>,
         val text: String, val sizeText: String, val seeds: Int, val leech: Int,
         val magnet: String?, val torrent: String?, val hasFrames: Boolean, val forum: String,
+        /** The release info above the screenshots: «В ролях: …», «Жанр: …» (label "" = a plain line). */
+        val info: List<Pair<String, String>> = emptyList(),
     )
 
     fun topic(ctx: Context, id: Long): Topic = parseTopic(id, page(ctx, "viewtopic.php?t=$id"))
@@ -192,7 +194,7 @@ object Lab {
         val forum = Regex("""class="nav"[^>]*>(.*?)</""", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1)
             ?.let { nav -> A.findAll(nav).map { text(it.groupValues[2]) }.lastOrNull() } ?: ""
         return Topic(id, title, poster, rest, bodyText(body), sizeText, seeds, leech, magnet, torrent,
-            hasFrames = "ascr" in body && "data-t=" in body, forum = forum)
+            hasFrames = "ascr" in body && "data-t=" in body, forum = forum, info = info(body))
     }
 
     /** Pictures of a post: <var class="postImg" title="thumb">, wrapped in a link to the big one if any. */
@@ -339,16 +341,39 @@ object Lab {
     private val A = Regex("""<a\s([^>]*)>(.*?)</a>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
 
     fun text(html: String): String =
-        Html.fromHtml(html.replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n"), Html.FROM_HTML_MODE_LEGACY).toString()
+        Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY).toString()
             .replace(' ', ' ').replace(Regex("[ \t]+"), " ").trim()
+
+    /**
+     * The info of the release up to the screenshots, line by line: «Label: value» pairs
+     * (labels are the bold part before «:»), other lines as they are.
+     */
+    fun info(body: String): List<Pair<String, String>> {
+        var b = body.substringAfter("post-user-message", body).substringAfter('>')
+        b = b.substringBefore("class=\"sp-wrap\"").substringBefore("<div class=\"sp-")
+        b = b.replace(Regex("""<var class="postImg[^>]*>.*?</var>""", RegexOption.DOT_MATCHES_ALL), "")
+            .replace(Regex("""<script.*?</script>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+        val out = ArrayList<Pair<String, String>>()
+        for (piece in b.split(Regex("""<br\s*/?>|<span class="post-br">|</div>|<div[^>]*>|<hr[^>]*>""", RegexOption.IGNORE_CASE))) {
+            val t = text(piece).trim().trim(':').trim()
+            if (t.isBlank() || t.length < 2) continue
+            val bold = Regex("""<span class="post-b">(.*?)</span>""", RegexOption.DOT_MATCHES_ALL).find(piece)?.groupValues?.get(1)?.let { text(it).trim() }
+            val colon = t.indexOf(':')
+            if (bold != null && colon in 1..60 && t.startsWith(bold.trimEnd(':'))) {
+                out += t.substring(0, colon).trim() to t.substring(colon + 1).trim()
+            } else out += "" to t
+        }
+        return out.filter { it.second.isNotBlank() || it.first.isNotBlank() }.take(40)
+    }
 
     /** The description as readable text: line breaks kept, spoiler titles as headings, pictures dropped. */
     private fun bodyText(body: String): String {
         var b = body.substringAfter('>')
         b = b.replace(Regex("""<script.*?</script>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
         b = b.replace(Regex("""<var class="postImg[^>]*>.*?</var>""", RegexOption.DOT_MATCHES_ALL), "")
-        b = b.replace(Regex("""<div class="sp-(?:title|head)[^"]*"[^>]*>(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)) { "\n\n▸ " + text(it.groupValues[1]) + "\n" }
-        b = b.replace(Regex("""<(?:/div|/p|hr|span class="post-br")[^>]*>""", RegexOption.IGNORE_CASE), "\n")
+        b = b.replace(Regex("""<(?:div|h3) class="sp-(?:title|head)[^"]*"[^>]*>(.*?)</(?:div|h3)>""", RegexOption.DOT_MATCHES_ALL)) { "<br><br>▸ " + it.groupValues[1] + "<br>" }
+        // (fromHtml turns plain line breaks into spaces: keep them as <br>)
+        b = b.replace(Regex("""<(?:/div|/p|hr)[^>]*>""", RegexOption.IGNORE_CASE), "<br>")
         return text(b).lines().map { it.trim() }.joinToString("\n").replace(Regex("\n{3,}"), "\n\n").trim().take(6000)
     }
 
