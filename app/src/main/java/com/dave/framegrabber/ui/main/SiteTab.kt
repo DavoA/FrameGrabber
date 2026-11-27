@@ -109,8 +109,8 @@ class SiteTab(private val s: MainScreen) {
     private fun showNative() {
         webBox.visibility = View.GONE
         nativeBox.visibility = View.VISIBLE
-        // came back from the login page: try again
-        if (rows.isEmpty() && com.dave.framegrabber.site.Lab.loggedIn()) search(query)
+        // came back (e.g. after logging in): try again
+        if (rows.isEmpty() && !loading) search(query)
     }
 
     /** The site itself (for login and everything the app screens don't have). */
@@ -281,10 +281,15 @@ class SiteTab(private val s: MainScreen) {
                 urlText.text = url.removePrefix("https://")
                 prefs.edit().putString(KEY_LAST, url).apply()
                 CookieManager.getInstance().flush()   // stay logged in
-                if (backAfterLogin && "login.php" !in url && com.dave.framegrabber.site.Lab.loggedIn()) {
-                    backAfterLogin = false
-                    act.toast("Вход выполнен ✓")
-                    rows.clear(); showNative()
+                // logged in? (a «выход» / logout link on the page, or the login cookie)
+                if (backAfterLogin && "login.php" !in url) view.evaluateJavascript(
+                    "(function(){return !!document.querySelector('a[href*=\"logout\"]') || /Выход/.test(document.body ? document.body.innerText : '');})()"
+                ) { r ->
+                    if (backAfterLogin && (r == "true" || com.dave.framegrabber.site.Lab.loggedIn())) {
+                        backAfterLogin = false
+                        act.toast("Вход выполнен ✓")
+                        rows.clear(); end = false; showNative(); search(query)
+                    }
                 }
             }
         }

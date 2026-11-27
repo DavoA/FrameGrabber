@@ -33,7 +33,11 @@ object Lab {
     private var ua: String? = null
     private fun ua(ctx: Context) = ua ?: runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrDefault("Mozilla/5.0 (Linux; Android)").also { ua = it }
 
-    fun loggedIn(): Boolean = CookieManager.getInstance().getCookie(HOST)?.let { "bb_data" in it || "bb_session" in it } == true
+    /** The site's cookies are set for /forum/: always ask for that path (the root gets none of them). */
+    fun cookies(url: String = BASE): String? = CookieManager.getInstance().getCookie(if (url.startsWith(BASE)) url else BASE)
+
+    /** A login cookie is there (TorrentPier: bb_data / bb_session; any session-like cookie counts). */
+    fun loggedIn(): Boolean = cookies()?.let { c -> Regex("""(?:^|;\s*)bb_[a-z_]+=""").containsMatchIn(c) } == true
 
     // ================================================================ network
 
@@ -43,11 +47,11 @@ object Lab {
         setRequestProperty("User-Agent", ua(ctx))
         setRequestProperty("Referer", BASE)
         setRequestProperty("Accept-Language", "ru,en;q=0.8")
-        if (url.startsWith(HOST)) CookieManager.getInstance().getCookie(HOST)?.let { setRequestProperty("Cookie", it) }
+        if (url.startsWith(HOST)) cookies(url)?.let { setRequestProperty("Cookie", it) }
     }
 
     private fun keepCookies(c: HttpURLConnection) {
-        c.headerFields["Set-Cookie"]?.forEach { CookieManager.getInstance().setCookie(HOST, it) }
+        c.headerFields["Set-Cookie"]?.forEach { CookieManager.getInstance().setCookie(BASE, it) }
     }
 
     /** A page of the forum as text; follows redirects; the login page → [NeedLogin]. */

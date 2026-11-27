@@ -51,7 +51,7 @@ class TorrentActivity : Activity() {
             runCatching {
                 val file = name.replace(Regex("""[\\/:*?"<>|]"""), " ").take(120).trim() + ".torrent"
                 val req = DownloadManager.Request(Uri.parse(url))
-                    .addRequestHeader("Cookie", CookieManager.getInstance().getCookie(Lab.HOST) ?: "")
+                    .addRequestHeader("Cookie", Lab.cookies(url) ?: "")
                     .addRequestHeader("Referer", Lab.BASE)
                     .setMimeType("application/x-bittorrent")
                     .setTitle(file)
