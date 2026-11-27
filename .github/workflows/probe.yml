@@ -1,0 +1,22 @@
+name: Probe site pages (for the «Сайт» screens)
+on:
+  workflow_dispatch:
+  push:
+    paths: [ '.github/probe-urls.txt' ]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pages
+        run: |
+          mkdir out; i=0
+          UA="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
+          while read -r url; do
+            [ -z "$url" ] && continue; i=$((i+1))
+            curl -sSL -A "$UA" -c cj.txt -b cj.txt -D "out/$i.headers" -o "out/$i.html" "$url" || true
+            echo "$i $url" >> out/index.txt
+          done < .github/probe-urls.txt
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with: { name: pages, path: out }
