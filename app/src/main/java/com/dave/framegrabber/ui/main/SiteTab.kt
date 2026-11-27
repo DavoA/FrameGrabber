@@ -75,6 +75,9 @@ class SiteTab(private val s: MainScreen) {
         s.h<View>(R.id.btnSiteHome).setOnClickListener { showNative() }
         s.h<View>(R.id.btnSiteWeb).setOnClickListener { showWeb(null) }
         s.h<View>(R.id.btnSiteSort).setOnClickListener { chooseSort() }
+        s.h<View>(R.id.btnSiteSaved).setOnClickListener {
+            act.startActivityForResult(com.dave.framegrabber.ui.site.SavedActivity.intent(act), com.dave.framegrabber.MainActivity.REQ_TORRENT)
+        }
         loginBtn.setOnClickListener { showWeb(com.dave.framegrabber.site.Lab.BASE + "login.php") }
         searchEdit.setOnEditorActionListener { _, _, _ -> search(searchEdit.text.toString()); true }
         list.adapter = adapter
@@ -124,6 +127,8 @@ class SiteTab(private val s: MainScreen) {
     // ================================================================ search (app screens)
 
     fun search(q: String) {
+        started = true
+        if (searchEdit.text.toString() != q.trim()) searchEdit.setText(q.trim())
         query = q.trim(); page = 0; total = -1; end = false
         rows.clear(); posters.clear(); askedPoster.clear()
         searchEdit.hideKeyboardSafe()

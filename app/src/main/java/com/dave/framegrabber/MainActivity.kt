@@ -133,6 +133,14 @@ class MainActivity : Activity() {
     /** "Share to" / "Open with" from other apps. */
     private fun handleIncoming(intent: Intent?) {
         if (intent == null) return
+        // a «new torrent of a followed model» notification: the site tab, searching for her
+        intent.getStringExtra(com.dave.framegrabber.site.WatchJob.EXTRA_SITE_SEARCH)?.let { name ->
+            intent.removeExtra(com.dave.framegrabber.site.WatchJob.EXTRA_SITE_SEARCH)
+            com.dave.framegrabber.site.SiteStore(this).seen(name)
+            screen.nav.show(NavController.Page.SITE)
+            screen.site.search(name)
+            return
+        }
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_SEND -> streamExtra(intent)
             Intent.ACTION_VIEW -> intent.data
@@ -244,7 +252,10 @@ class MainActivity : Activity() {
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
             REQ_BACKUP -> data.data?.let { restoreBackup(it) }
-            REQ_TORRENT -> data.getStringExtra(com.dave.framegrabber.ui.site.TorrentActivity.EXTRA_OPEN_URL)?.let { screen.site.showWeb(it) }
+            REQ_TORRENT -> {
+                data.getStringExtra(com.dave.framegrabber.ui.site.TorrentActivity.EXTRA_OPEN_URL)?.let { screen.site.showWeb(it) }
+                data.getStringExtra(com.dave.framegrabber.ui.site.SavedActivity.EXTRA_SEARCH)?.let { screen.site.search(it) }
+            }
             REQ_STATS -> {
                 data.getStringExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_SEARCH)?.let { screen.feed.search(it) }
                 data.getLongExtra(com.dave.framegrabber.ui.telegram.ModelActivity.EXTRA_JUMP, 0L).takeIf { it != 0L }?.let { screen.feed.jumpToMessage(it) }

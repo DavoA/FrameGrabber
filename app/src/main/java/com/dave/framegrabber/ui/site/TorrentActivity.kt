@@ -94,6 +94,10 @@ class TorrentActivity : Activity() {
             text = "Раздача"; textSize = 17f; setTextColor(tc(R.color.text)); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             setPadding((12 * d).toInt(), 0, 0, 0)
         }, LinearLayout.LayoutParams(0, -2, 1f))
+        // ☆ bookmark («на потом»)
+        star = icon(R.drawable.ic_star, "В закладки") { toggleBookmark() }
+        bar.addView(star)
+        paintStar()
         bar.addView(icon(R.drawable.ic_web, "Открыть на сайте") { openOnSite("viewtopic.php?t=$id") })
         bar.addView(icon(R.drawable.ic_more, "Ещё") {
             android.app.AlertDialog.Builder(this).setItems(arrayOf("Поделиться ссылкой", "Отчёт для исправлений (страница + картинки)")) { _, i ->
@@ -120,6 +124,22 @@ class TorrentActivity : Activity() {
     }
 
     private var pageHtml = ""
+    private lateinit var star: ImageButton
+    private val store by lazy { com.dave.framegrabber.site.SiteStore(this) }
+
+    private fun paintStar() {
+        val on = store.isBookmarked(id)
+        star.setColorFilter(if (on) 0xFFFFC94D.toInt() else tc(R.color.textDim))
+        star.contentDescription = if (on) "Убрать из закладок" else "В закладки"
+    }
+
+    private fun toggleBookmark() {
+        val t = topic
+        val on = store.toggleBookmark(com.dave.framegrabber.site.SiteStore.Bookmark(
+            id, t?.title ?: intent.getStringExtra(EXTRA_TITLE) ?: "Раздача $id", t?.poster?.thumb, t?.sizeText ?: "", System.currentTimeMillis()))
+        paintStar()
+        toast(if (on) "★ В закладках — «Сайт» → ★" else "Убрано из закладок")
+    }
     private var topic: Lab.Topic? = null
 
     /**
@@ -166,7 +186,7 @@ class TorrentActivity : Activity() {
             val r = runCatching { Lab.topic(applicationContext, id).also { pageHtml = Lab.lastHtml } }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
-                r.onSuccess { topic = it; show(it) }.onFailure { e ->
+                r.onSuccess { topic = it; show(it); paintStar() }.onFailure { e ->
                     status.text = if (e is Lab.NeedLogin) "Нужно войти на сайт" else "Не удалось открыть: ${e.message}"
                     body.addView(Button(this, null, 0, R.style.BtnPrimary).apply {
                         text = if (e is Lab.NeedLogin) "Войти на сайте" else "Открыть на сайте"; gravity = Gravity.CENTER
@@ -305,6 +325,34 @@ class TorrentActivity : Activity() {
                 })
             }
             body.addView(card, body.indexOfChild(picsTitle))
+            // the cast: follow a model (a notification when she has a new torrent)
+            val cast = t.info.firstOrNull { (l, _) -> l.contains("ролях", true) || l.contains("модел", true) || l.contains("актрис", true) || l.contains("cast", true) }
+                ?.second?.split(Regex("""\s*(?:,|&|/|\band\b|\bи\b)\s*"""))?.map { it.trim() }?.filter { it.length in 2..40 }.orEmpty()
+            if (cast.isNotEmpty()) {
+                val box = android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+                val row = LinearLayout(this).apply { setPadding(0, (8 * d).toInt(), 0, 0) }
+                cast.forEach { name ->
+                    row.addView(TextView(this).apply {
+                        fun paint() {
+                            val on = store.isFollowed(name)
+                            text = (if (on) "★ " else "☆ ") + name
+                            setTextColor(if (on) 0xFFFFC94D.toInt() else tc(R.color.text))
+                        }
+                        paint()
+                        textSize = 13f
+                        setBackgroundResource(R.drawable.bg_chip)
+                        setPadding((12 * d).toInt(), (6 * d).toInt(), (12 * d).toInt(), (6 * d).toInt())
+                        layoutParams = LinearLayout.LayoutParams(-2, -2).apply { marginEnd = (6 * d).toInt() }
+                        setOnClickListener { follow(this@TorrentActivity, name); paint() }
+                    })
+                }
+                box.addView(row)
+                body.addView(TextView(this).apply {
+                    text = "Следить за моделями — уведомлю о новых раздачах:"; textSize = 12f; setTextColor(tc(R.color.textDim))
+                    setPadding(0, (10 * d).toInt(), 0, 0)
+                }, body.indexOfChild(picsTitle))
+                body.addView(box, body.indexOfChild(picsTitle))
+            }
         }
         // full description only when the info couldn't be read
         if (t.info.isEmpty() && t.text.isNotBlank()) {

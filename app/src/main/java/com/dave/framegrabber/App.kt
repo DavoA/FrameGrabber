@@ -7,5 +7,6 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         ColorScheme.install(this)
+        com.dave.framegrabber.site.WatchJob.schedule(this)   // the daily check of followed models
     }
 }

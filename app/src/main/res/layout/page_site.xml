@@ -38,6 +38,14 @@
                 android:contentDescription="Сортировка"
                 android:src="@drawable/ic_list" />
             <ImageButton
+                android:id="@+id/btnSiteSaved"
+                style="@style/IconBtn"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="Закладки и модели"
+                android:src="@drawable/ic_bookmark" />
+            <ImageButton
                 android:id="@+id/btnSiteWeb"
                 style="@style/IconBtn"
                 android:layout_width="42dp"
