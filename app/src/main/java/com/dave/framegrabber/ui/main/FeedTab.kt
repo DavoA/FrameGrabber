@@ -772,125 +772,18 @@ class FeedTab(private val s: MainScreen) {
      */
     private fun openGallery(items: List<Media>, start: Int) {
         if (items.isEmpty()) return
-        val dlg = android.app.Dialog(act, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        val root = FrameLayout(act).apply { setBackgroundColor(0xFF000000.toInt()) }
-        /** Photos already shown in full quality. */
-        val full = HashSet<Int>()
-        val views = items.mapIndexed { i, m ->
-            ImageView(act).apply {
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                // already downloaded in full (the feed fetches photos ahead): shown in full right away
-                val ready = m.big?.let { bigPaths[it.id] }?.takeIf { i == start }?.let { decode(it, FULL) }
-                if (ready != null) { setImageBitmap(ready); full += i }
-                else (m.thumb?.let { thumbs.get(it.id) } ?: m.mini?.let { b -> runCatching { BitmapFactory.decodeByteArray(b, 0, b.size) }.getOrNull() })
-                    ?.let { setImageBitmap(it) }
-                root.addView(this, FrameLayout.LayoutParams(-1, -1))
-            }
-        }
-        // while the full picture is still loading
-        val spinner = ProgressBar(act).apply { indeterminateTintList = android.content.res.ColorStateList.valueOf(act.tc(R.color.accent)) }
-        root.addView(spinner, FrameLayout.LayoutParams((40 * d).toInt(), (40 * d).toInt(), Gravity.CENTER))
-        val counter = TextView(act).apply {
-            textSize = 14f; setTextColor(0xFFFFFFFF.toInt()); typeface = Typeface.DEFAULT_BOLD
-            setBackgroundResource(R.drawable.bg_badge)
-            setPadding((12 * d).toInt(), (4 * d).toInt(), (12 * d).toInt(), (4 * d).toInt())
-        }
-        root.addView(counter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = (18 * d).toInt() })
-        val close = ImageView(act).apply {
-            setImageResource(R.drawable.ic_close); setColorFilter(0xFFFFFFFF.toInt())
-            setBackgroundResource(R.drawable.bg_badge)
-            val p = (9 * d).toInt(); setPadding(p, p, p, p)
-            setOnClickListener { dlg.dismiss() }
-        }
-        root.addView(close, FrameLayout.LayoutParams((42 * d).toInt(), (42 * d).toInt(), Gravity.TOP or Gravity.END).apply { setMargins(0, (12 * d).toInt(), (12 * d).toInt(), 0) })
-
-        var index = start.coerceIn(0, items.size - 1)
-        var dx = 0f
-        var dy = 0f
-        val loaded = HashSet<Int>()
-        fun width() = root.width.takeIf { it > 0 }?.toFloat() ?: act.resources.displayMetrics.widthPixels.toFloat()
-        fun layout() {
-            val w = width()
-            views.forEachIndexed { i, v ->
-                v.translationX = (i - index) * w + dx
-                v.translationY = if (i == index) dy else 0f
-                v.visibility = if (kotlin.math.abs(i - index) <= 1) View.VISIBLE else View.INVISIBLE
-            }
-            root.background.alpha = (255 * (1f - kotlin.math.abs(dy) / (root.height.coerceAtLeast(1) * 0.6f))).toInt().coerceIn(60, 255)
-            counter.text = "${index + 1} / ${items.size}"
-            spinner.visibility = if (index in full) View.GONE else View.VISIBLE
-        }
-        // full-size pictures for the current one and its neighbours (current first)
-        fun ensure() {
-            for (i in listOf(index, index + 1, index - 1, index + 2, index - 2)) {
-                if (i !in items.indices || i in full || !loaded.add(i)) continue
-                val f = items[i].big ?: items[i].thumb ?: continue
-                galleryExec.execute {
-                    val path = bigPaths[f.id] ?: Tg.fetch(f, 32)?.also { bigPaths[f.id] = it }
-                    val bmp = path?.let { decode(it, FULL) }
-                    s.ui.post {
-                        if (bmp != null) { views[i].setImageBitmap(bmp); full += i }
-                        else full += i   // nothing better to wait for
-                        layout()
-                    }
-                }
-            }
-        }
-        fun animateTo(toDx: Float, toDy: Float, end: () -> Unit = {}) {
-            val fx = dx; val fy = dy
-            android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 220
-                interpolator = android.view.animation.DecelerateInterpolator()
-                addUpdateListener { a -> val t = a.animatedValue as Float; dx = fx + (toDx - fx) * t; dy = fy + (toDy - fy) * t; layout() }
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(a: android.animation.Animator) { end() }
-                })
-                start()
-            }
-        }
-
-        var x0 = 0f; var y0 = 0f; var mode = 0   // 0 = undecided, 1 = sideways, 2 = down (close)
-        val slop = 12 * d
-        root.setOnTouchListener { _, e ->
-            when (e.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> { x0 = e.rawX; y0 = e.rawY; mode = 0 }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    val mx = e.rawX - x0; val my = e.rawY - y0
-                    if (mode == 0) mode = when {
-                        kotlin.math.abs(mx) > slop && kotlin.math.abs(mx) > kotlin.math.abs(my) -> 1
-                        my > slop && my > kotlin.math.abs(mx) -> 2
-                        else -> 0
-                    }
-                    if (mode == 1) {
-                        // a little resistance past the first / last photo
-                        val edge = (index == 0 && mx > 0) || (index == items.size - 1 && mx < 0)
-                        dx = if (edge) mx / 3 else mx
-                        layout()
-                    } else if (mode == 2) { dy = my; layout() }
-                }
-                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                    val w = width()
-                    when (mode) {
-                        1 -> {
-                            val old = index
-                            if (dx < -w / 6 && index < items.size - 1) index++
-                            else if (dx > w / 6 && index > 0) index--
-                            dx += (index - old) * w   // same picture position, then glide into place
-                            ensure()
-                            animateTo(0f, 0f)
-                        }
-                        2 -> if (dy > root.height / 6f) animateTo(0f, root.height.toFloat()) { dlg.dismiss() } else animateTo(0f, 0f)
-                        else -> if (e.actionMasked == android.view.MotionEvent.ACTION_UP)
-                            counter.visibility = if (counter.visibility == View.VISIBLE) View.INVISIBLE else View.VISIBLE
-                    }
-                    mode = 0
-                }
-            }
-            true
-        }
-        dlg.setContentView(root)
-        dlg.show()
-        root.post { layout(); ensure() }
+        // the shared full-screen pager (swipe, zoom); full photos come from Telegram (or were fetched ahead)
+        com.dave.framegrabber.ui.widget.PhotoPager.show(act, items.size, start,
+            preview = { i ->
+                val m = items[i]
+                m.big?.let { bigPaths[it.id] }?.takeIf { i == start }?.let { decode(it, FULL) }
+                    ?: m.thumb?.let { thumbs.get(it.id) }
+                    ?: m.mini?.let { b -> runCatching { BitmapFactory.decodeByteArray(b, 0, b.size) }.getOrNull() }
+            },
+            full = { i ->
+                val f = items[i].big ?: items[i].thumb
+                f?.let { file -> (bigPaths[file.id] ?: Tg.fetch(file, 32)?.also { bigPaths[file.id] = it })?.let { decode(it, FULL) } }
+            })
     }
 
     // ================================================================ list

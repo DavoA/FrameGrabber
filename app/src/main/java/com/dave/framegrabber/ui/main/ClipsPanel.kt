@@ -384,7 +384,8 @@ class ClipsPanel(private val s: MainScreen) {
         val d = madeList.dp
         val dlg = android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         val root = FrameLayout(ctx).apply { setBackgroundColor(0xFF000000.toInt()) }
-        val iv = ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+        // pinch / double-tap to zoom the GIF
+        val iv = com.dave.framegrabber.ui.widget.ZoomImageView(ctx)
         root.addView(iv, FrameLayout.LayoutParams(-1, -1))
         val bar = LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -409,7 +410,7 @@ class ClipsPanel(private val s: MainScreen) {
             setPadding(0, 0, 0, (24 * d).toInt())
         }
         root.addView(info, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
-        root.setOnClickListener {
+        iv.onTap = {
             val v = if (bar.visibility == View.VISIBLE) View.INVISIBLE else View.VISIBLE
             bar.visibility = v; info.visibility = v
         }

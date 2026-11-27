@@ -29,6 +29,8 @@ import com.dave.framegrabber.R
 class ZoomImageView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : ImageView(ctx, attrs) {
 
     var onSwipe: ((dir: Int) -> Unit)? = null
+    /** A single tap (not a double one). */
+    var onTap: (() -> Unit)? = null
     private val maxScale = 6f
     private val m = Matrix()
     private var base = 1f          // fit-center scale
@@ -126,6 +128,7 @@ class ZoomImageView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
             m.postTranslate(-dx, -dy); clamp(); imageMatrix = m
             return true
         }
+        override fun onSingleTapConfirmed(e: MotionEvent): Boolean { onTap?.invoke(); return onTap != null }
         override fun onDoubleTap(e: MotionEvent): Boolean {
             if (isZoomed) animateZoomTo(1f, e.x, e.y) else animateZoomTo(2.5f, e.x, e.y)
             return true

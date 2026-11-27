@@ -23,7 +23,7 @@ import kotlin.math.abs
 
 /**
  * Pictures full screen, swiped left / right (counter «2 / 12»), swipe down or ✕ closes, a tap
- * hides / shows the counter. [preview] gives what is already at hand (shown at once), [full]
+ * hides / shows the counter. Pinch or double-tap to zoom; while zoomed, one finger moves the picture. [preview] gives what is already at hand (shown at once), [full]
  * loads the big picture (background thread).
  */
 object PhotoPager {
@@ -33,12 +33,32 @@ object PhotoPager {
         if (count <= 0) return
         val d = act.resources.displayMetrics.density
         val dlg = Dialog(act, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        val root = FrameLayout(act).apply { setBackgroundColor(0xFF000000.toInt()) }
+        // the pager takes a gesture over from the picture only for paging / closing (not while zoomed)
+        var x0 = 0f; var y0 = 0f; var mode = 0   // 0 = undecided, 1 = sideways, 2 = down (close)
+        val slop = 12 * d
+        var current: () -> ZoomImageView? = { null }
+        val root = object : FrameLayout(act) {
+            override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> { x0 = e.rawX; y0 = e.rawY; mode = 0 }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (e.pointerCount > 1 || current()?.isZoomed == true) return false
+                        val mx = e.rawX - x0; val my = e.rawY - y0
+                        mode = when {
+                            abs(mx) > slop && abs(mx) > abs(my) -> 1
+                            my > slop && my > abs(mx) -> 2
+                            else -> 0
+                        }
+                        return mode != 0
+                    }
+                }
+                return false
+            }
+        }.apply { setBackgroundColor(0xFF000000.toInt()) }
         val done = HashSet<Int>()
         val asked = HashSet<Int>()
         val views = List(count) { i ->
-            ImageView(act).apply {
-                scaleType = ImageView.ScaleType.FIT_CENTER
+            ZoomImageView(act).apply {
                 preview(i)?.let { setImageBitmap(it) }
                 root.addView(this, FrameLayout.LayoutParams(-1, -1))
             }
@@ -59,6 +79,8 @@ object PhotoPager {
         }, FrameLayout.LayoutParams((42 * d).toInt(), (42 * d).toInt(), Gravity.TOP or Gravity.END).apply { setMargins(0, (12 * d).toInt(), (12 * d).toInt(), 0) })
 
         var index = start.coerceIn(0, count - 1)
+        current = { views.getOrNull(index) }
+        views.forEach { v -> v.onTap = { counter.visibility = if (counter.visibility == View.VISIBLE) View.INVISIBLE else View.VISIBLE } }
         var dx = 0f; var dy = 0f
         fun width() = root.width.takeIf { it > 0 }?.toFloat() ?: act.resources.displayMetrics.widthPixels.toFloat()
         fun layout() {
@@ -77,7 +99,7 @@ object PhotoPager {
                 if (i !in 0 until count || !asked.add(i)) continue
                 exec.execute {
                     val b = runCatching { full(i) }.getOrNull()
-                    act.runOnUiThread { if (b != null) views[i].setImageBitmap(b); done += i; layout() }
+                    act.runOnUiThread { if (b != null && !views[i].isZoomed) views[i].setImageBitmap(b) else if (b != null) views[i].setImageBitmap(b); done += i; layout() }
                 }
             }
         }
@@ -90,8 +112,6 @@ object PhotoPager {
                 start()
             }
         }
-        var x0 = 0f; var y0 = 0f; var mode = 0
-        val slop = 12 * d
         root.setOnTouchListener { _, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> { x0 = e.rawX; y0 = e.rawY; mode = 0 }
@@ -112,11 +132,11 @@ object PhotoPager {
                             val old = index
                             if (dx < -w / 6 && index < count - 1) index++ else if (dx > w / 6 && index > 0) index--
                             dx += (index - old) * w
+                            if (index != old) views[old].resetZoom()
                             ensure(); animateTo(0f, 0f)
                         }
                         2 -> if (dy > root.height / 6f) animateTo(0f, root.height.toFloat()) { dlg.dismiss() } else animateTo(0f, 0f)
-                        else -> if (e.actionMasked == MotionEvent.ACTION_UP)
-                            counter.visibility = if (counter.visibility == View.VISIBLE) View.INVISIBLE else View.VISIBLE
+                        else -> {}
                     }
                     mode = 0
                 }
