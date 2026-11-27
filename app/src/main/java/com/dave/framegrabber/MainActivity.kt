@@ -32,6 +32,7 @@ class MainActivity : Activity() {
         private const val REQ_PLAYER_DIR = 6
         private const val REQ_DELETE = 7
         const val REQ_STATS = 8
+        const val REQ_TORRENT = 10
         private const val REQ_BACKUP = 9
         /** What the pickers ask other apps for. */
         val VIDEO_MIME_TYPES = arrayOf(
@@ -243,6 +244,7 @@ class MainActivity : Activity() {
         when (requestCode) {
             REQ_TREE -> data.data?.let { screen.settings.onFolderPicked(it) }
             REQ_BACKUP -> data.data?.let { restoreBackup(it) }
+            REQ_TORRENT -> data.getStringExtra(com.dave.framegrabber.ui.site.TorrentActivity.EXTRA_OPEN_URL)?.let { screen.site.showWeb(it) }
             REQ_STATS -> {
                 data.getStringExtra(com.dave.framegrabber.ui.telegram.StatsActivity.EXTRA_SEARCH)?.let { screen.feed.search(it) }
                 data.getLongExtra(com.dave.framegrabber.ui.telegram.ModelActivity.EXTRA_JUMP, 0L).takeIf { it != 0L }?.let { screen.feed.jumpToMessage(it) }

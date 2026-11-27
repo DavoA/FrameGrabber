@@ -1,11 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Page «Сайт»: pornolab.net inside the app (login stays, .torrent → Download, magnet → torrent app) -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/pageSite"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:visibility="gone">
+
+    <!-- the app's own screens: tracker search and results -->
+    <LinearLayout
+        android:id="@+id/siteNative"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="14dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="6dp">
+            <EditText
+                android:id="@+id/editSiteSearch"
+                style="@style/Input"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:hint="Поиск по трекеру"
+                android:imeOptions="actionSearch"
+                android:inputType="text" />
+            <ImageButton
+                android:id="@+id/btnSiteSort"
+                style="@style/IconBtn"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="Сортировка"
+                android:src="@drawable/ic_list" />
+            <ImageButton
+                android:id="@+id/btnSiteWeb"
+                style="@style/IconBtn"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="Сайт как есть"
+                android:src="@drawable/ic_web" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/txtSiteStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="4dp"
+            android:textColor="?attr/cTextDim"
+            android:textSize="12sp" />
+        <Button
+            android:id="@+id/btnSiteLogin"
+            style="@style/BtnPrimary"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:gravity="center"
+            android:text="Войти на сайте (один раз)"
+            android:visibility="gone" />
+        <ListView
+            android:id="@+id/siteList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:listSelector="@android:color/transparent"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="16dp"
+            android:scrollbars="none" />
+    </LinearLayout>
+
+    <!-- the site as it is (login, everything else) -->
+    <LinearLayout
+        android:id="@+id/siteWebBox"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -52,8 +131,8 @@
             style="@style/IconBtn"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:contentDescription="Главная"
-            android:src="@drawable/ic_web" />
+            android:contentDescription="К поиску в приложении"
+            android:src="@drawable/ic_search" />
         <ImageButton
             android:id="@+id/btnSiteRefresh"
             style="@style/IconBtn"
@@ -84,4 +163,5 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
-</LinearLayout>
+    </LinearLayout>
+</FrameLayout>
