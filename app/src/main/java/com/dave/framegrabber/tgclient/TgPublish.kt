@@ -49,6 +49,13 @@ object TgPublish {
     @Volatile var stage = ""; private set
     @Volatile var fraction = 0f; private set
     @Volatile var error: String? = null; private set
+    /** Upload: bytes sent / all bytes, seconds left (-1 = not known yet), what is being sent. */
+    @Volatile var bytesDone = 0L; private set
+    @Volatile var bytesTotal = 0L; private set
+    @Volatile var etaSec = -1L; private set
+    @Volatile var what = ""; private set
+    /** (time, bytes) of the last ~20 s: the speed for «осталось». */
+    private val samples = java.util.ArrayDeque<Pair<Long, Long>>()
     @Volatile var doneText: String? = null; private set
     @Volatile private var cancelled = false
     val listeners = CopyOnWriteArrayList<() -> Unit>()
@@ -59,6 +66,11 @@ object TgPublish {
         if (running) return
         pending = r
         running = true; error = null; doneText = null; cancelled = false; stage = "Готовлю…"; fraction = 0f
+        bytesDone = 0; bytesTotal = 0; etaSec = -1; samples.clear()
+        what = when {
+            r.video == null -> "${r.photos.size} фото"
+            else -> "${r.photos.size} фото + видео"
+        } + if (r.sendAt > 0) " · запланирован" else ""
         changed()
         ctx.startForegroundService(Intent(ctx, TgPublishService::class.java))
     }
@@ -110,6 +122,7 @@ object TgPublish {
                 }
             }
             if (cancelled) throw InterruptedException()
+            if (videos.size > 1) what = "${r.photos.size} фото + ${videos.size} части видео" + if (r.sendAt > 0) " · запланирован" else ""
 
             // send: photos (caption on the first), then the videos — Telegram keeps this order
             val opts = TdApi.MessageSendOptions().apply {
@@ -144,6 +157,16 @@ object TgPublish {
                     is TdApi.UpdateFile -> if (sizes.containsKey(u.file.id)) {
                         uploaded[u.file.id] = if (u.file.remote.isUploadingCompleted) sizes[u.file.id] ?: 0 else u.file.remote.uploadedSize
                         val total = sizes.values.sum().coerceAtLeast(1)
+                        val done = uploaded.values.sum()
+                        synchronized(samples) {
+                            val now = System.currentTimeMillis()
+                            samples.addLast(now to done)
+                            while (samples.size > 2 && now - samples.first().first > 20_000) samples.removeFirst()
+                            val (t0, b0) = samples.first()
+                            val speed = if (now - t0 > 1500) (done - b0) * 1000.0 / (now - t0) else 0.0
+                            etaSec = if (speed > 1) ((total - done) / speed).toLong() else -1
+                        }
+                        bytesDone = done; bytesTotal = total
                         step((if (r.sendAt > 0) "Загружаю (пост запланирован)… " else "Загружаю… ") +
                             "${mb(uploaded.values.sum())} из ${mb(total)}", 0.25f + 0.75f * uploaded.values.sum() / total)
                     }

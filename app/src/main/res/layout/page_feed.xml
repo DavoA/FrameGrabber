@@ -176,5 +176,17 @@
                 android:src="@drawable/ic_arrow_up"
                 android:visibility="gone" />
         </FrameLayout>
+        <!-- a post being uploaded from the app: progress, what's left, cancel (filled in FeedTab) -->
+        <LinearLayout
+            android:id="@+id/feedUpload"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

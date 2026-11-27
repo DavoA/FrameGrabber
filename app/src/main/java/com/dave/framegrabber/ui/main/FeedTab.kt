@@ -173,6 +173,9 @@ class FeedTab(private val s: MainScreen) {
         // a post deleted in Telegram disappears here too
         Tg.deleteListeners += { chat, ids -> onDeleted(chat, ids) }
         TgDownloads.listeners += { if (visible) { s.ui.removeCallbacks(refreshRows); s.ui.postDelayed(refreshRows, 250) } }
+        // a post being published from the app: its progress at the bottom of the feed
+        com.dave.framegrabber.tgclient.TgPublish.listeners += { showUpload() }
+        s.ui.post { showUpload() }   // (after all fields are set up)
     }
 
     /** The page was opened. */
@@ -543,6 +546,81 @@ class FeedTab(private val s: MainScreen) {
                 act.toast("Лента обновлена")
             }
         }
+    }
+
+    // ================================================================ upload of a post from the app
+
+    private val upload = s.h<LinearLayout>(R.id.feedUpload)
+    private var upTitle: TextView? = null
+    private var upStage: TextView? = null
+    private var upBar: android.widget.ProgressBar? = null
+    private var upCancel: TextView? = null
+    private var upWasRunning = false
+    private val hideUpload = Runnable { upload.animate().alpha(0f).setDuration(250).withEndAction { upload.visibility = View.GONE; upload.alpha = 1f }.start() }
+
+    private fun buildUpload() {
+        if (upTitle != null) return
+        val top = LinearLayout(act).apply { gravity = Gravity.CENTER_VERTICAL }
+        top.addView(ImageView(act).apply { setImageResource(R.drawable.ic_send); setColorFilter(act.tc(R.color.accent)) },
+            LinearLayout.LayoutParams((20 * d).toInt(), (20 * d).toInt()).apply { marginEnd = (10 * d).toInt() })
+        upTitle = TextView(act).apply { textSize = 14.5f; setTextColor(act.tc(R.color.text)); typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL) }
+        top.addView(upTitle, LinearLayout.LayoutParams(0, -2, 1f))
+        upCancel = TextView(act).apply {
+            text = "Отменить"; textSize = 13f; setTextColor(act.tc(R.color.textDim))
+            setPadding((10 * d).toInt(), (6 * d).toInt(), (4 * d).toInt(), (6 * d).toInt())
+        }
+        top.addView(upCancel)
+        upload.addView(top)
+        upBar = android.widget.ProgressBar(act, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 1000; progressTintList = android.content.res.ColorStateList.valueOf(act.tc(R.color.accent))
+        }
+        upload.addView(upBar, LinearLayout.LayoutParams(-1, (8 * d).toInt()).apply { topMargin = (8 * d).toInt() })
+        upStage = TextView(act).apply { textSize = 12.5f; setTextColor(act.tc(R.color.textDim)); setPadding(0, (4 * d).toInt(), 0, 0) }
+        upload.addView(upStage)
+    }
+
+    private fun showUpload() {
+        val P = com.dave.framegrabber.tgclient.TgPublish
+        if (!P.running && !upWasRunning) return
+        buildUpload()
+        s.ui.removeCallbacks(hideUpload)
+        upload.alpha = 1f
+        upload.visibility = View.VISIBLE
+        if (P.running) {
+            upWasRunning = true
+            upTitle!!.text = "Заливаю пост: ${P.what}"
+            upBar!!.isIndeterminate = false
+            upBar!!.progress = (P.fraction * 1000).toInt()
+            val pct = (P.fraction * 100).toInt()
+            upStage!!.text = if (P.bytesTotal > 0) {
+                val left = P.etaSec
+                "$pct% · ${mbs(P.bytesDone)} из ${mbs(P.bytesTotal)}" +
+                    (if (left >= 0) " · осталось ${eta(left)}" else " · считаю, сколько осталось…")
+            } else P.stage
+            upCancel!!.visibility = View.VISIBLE
+            upCancel!!.setOnClickListener {
+                AlertDialog.Builder(act, R.style.DialogTheme).setMessage("Остановить публикацию? То, что уже ушло в канал, будет удалено.")
+                    .setPositiveButton("Остановить") { _, _ -> P.cancel() }
+                    .setNegativeButton("Нет", null).show()
+            }
+        } else {
+            // finished: say how it went, then hide
+            upWasRunning = false
+            upBar!!.progress = if (P.error == null) 1000 else upBar!!.progress
+            upTitle!!.text = if (P.error == null) "Пост в канале ✓" else "Пост не опубликован"
+            upStage!!.text = P.error ?: P.doneText ?: ""
+            upCancel!!.visibility = View.GONE
+            s.ui.postDelayed(hideUpload, if (P.error == null) 4000 else 8000)
+        }
+    }
+
+    private fun mbs(b: Long) = if (b >= 1L shl 30) String.format(Locale.US, "%.2f ГБ", b / (1L shl 30).toDouble())
+        else String.format(Locale.US, "%.0f МБ", b / (1L shl 20).toDouble())
+
+    private fun eta(sec: Long) = when {
+        sec < 60 -> "меньше минуты"
+        sec < 3600 -> "${(sec + 30) / 60} мин"
+        else -> "${sec / 3600} ч ${(sec % 3600) / 60} мин"
     }
 
     // ================================================================ «Любимые»
