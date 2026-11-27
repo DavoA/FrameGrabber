@@ -41,11 +41,11 @@ object Lab {
 
     // ================================================================ network
 
-    private fun open(ctx: Context, url: String): HttpURLConnection = (URL(url).openConnection() as HttpURLConnection).apply {
+    private fun open(ctx: Context, url: String, referer: String? = BASE): HttpURLConnection = (URL(url).openConnection() as HttpURLConnection).apply {
         instanceFollowRedirects = false
         connectTimeout = 15000; readTimeout = 30000
         setRequestProperty("User-Agent", ua(ctx))
-        setRequestProperty("Referer", BASE)
+        if (!referer.isNullOrEmpty()) setRequestProperty("Referer", referer)
         setRequestProperty("Accept-Language", "ru,en;q=0.8")
         if (url.startsWith(HOST)) cookies(url)?.let { setRequestProperty("Cookie", it) }
     }
@@ -242,18 +242,29 @@ object Lab {
      * A page of another site (an image host), following its redirects ourselves — also
      * http → https and fastpic.ru → fastpic.org, which Java won't follow on its own.
      */
-    fun fetchText(ctx: Context, url: String): String? {
+    /** Cookies of image hosts (fastpic gives the picture page only to the visitor it greeted). */
+    private val hostCookies = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ConcurrentHashMap<String, String>>()
+
+    private fun siteOf(host: String) = host.split('.').takeLast(2).joinToString(".")
+
+    fun fetchText(ctx: Context, url: String, referer: String = BASE): String? {
         var u = url.replaceFirst(Regex("^http://"), "https://")
         repeat(6) {
+            val site = siteOf(URL(u).host)
+            val jar = hostCookies.getOrPut(site) { java.util.concurrent.ConcurrentHashMap() }
             val c = (URL(u).openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = false
                 connectTimeout = 15000; readTimeout = 20000
-                setRequestProperty("User-Agent", ua(ctx)); setRequestProperty("Referer", BASE)
+                setRequestProperty("User-Agent", ua(ctx)); setRequestProperty("Referer", referer)
+                if (jar.isNotEmpty()) setRequestProperty("Cookie", jar.entries.joinToString("; ") { "${it.key}=${it.value}" })
                 setRequestProperty("Accept", "text/html,application/xhtml+xml,*/*;q=0.8")
                 setRequestProperty("Accept-Language", "ru,en;q=0.8")
             }
             try {
                 val code = c.responseCode
+                c.headerFields["Set-Cookie"]?.forEach { h ->
+                    h.substringBefore(';').split('=', limit = 2).takeIf { it.size == 2 }?.let { (k, v) -> jar[k.trim()] = v.trim() }
+                }
                 if (code in 300..399) {
                     u = URL(URL(u), c.getHeaderField("Location") ?: return null).toString().replaceFirst(Regex("^http://"), "https://")
                     return@repeat
@@ -276,15 +287,28 @@ object Lab {
         val page = img.page ?: return img.full to BASE
         bigCache[page]?.let { return it }
         val found = runCatching {
-            val html = fetchText(ctx, page) ?: return@runCatching null
+            var html = fetchText(ctx, page) ?: return@runCatching null
             val un = { u: String -> Html.fromHtml(u, 0).toString().let { if (it.startsWith("//")) "https:$it" else it } }
+            // fastpic first shows «Изображение готово к просмотру» with a «Перейти к изображению» link
+            // (the same page + a one-time ?xxxx=… key): follow it, with the cookies it just set
+            // the picture's own name (fastpic pages also carry decoy pictures of other people)
+            val name = URL(page).path.substringAfterLast('/').substringBefore('.')
+            val bigRe = Regex("""(https?:)?//i\d+\.fastpic\.(?:org|ru)/big/[^"'\s<>]+""")
+            fun ownBig(h: String) = bigRe.findAll(h).map { it.value }.firstOrNull { name.isNotEmpty() && name in it }
+            if (ownBig(html) == null) {
+                val path = URL(page).path
+                Regex("""href="([^"]*${Regex.escape(path)}\?[^"]+)"""").find(html)?.groupValues?.get(1)?.let(un)?.let { next ->
+                    fetchText(ctx, URL(URL(page), next).toString(), referer = page)?.let { html = it }
+                }
+            }
             // fastpic: https://iNN.fastpic.org/big/…?md5=…&expires=…
-            Regex("""(https?:)?//i\d+\.fastpic\.(?:org|ru)/big/[^"'\s<>]+""").find(html)?.value?.let(un)
+            ownBig(html)?.let(un)
                 ?: Regex("""<meta[^>]+property="og:image"[^>]+content="([^"]+)"""").find(html)?.groupValues?.get(1)?.let(un)
                 ?: Regex("""<img[^>]+(?:id|class)="[^"]*(?:main|image|picture|big|full|show)[^"]*"[^>]+src="([^"]+)"""", RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)?.let(un)
                 ?: Regex("""<img[^>]+src="([^"]+)"[^>]+(?:id|class)="[^"]*(?:main|image|picture|big|full|show)[^"]*"""", RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)?.let(un)
         }.getOrNull()?.takeIf { it.startsWith("http") && !Ads.isAd(it) }
-        val r = (found ?: img.full) to page
+        // the big picture loads without a Referer (with the page as Referer fastpic answers 404)
+        val r = (found ?: img.full) to (if (found != null) "" else BASE)
         bigLog.add("$page ⇒ ${found ?: "не найдено, беру " + img.full}")
         while (bigLog.size > 60) bigLog.pollFirst()
         bigCache[page] = r
@@ -347,6 +371,7 @@ object Lab {
     fun cachedBig(img: Img, max: Int): Bitmap? = (img.page?.let { bigCache[it]?.first } ?: img.full).let { cache.get("$max|$it") }
 
     /** A picture from the web, fitted into [max] px (blocking). */
+    /** [referer] "" = send none. */
     fun image(ctx: Context, url: String, max: Int, referer: String = BASE): Bitmap? {
         cache.get("$max|$url")?.let { return it }
         val bytes = runCatching {
@@ -354,7 +379,7 @@ object Lab {
             var data: ByteArray? = null
             repeat(4) {
                 if (data != null) return@repeat
-                val c = open(ctx, u).apply { setRequestProperty("Referer", referer) }
+                val c = open(ctx, u, referer)
                 try {
                     val code = c.responseCode
                     if (code in 300..399) { u = URL(URL(u), c.getHeaderField("Location") ?: return@runCatching null).toString().replaceFirst(Regex("^http://"), "https://") }
