@@ -157,10 +157,9 @@ class SiteTab(private val s: MainScreen) {
         loading = true
         val q = query; val p = page; val so = sort
         io.execute {
-            // the hidden words also go to the site's own search («-word»), when there is a query
-            val minus = if (q.isNotEmpty() && siteStore.hideOn) siteStore.hidden.filter { it.length > 2 && ' ' !in it }
-                .joinToString("") { " -$it" }.take(220) else ""
-            val r = runCatching { com.dave.framegrabber.site.Lab.search(act.applicationContext, q + minus, so, true, p) }
+            // (hidden words are filtered here, not sent as «-word»: with a short query like «vr»
+            // the site's search then finds nothing)
+            val r = runCatching { com.dave.framegrabber.site.Lab.search(act.applicationContext, q, so, true, p) }
             s.ui.post {
                 loading = false
                 if (q != query || so != sort) return@post
