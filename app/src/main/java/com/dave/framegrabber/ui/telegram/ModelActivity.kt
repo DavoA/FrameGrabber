@@ -117,8 +117,9 @@ class ModelActivity : Activity() {
             text = "＋\nДобавить фото"; gravity = Gravity.CENTER; textSize = 14f; setTextColor(tc(R.color.accent))
         }
         box.addView(addHint, FrameLayout.LayoutParams(-1, -1))
-        val side = minOf((220 * d).toInt(), resources.displayMetrics.widthPixels - (80 * d).toInt())
-        body.addView(box, LinearLayout.LayoutParams(side, side).apply { topMargin = (6 * d).toInt() })
+        // a tall portrait (3:4), almost the full width
+        val w = resources.displayMetrics.widthPixels - (40 * d).toInt()
+        body.addView(box, LinearLayout.LayoutParams(w, w * 4 / 3).apply { topMargin = (6 * d).toInt() })
 
         body.addView(TextView(this).apply {
             text = name; textSize = 26f; setTextColor(tc(R.color.text)); gravity = Gravity.CENTER
@@ -200,14 +201,17 @@ class ModelActivity : Activity() {
             savePhoto { contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } }
     }
 
-    /** Center square, 720 px, JPEG. */
+    /** A 3:4 portrait from the middle (a bit above center: faces), up to 1080×1440, JPEG. */
     private fun savePhoto(load: () -> Bitmap?) {
         io.execute {
             val r = runCatching {
                 val src = load() ?: throw IllegalStateException("Не удалось открыть картинку")
-                val s = minOf(src.width, src.height)
-                val sq = Bitmap.createBitmap(src, (src.width - s) / 2, (src.height - s) / 3, s, s)
-                val out = Bitmap.createScaledBitmap(sq, minOf(720, s), minOf(720, s), true)
+                // biggest 3:4 area that fits
+                var cw = src.width; var ch = cw * 4 / 3
+                if (ch > src.height) { ch = src.height; cw = ch * 3 / 4 }
+                val crop = Bitmap.createBitmap(src, (src.width - cw) / 2, (src.height - ch) / 3, cw, ch)
+                val ow = minOf(1080, cw)
+                val out = Bitmap.createScaledBitmap(crop, ow, ow * 4 / 3, true)
                 photoFile(this, name).outputStream().use { out.compress(Bitmap.CompressFormat.JPEG, 90, it) }
             }
             runOnUiThread { r.onSuccess { showPhoto() }.onFailure { toast(it.message ?: "Ошибка") } }

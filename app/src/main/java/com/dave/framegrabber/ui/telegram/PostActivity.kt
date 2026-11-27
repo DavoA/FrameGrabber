@@ -191,7 +191,6 @@ class PostActivity : Activity() {
     private var videoUri: Uri? = null
     private var sendAt = 0                       // unix time, 0 = now
     private lateinit var swVideo: android.widget.Switch
-    private lateinit var editVideoCaption: EditText
     private lateinit var txtWhen: TextView
     private lateinit var txtAccount: TextView
     private val tgPrefs get() = getSharedPreferences("telegram", MODE_PRIVATE)
@@ -219,14 +218,16 @@ class PostActivity : Activity() {
         val info = TextView(this).apply { textSize = 12f; setTextColor(tc(R.color.textDim)); setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt()) }
         info.tag = "videoInfo"
         card.addView(info)
-        editVideoCaption = EditText(this, null, 0, R.style.Input).apply {
-            hint = "Подпись под видео (необязательно)"
-            gravity = Gravity.CENTER_VERTICAL
-            setText(tgPrefs.getString("videoCaption", ""))
-            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2)
-            addTextChangedListener(watcher { tgPrefs.edit().putString("videoCaption", text.toString()).apply() })
-        }
-        card.addView(editVideoCaption)
+        // the caption under the videos is fixed: «Part N» + the channel's signature (a link)
+        card.addView(TextView(this).apply {
+            textSize = 12f; setTextColor(tc(R.color.textDim)); setLineSpacing(0f, 1.1f)
+            text = android.text.SpannableStringBuilder("Подпись под видео: ").apply {
+                val st = length
+                append(com.dave.framegrabber.tgclient.TgPublish.SIGNATURE)
+                setSpan(android.text.style.ForegroundColorSpan(tc(R.color.accent)), st, length, 0)
+                append(" (ссылка на канал); у частей сверху «Part 1», «Part 2»…")
+            }
+        })
         val row = android.widget.LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, (12 * d).toInt(), 0, 0)
@@ -311,7 +312,7 @@ class PostActivity : Activity() {
         if (com.dave.framegrabber.tgclient.TgPublish.running) { toast("Предыдущий пост ещё отправляется"); return }
         com.dave.framegrabber.tgclient.TgPublish.start(this, com.dave.framegrabber.tgclient.TgPublish.Request(
             channel, files.toList(), text, if (swVideo.isChecked) videoUri else null,
-            intent.getStringExtra(EXTRA_VIDEO) ?: "video", editVideoCaption.text.toString(), sendAt,
+            intent.getStringExtra(EXTRA_VIDEO) ?: "video", sendAt,
         ))
         recordPost(studio, 0)
         AlertDialog.Builder(this)

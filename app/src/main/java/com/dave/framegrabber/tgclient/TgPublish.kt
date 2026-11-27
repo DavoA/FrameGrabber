@@ -42,7 +42,6 @@ object TgPublish {
         val caption: String,
         val video: Uri?,                  // null = photos only
         val videoName: String,
-        val videoCaption: String,         // extra line under «Part N» (e.g. the channel's signature)
         val sendAt: Int,                  // unix time, 0 = now
     )
 
@@ -125,15 +124,12 @@ object TgPublish {
                 )
             }
             val videoContents = videos.mapIndexed { i, v ->
-                val text = buildString {
-                    if (videos.size > 1) append("Part ${i + 1}")
-                    if (r.videoCaption.isNotBlank()) { if (isNotEmpty()) append("\n\n"); append(r.videoCaption.trim()) }
-                }
+                val caption = videoCaption(if (videos.size > 1) i + 1 else 0)
                 TdApi.InputMessageVideo(
                     TdApi.InputVideo(TdApi.InputFileLocal(v.path),
                         v.thumb?.let { TdApi.InputThumbnail(TdApi.InputFileLocal(it.path), 320, 320 * v.h / maxOf(1, v.w)) },
                         null, 0, IntArray(0), v.durationS, v.w, v.h, true),
-                    if (text.isEmpty()) null else TdApi.FormattedText(text, emptyArray()), false, null, false,
+                    caption, false, null, false,
                 )
             }
 
@@ -198,6 +194,22 @@ object TgPublish {
             running = false
             changed()
         }
+    }
+
+    /** The channel's signature under every video, linked to the channel. */
+    const val SIGNATURE = "Сиси Сиси +🔞"
+    const val SIGNATURE_URL = "https://t.me/itssisi69titi"
+
+    /**
+     * Whole video: «Сиси Сиси +🔞»; a part: «Part N», empty line, «Сиси Сиси +🔞» —
+     * the signature is a link to the channel.
+     */
+    fun videoCaption(part: Int): TdApi.FormattedText {
+        val head = if (part > 0) "Part $part\n\n" else ""
+        val text = head + SIGNATURE
+        // offsets in UTF-16 units, as Telegram counts them (🔞 is 2)
+        val link = TdApi.TextEntity(head.length, SIGNATURE.length, TdApi.TextEntityTypeTextUrl(SIGNATURE_URL))
+        return TdApi.FormattedText(text, arrayOf(link))
     }
 
     private fun fileOf(c: TdApi.MessageContent): TdApi.File? = when (c) {
