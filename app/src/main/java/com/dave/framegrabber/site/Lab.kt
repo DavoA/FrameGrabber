@@ -88,6 +88,28 @@ object Lab {
 
     private fun isLoginPage(html: String) = "name=\"login_password\"" in html && "id=\"tor-tbl\"" !in html && "post_body" !in html
 
+    /** A file of the site with the login (e.g. a .torrent), as bytes. */
+    fun bytes(ctx: Context, url: String): ByteArray {
+        var u = url
+        repeat(5) {
+            val c = open(ctx, u)
+            try {
+                keepCookies(c)
+                val code = c.responseCode
+                if (code in 300..399) {
+                    u = URL(URL(u), c.getHeaderField("Location") ?: throw IllegalStateException("переадресация без адреса")).toString()
+                    if ("login.php" in u) throw NeedLogin()
+                    return@repeat
+                }
+                if (code >= 400) throw IllegalStateException("Сайт ответил ошибкой $code")
+                val b = c.inputStream.use { it.readBytes() }
+                if (b.isNotEmpty() && b[0] == '<'.code.toByte()) throw IllegalStateException("Вместо торрента пришла страница (нужен вход?)")
+                return b
+            } finally { c.disconnect() }
+        }
+        throw IllegalStateException("слишком много переадресаций")
+    }
+
     // ================================================================ search
 
     class Row(

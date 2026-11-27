@@ -90,12 +90,45 @@ class SettingsDialog(private val s: MainScreen) {
         showChoice(AppTheme.get(s.act), animate = false)
         bindSchemes(v)
         bindBackup(v)
+        bindTorrents(v)
         optClassic.setOnClickListener { choose(AppTheme.CLASSIC) }
         optWave.setOnClickListener { choose(AppTheme.WAVE) }
     }
 
     /** Color scheme: green, pink, orange, red, purple — the app is redrawn in it. */
     private var openDlg: AlertDialog? = null
+
+    /** «Торренты»: download in the app / open in a torrent app / only save the .torrent. */
+    private fun bindTorrents(v: View) {
+        val box = v.findViewById<android.widget.LinearLayout>(R.id.torrentModes)
+        val d = s.act.resources.displayMetrics.density
+        fun build() {
+            box.removeAllViews()
+            val cur = com.dave.framegrabber.torrent.TorrentMode.get(s.act)
+            com.dave.framegrabber.torrent.TorrentMode.entries.forEach { m ->
+                box.addView(android.widget.LinearLayout(s.act).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setBackgroundResource(R.drawable.bg_option)
+                    isSelected = m == cur
+                    setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
+                    layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (6 * d).toInt() }
+                    addView(TextView(s.act).apply {
+                        text = (if (m == cur) "● " else "○ ") + m.title; textSize = 15f
+                        setTextColor(s.act.tc(if (m == cur) R.color.text else R.color.textDim))
+                    })
+                    addView(TextView(s.act).apply { text = m.hint; textSize = 12f; setTextColor(s.act.tc(R.color.textDim)) })
+                    setOnClickListener {
+                        com.dave.framegrabber.torrent.TorrentMode.set(s.act, m)
+                        if (m == com.dave.framegrabber.torrent.TorrentMode.CLIENT)
+                            com.dave.framegrabber.player.Library(s.act).addFolder(
+                                android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS).path)
+                        build()
+                    }
+                })
+            }
+        }
+        build()
+    }
 
     /** «Резервная копия»: save to Download/FrameGrabber, or restore from a file. */
     private fun bindBackup(v: View) {

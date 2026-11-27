@@ -8,5 +8,6 @@ class App : Application() {
         super.onCreate()
         ColorScheme.install(this)
         com.dave.framegrabber.site.WatchJob.schedule(this)   // the daily check of followed models
+        runCatching { com.dave.framegrabber.torrent.TorrentEngine.restore(this) }   // unfinished torrent downloads go on
     }
 }

@@ -156,6 +156,10 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
         <service
+            android:name=".torrent.TorrentService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
             android:name=".tgclient.TgPublishService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

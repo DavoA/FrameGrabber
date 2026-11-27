@@ -412,6 +412,17 @@
     <TextView
         style="@style/Label"
         android:paddingTop="18dp"
+        android:text="ТОРРЕНТЫ (СТРАНИЦА РАЗДАЧИ → ⬇)"
+        android:letterSpacing="0.1" />
+    <LinearLayout
+        android:id="@+id/torrentModes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        style="@style/Label"
+        android:paddingTop="18dp"
         android:text="РЕЗЕРВНАЯ КОПИЯ"
         android:letterSpacing="0.1" />
     <TextView

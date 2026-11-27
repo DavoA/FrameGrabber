@@ -43,7 +43,8 @@ class SavedActivity : Activity() {
         /** Result: search the tracker for this. */
         const val EXTRA_SEARCH = "siteSearch"
         private const val EXTRA_TAB = "tab"
-        fun intent(ctx: Context, models: Boolean = false) = Intent(ctx, SavedActivity::class.java).putExtra(EXTRA_TAB, if (models) 1 else 0)
+        fun intent(ctx: Context, models: Boolean = false, downloads: Boolean = false) =
+            Intent(ctx, SavedActivity::class.java).putExtra(EXTRA_TAB, if (downloads) 2 else if (models) 1 else 0)
     }
 
     private val d get() = resources.displayMetrics.density
@@ -85,7 +86,7 @@ class SavedActivity : Activity() {
             setBackgroundResource(R.drawable.bg_segment_group)
             setPadding((3 * d).toInt(), (3 * d).toInt(), (3 * d).toInt(), (3 * d).toInt())
         }
-        tabs = listOf("★ Закладки", "👁 Модели").mapIndexed { i, t ->
+        tabs = listOf("★ Закладки", "👁 Модели", "⬇ Загрузки").mapIndexed { i, t ->
             TextView(this).apply {
                 text = t; gravity = Gravity.CENTER; textSize = 14f
                 setPadding(0, (9 * d).toInt(), 0, (9 * d).toInt())
@@ -108,7 +109,73 @@ class SavedActivity : Activity() {
             t.setTextColor(tc(if (i == tab) R.color.text else R.color.textDim))
         }
         body.removeAllViews()
-        if (tab == 0) bookmarks() else models()
+        when (tab) { 0 -> bookmarks(); 1 -> models(); else -> downloads() }
+    }
+
+    // ================================================================ torrent downloads (in the app)
+
+    private val E = com.dave.framegrabber.torrent.TorrentEngine
+    private val refresh = Runnable { if (tab == 2 && !isDestroyed) render() }
+    private val onTorrents: () -> Unit = { body.removeCallbacks(refresh); body.postDelayed(refresh, 300) }
+
+    override fun onStart() { super.onStart(); E.listeners += onTorrents }
+    override fun onStop() { E.listeners -= onTorrents; super.onStop() }
+
+    private fun downloads() {
+        val list = E.jobs.toList()
+        if (list.isEmpty()) {
+            hint("Загрузок нет.\nНа странице раздачи нажми «⬇ Скачать видео» — оно скачается прямо в приложение и появится в «Плеере».\n(Как качать — Общие настройки → Торренты.)")
+            return
+        }
+        list.forEach { j ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_card)
+                setPadding((14 * d).toInt(), (10 * d).toInt(), (10 * d).toInt(), (10 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (8 * d).toInt() }
+            }
+            card.addView(TextView(this).apply { text = j.title.ifBlank { j.name }; textSize = 14f; setTextColor(tc(R.color.text)); maxLines = 3 })
+            card.addView(TextView(this).apply {
+                text = when {
+                    j.error != null -> "Ошибка: ${j.error}"
+                    j.finished -> "✓ Скачано · ${E.size(j.wanted)}"
+                    j.paused -> "⏸ Пауза · ${(j.progress * 100).toInt()}% · ${E.size(j.done)} из ${E.size(j.wanted)}"
+                    else -> "${j.state} · ${(j.progress * 100).toInt()}% · ${E.size(j.done)} из ${E.size(j.wanted)}" +
+                        (if (j.rate > 0) " · ${E.size(j.rate.toLong())}/с" else "") + " · раздают ${j.seeds}, всего ${j.peers}"
+                }
+                textSize = 12f; setTextColor(tc(if (j.finished) R.color.accent else R.color.textDim)); setPadding(0, (4 * d).toInt(), 0, 0)
+            })
+            if (!j.finished) card.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 1000; progress = (j.progress * 1000).toInt()
+                progressTintList = android.content.res.ColorStateList.valueOf(tc(R.color.primaryBright))
+                layoutParams = LinearLayout.LayoutParams(-1, (6 * d).toInt()).apply { topMargin = (6 * d).toInt() }
+            })
+            val btns = LinearLayout(this).apply { gravity = Gravity.END; setPadding(0, (6 * d).toInt(), 0, 0) }
+            fun btn(t: String, click: () -> Unit) = btns.addView(Button(this, null, 0, R.style.BtnSecondary).apply {
+                text = t; textSize = 13f; gravity = Gravity.CENTER
+                minHeight = (38 * d).toInt(); minimumHeight = (38 * d).toInt()
+                layoutParams = LinearLayout.LayoutParams(-2, -2).apply { marginStart = (6 * d).toInt() }
+                setOnClickListener { click() }
+            })
+            if (j.finished) {
+                j.files.firstOrNull()?.let { f -> btn("▶ Смотреть") {
+                    startActivity(com.dave.framegrabber.ui.player.PlayerActivity.intent(this, android.net.Uri.fromFile(f), -1, f.nameWithoutExtension))
+                } }
+                if (j.files.size > 1) btn("Файлы (${j.files.size})") {
+                    AlertDialog.Builder(this).setItems(j.files.map { it.name }.toTypedArray()) { _, i ->
+                        startActivity(com.dave.framegrabber.ui.player.PlayerActivity.intent(this, android.net.Uri.fromFile(j.files[i]), -1, j.files[i].nameWithoutExtension))
+                    }.show()
+                }
+            } else if (j.paused) btn("▶ Дальше") { E.resume(j.hash) } else btn("⏸ Пауза") { E.pause(j.hash) }
+            btn("✕") {
+                AlertDialog.Builder(this).setTitle("Убрать загрузку?")
+                    .setItems(arrayOf("Убрать и удалить файлы", "Убрать из списка, файлы оставить")) { _, i -> E.remove(j.hash, deleteFiles = i == 0); render() }
+                    .setNegativeButton("Отмена", null).show()
+            }
+            card.addView(btns)
+            body.addView(card)
+        }
+        hint("Видео лежат в папке приложения Movies/Torrents и видны во вкладке «Плеер». После скачивания раздача останавливается (не тратит трафик и батарею).")
     }
 
     // ================================================================ bookmarks

@@ -241,18 +241,14 @@ class TorrentActivity : Activity() {
             text = "⬇ Торрент"; gravity = Gravity.CENTER
             isEnabled = t.torrent != null
             layoutParams = LinearLayout.LayoutParams(0, (50 * d).toInt(), 1f).apply { topMargin = 0 }
-            setOnClickListener { t.torrent?.let { downloadTorrent(this@TorrentActivity, it, t.title) } }
+            text = if (com.dave.framegrabber.torrent.TorrentMode.get(this@TorrentActivity) == com.dave.framegrabber.torrent.TorrentMode.APP) "⬇ Скачать видео" else "⬇ Торрент"
+            setOnClickListener { download(t, magnet = false) }
         })
         btns.addView(Button(this, null, 0, R.style.BtnSecondary).apply {
             text = "🧲 Magnet"; gravity = Gravity.CENTER
             isEnabled = t.magnet != null
             layoutParams = LinearLayout.LayoutParams(0, (50 * d).toInt(), 1f).apply { marginStart = (8 * d).toInt() }
-            setOnClickListener {
-                t.magnet?.let { m ->
-                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(m))) }
-                        .onFailure { toast("Нет торрент-приложения для magnet-ссылки") }
-                }
-            }
+            setOnClickListener { download(t, magnet = true) }
         })
         body.addView(btns)
         if (t.torrent == null && t.magnet == null) body.addView(TextView(this).apply {
@@ -364,6 +360,88 @@ class TorrentActivity : Activity() {
                 setPadding((12 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
             })
         }
+    }
+
+    // ================================================================ downloading (Настройки → Торренты)
+
+    private fun download(t: Lab.Topic, magnet: Boolean) {
+        val mode = com.dave.framegrabber.torrent.TorrentMode.get(this)
+        when {
+            mode == com.dave.framegrabber.torrent.TorrentMode.APP -> inApp(t, magnet)
+            magnet -> t.magnet?.let { m ->
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(m))) }.onFailure { toast("Нет торрент-приложения для magnet-ссылки") }
+            }
+            mode == com.dave.framegrabber.torrent.TorrentMode.CLIENT -> toClient(t)
+            else -> t.torrent?.let { downloadTorrent(this, it, t.title) }
+        }
+    }
+
+    /** The .torrent → your torrent app; its Download folder shows up in «Плеер». */
+    private fun toClient(t: Lab.Topic) {
+        val url = t.torrent ?: return
+        toast("Открываю в торрент-приложении…")
+        io.execute {
+            val r = runCatching {
+                val bytes = Lab.bytes(applicationContext, url)
+                val name = t.title.replace(Regex("""[\\/:*?"<>|]"""), " ").take(100).trim() + ".torrent"
+                com.dave.framegrabber.data.Output.write(this, name, "application/x-bittorrent", com.dave.framegrabber.data.Output.Kind.DOWNLOAD) { o ->
+                    o.stream().use { it.write(bytes) }
+                }
+            }
+            runOnUiThread {
+                r.onSuccess { uri ->
+                    com.dave.framegrabber.player.Library(this).addFolder(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path)
+                    runCatching {
+                        startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/x-bittorrent")
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                    }.onFailure { toast("Нет торрент-приложения. Файл сохранён в Download/${Prefs.ALBUM}") }
+                }.onFailure { e -> toast(if (e is Lab.NeedLogin) "Нужно войти на сайте" else "Не удалось: ${e.message}") }
+            }
+        }
+    }
+
+    /** In the app: the .torrent (or the magnet's), pick the files (videos ticked), download. */
+    private fun inApp(t: Lab.Topic, magnet: Boolean) {
+        val wait = android.app.ProgressDialog(this).apply {
+            setMessage(if (magnet) "Получаю данные по magnet-ссылке…" else "Получаю торрент…"); setCancelable(true); show()
+        }
+        io.execute {
+            val r = runCatching {
+                if (magnet) com.dave.framegrabber.torrent.TorrentEngine.magnetBytes(applicationContext, t.magnet ?: error("нет magnet"))
+                    ?: error("Не удалось получить данные (нет раздающих?)")
+                else Lab.bytes(applicationContext, t.torrent ?: error("нет торрента"))
+            }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                wait.dismiss()
+                r.onSuccess { bytes -> chooseFiles(t, bytes) }
+                    .onFailure { e -> toast(if (e is Lab.NeedLogin) "Нужно войти на сайте" else "Не удалось: ${e.message}") }
+            }
+        }
+    }
+
+    private fun chooseFiles(t: Lab.Topic, bytes: ByteArray) {
+        val (name, files) = runCatching { com.dave.framegrabber.torrent.TorrentEngine.files(bytes) }.getOrElse { toast("Торрент не читается: ${it.message}"); return }
+        val E = com.dave.framegrabber.torrent.TorrentEngine
+        val videos = files.filter { E.isVideo(it.second) }
+        val checked = BooleanArray(files.size) { i -> if (videos.isEmpty()) true else E.isVideo(files[i].second) }
+        val labels = files.map { (_, p, sz) -> p.substringAfter('/').ifBlank { p } + "  ·  " + E.size(sz) }.toTypedArray()
+        fun total() = files.filterIndexed { i, _ -> checked[i] }.sumOf { it.third }
+        val dlg = android.app.AlertDialog.Builder(this)
+            .setTitle("Что скачать? (${files.size} файл.)")
+            .setMultiChoiceItems(labels, checked) { d, i, on -> checked[i] = on; (d as android.app.AlertDialog).setTitle("Выбрано: " + E.size(total())) }
+            .setPositiveButton("Скачать") { _, _ ->
+                val sel = files.indices.filter { checked[it] }
+                if (sel.isEmpty()) { toast("Ничего не выбрано"); return@setPositiveButton }
+                runCatching { E.add(this, bytes, t.title.ifBlank { name }, sel) }
+                    .onSuccess { toast("Качаю в приложении — прогресс в уведомлении и в «Сайт» → ★ → Загрузки") }
+                    .onFailure { toast("Не удалось начать: ${it.message}") }
+            }
+            .setNegativeButton("Отмена", null)
+            .create()
+        dlg.show()
+        dlg.setTitle("Выбрано: " + E.size(total()) + if (videos.isNotEmpty()) " (видео)" else "")
     }
 
     private fun section(t: String) = TextView(this).apply {
