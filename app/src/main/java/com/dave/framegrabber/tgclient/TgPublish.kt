@@ -139,15 +139,17 @@ object TgPublish {
                     if (i == 0) TdApi.FormattedText(r.caption, emptyArray()) else null, false, null, false,
                 )
             }
-            val videoContents = videos.mapIndexed { i, v ->
+            fun videoContent(i: Int, path: String): TdApi.InputMessageContent {
+                val v = videos[i]
                 val caption = videoCaption(if (videos.size > 1) i + 1 else 0)
-                TdApi.InputMessageVideo(
-                    TdApi.InputVideo(TdApi.InputFileLocal(v.path),
+                return TdApi.InputMessageVideo(
+                    TdApi.InputVideo(TdApi.InputFileLocal(path),
                         v.thumb?.let { TdApi.InputThumbnail(TdApi.InputFileLocal(it.path), 320, 320 * v.h / maxOf(1, v.w)) },
                         null, 0, IntArray(0), v.durationS, v.w, v.h, true),
                     caption, false, null, false,
                 )
             }
+            val videoContents = videos.indices.map { i -> videoContent(i, videos[i].path) }
 
             // progress: bytes uploaded of every file, until each message is sent (or fails)
             val waiting = ConcurrentHashMap.newKeySet<Long>()
@@ -161,6 +163,9 @@ object TgPublish {
             var allQueued = false
             val sizes = ConcurrentHashMap<Int, Long>()
             val videoFiles = ConcurrentHashMap.newKeySet<Int>()
+            /** Video message → which video (part) it carries and its file. */
+            val videoMsg = ConcurrentHashMap<Long, Int>()
+            val videoFileOf = ConcurrentHashMap<Long, Int>()
             val uploaded = ConcurrentHashMap<Int, Long>()
             var failure: String? = null
             val allSent = CountDownLatch(1)
@@ -204,14 +209,18 @@ object TgPublish {
             Tg.rawListeners += listener
             try {
                 fun sendGroup(contents: List<TdApi.InputMessageContent>, isVideo: Boolean = false) {
-                    for (chunk in contents.chunked(10)) {
+                    for ((ci, chunk) in contents.chunked(10).withIndex()) {
                         val res = if (chunk.size == 1)
                             Tg.call(TdApi.SendMessage(chat.id, null, null, opts, null, chunk[0]), 120).let { m -> (m as? TdApi.Message)?.let { arrayOf(it) } ?: throw IllegalStateException(Tg.errorOf(m)) }
                         else (Tg.call(TdApi.SendMessageAlbum(chat.id, null, null, opts, chunk.toTypedArray()), 120) as? TdApi.Messages)?.messages
                             ?: throw IllegalStateException("Telegram не принял сообщения")
-                        res.forEach { m ->
+                        res.forEachIndexed { k, m ->
                             waiting += m.id
-                            fileOf(m.content)?.let { f -> sizes[f.id] = maxOf(f.size, f.expectedSize, 1); if (isVideo) videoFiles += f.id }
+                            if (isVideo) videoMsg[m.id] = ci * 10 + k
+                            fileOf(m.content)?.let { f ->
+                                sizes[f.id] = maxOf(f.size, f.expectedSize, 1)
+                                if (isVideo) { videoFiles += f.id; videoFileOf[m.id] = f.id }
+                            }
                         }
                     }
                 }
@@ -227,6 +236,48 @@ object TgPublish {
                 }
                 var diag = ""
                 var lastDiag = 0L
+                var retried = false
+                /**
+                 * The video doesn't move: Telegram may hold on to this file from an earlier try
+                 * (it thinks it's uploaded, but the message never goes). Once: the stuck video
+                 * message is removed and sent again from a fresh copy, which Telegram sees as a new file.
+                 */
+                fun retryVideos() {
+                    val stuck = videoMsg.filterKeys { it in waiting }.entries.sortedBy { it.value }
+                    if (stuck.isEmpty()) return
+                    Tg.call(TdApi.DeleteMessages(chat.id, stuck.map { it.key }.toLongArray(), true))
+                    stuck.forEach { (id, _) ->
+                        waiting.remove(id); videoMsg.remove(id)
+                        videoFileOf.remove(id)?.let { f -> sizes.remove(f); uploaded.remove(f); videoFiles.remove(f) }
+                    }
+                    for ((_, i) in stuck) {
+                        if (cancelled) throw InterruptedException()
+                        val src = File(videos[i].path)
+                        val copy = File(tmp, "retry-${System.currentTimeMillis()}-$i." + src.extension.ifEmpty { "mp4" })
+                        val need = src.length()
+                        if (tmp.usableSpace < need + 200L * 1024 * 1024)
+                            throw IllegalStateException("Видео застряло, а для новой попытки нужна копия (${mb(need)}) — мало места на телефоне")
+                        java.io.FileInputStream(src).channel.use { a ->
+                            copy.outputStream().channel.use { b ->
+                                var pos = 0L
+                                while (pos < need) {
+                                    if (cancelled) throw InterruptedException()
+                                    val n = b.transferFrom(a, pos, minOf(32L shl 20, need - pos))
+                                    if (n <= 0) break
+                                    pos += n
+                                    step("Видео застряло — пробую заново: копирую ${(pos * 100 / maxOf(need, 1)).toInt()}%", fraction)
+                                }
+                            }
+                        }
+                        val m = Tg.call(TdApi.SendMessage(chat.id, null, null, opts, null, videoContent(i, copy.path)), 120) as? TdApi.Message
+                            ?: throw IllegalStateException("Telegram не принял видео при повторной попытке")
+                        waiting += m.id; videoMsg[m.id] = i
+                        fileOf(m.content)?.let { f -> sizes[f.id] = maxOf(f.size, f.expectedSize, 1); videoFiles += f.id; videoFileOf[m.id] = f.id }
+                    }
+                    lastProgress = System.currentTimeMillis()
+                    step("Видео отправлено заново…", fraction)
+                    settle()
+                }
                 while (!allSent.await(2, TimeUnit.SECONDS)) {
                     if (cancelled) { dropPost(); throw InterruptedException() }
                     val idle = System.currentTimeMillis() - lastProgress
@@ -235,6 +286,11 @@ object TgPublish {
                         lastDiag = System.currentTimeMillis()
                         diag = videoFiles.joinToString("\n") { id -> describeFile(id) }
                         step("Видео стоит ${idle / 1000} с.\n$diag", fraction)
+                    }
+                    if (!retried && idle > RETRY_MS && videoMsg.keys.any { it in waiting }) {
+                        retried = true
+                        retryVideos()
+                        continue
                     }
                     if (idle > STALL_MS) {
                         dropPost()
@@ -266,6 +322,8 @@ object TgPublish {
 
     /** No byte uploaded for this long = stuck. */
     private const val STALL_MS = 5 * 60_000L
+    /** No byte for this long while a video waits: it is sent again once from a fresh copy. */
+    private const val RETRY_MS = 75_000L
 
     /**
      * Messages still «sending» or failed — in this channel and in the other chats too (Telegram
