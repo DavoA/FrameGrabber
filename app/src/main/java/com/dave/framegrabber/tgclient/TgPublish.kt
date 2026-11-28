@@ -105,7 +105,7 @@ object TgPublish {
             if (r.video != null) {
                 val size = ctx.contentResolver.openAssetFileDescriptor(r.video, "r")?.use { it.length } ?: -1L
                 if (size in 1..limit) {
-                    videos += describe(ctx, r.video, pathOf(ctx, r.video, openFds), File(tmp, "thumb0.jpg"))
+                    videos += describe(ctx, r.video, pathOf(ctx, r.video, openFds, tmp, size), File(tmp, "thumb0.jpg"))
                 } else {
                     step("Считаю, как разделить видео…", 0.12f)
                     val sc = SplitPlan.scan(ctx, r.video, size) { f -> step("Считаю, как разделить видео… ${(f * 100).toInt()}%", 0.12f); !cancelled }
@@ -242,11 +242,40 @@ object TgPublish {
     }
 
     /** A path TDLib can read: the file itself, or the open file of a gallery / folder video. */
-    private fun pathOf(ctx: Context, uri: Uri, keep: MutableList<ParcelFileDescriptor>): String {
+    /**
+     * A path Telegram can read the video from. TDLib wants a real file: «/proc/self/fd/N» of a
+     * content:// video often fails there ("Can't find real file path"). So: the real file behind
+     * the descriptor when this app may read it directly, else a copy next to the other upload files
+     * (deleted after the post).
+     */
+    private fun pathOf(ctx: Context, uri: Uri, keep: MutableList<ParcelFileDescriptor>, tmp: File, size: Long): String {
         if (uri.scheme == "file") return uri.path!!
         val pfd = ctx.contentResolver.openFileDescriptor(uri, "r") ?: throw IllegalStateException("Не открывается видео")
         keep += pfd
-        return "/proc/self/fd/${pfd.fd}"
+        val real = runCatching { android.system.Os.readlink("/proc/self/fd/${pfd.fd}") }.getOrNull()
+        if (real != null && real.startsWith("/") && runCatching { java.io.FileInputStream(real).use { it.read() }; true }.getOrDefault(false))
+            return real
+        // a copy the app owns
+        val free = tmp.usableSpace
+        if (size > 0 && free < size + 200L * 1024 * 1024)
+            throw IllegalStateException("Мало места на телефоне: для отправки нужна копия видео (${mb(size)}), свободно ${mb(free)}")
+        val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(ctx.contentResolver.getType(uri)) ?: "mp4"
+        val out = File(tmp, "video.$ext")
+        java.io.FileInputStream(pfd.fileDescriptor).channel.use { src ->
+            src.position(0)
+            out.outputStream().channel.use { dst ->
+                var pos = 0L
+                val total = if (size > 0) size else src.size()
+                while (pos < total) {
+                    if (cancelled) throw InterruptedException()
+                    val n = dst.transferFrom(src, pos, minOf(32L shl 20, total - pos))
+                    if (n <= 0) break
+                    pos += n
+                    step("Готовлю видео к отправке… ${(pos * 100 / maxOf(total, 1)).toInt()}%", 0.05f + 0.15f * pos / maxOf(total, 1))
+                }
+            }
+        }
+        return out.path
     }
 
     private class VidInfo(val path: String, val durationS: Int, val w: Int, val h: Int, val thumb: File?)
