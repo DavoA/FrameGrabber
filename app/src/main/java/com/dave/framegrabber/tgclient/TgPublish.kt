@@ -108,7 +108,7 @@ object TgPublish {
             if (r.video != null) {
                 val size = ctx.contentResolver.openAssetFileDescriptor(r.video, "r")?.use { it.length } ?: -1L
                 if (size in 1..limit) {
-                    videos += describe(ctx, r.video, pathOf(ctx, r.video, openFds, tmp, size), File(tmp, "thumb0.jpg"))
+                    videos += describe(ctx, r.video, pathOf(ctx, r.video, openFds, tmp, size), File(tmp, "thumb-${System.currentTimeMillis()}-0.jpg"))
                 } else {
                     step("Считаю, как разделить видео…", 0.12f)
                     val sc = SplitPlan.scan(ctx, r.video, size) { f -> step("Считаю, как разделить видео… ${(f * 100).toInt()}%", 0.12f); !cancelled }
@@ -120,7 +120,7 @@ object TgPublish {
                         Exporters.clip(ctx, r.video, p.startAbs, p.endAbs - 1, out, absolute = true) { f ->
                             step("Режу на части: ${i + 1} из ${plan.parts.size} · ${(f * 100).toInt()}%", 0.15f); !cancelled
                         }
-                        videos += describe(ctx, Uri.fromFile(out), out.path, File(tmp, "thumb${i + 1}.jpg"))
+                        videos += describe(ctx, Uri.fromFile(out), out.path, File(tmp, "thumb-${System.currentTimeMillis()}-${i + 1}.jpg"))
                     }
                 }
             }
@@ -139,12 +139,12 @@ object TgPublish {
                     if (i == 0) TdApi.FormattedText(r.caption, emptyArray()) else null, false, null, false,
                 )
             }
-            fun videoContent(i: Int, path: String): TdApi.InputMessageContent {
+            fun videoContent(i: Int, path: String, withThumb: Boolean = true): TdApi.InputMessageContent {
                 val v = videos[i]
                 val caption = videoCaption(if (videos.size > 1) i + 1 else 0)
                 return TdApi.InputMessageVideo(
                     TdApi.InputVideo(TdApi.InputFileLocal(path),
-                        v.thumb?.let { TdApi.InputThumbnail(TdApi.InputFileLocal(it.path), 320, 320 * v.h / maxOf(1, v.w)) },
+                        v.thumb?.takeIf { withThumb }?.let { TdApi.InputThumbnail(TdApi.InputFileLocal(it.path), 320, 320 * v.h / maxOf(1, v.w)) },
                         null, 0, IntArray(0), v.durationS, v.w, v.h, true),
                     caption, false, null, false,
                 )
@@ -253,11 +253,21 @@ object TgPublish {
                     for ((_, i) in stuck) {
                         if (cancelled) throw InterruptedException()
                         val src = File(videos[i].path)
-                        val copy = File(tmp, "retry-${System.currentTimeMillis()}-$i." + src.extension.ifEmpty { "mp4" })
+                        val ext = runCatching { Exporters.clipFormat(ctx, Uri.fromFile(src)).ext }.getOrNull() ?: src.extension.ifEmpty { "mp4" }
+                        val copy = File(tmp, "FG-${System.currentTimeMillis()}-${i + 1}.$ext")
                         val need = src.length()
                         if (tmp.usableSpace < need + 200L * 1024 * 1024)
                             throw IllegalStateException("Видео застряло, а для новой попытки нужна копия (${mb(need)}) — мало места на телефоне")
-                        java.io.FileInputStream(src).channel.use { a ->
+                        // a NEW file: repacked without re-encoding (same picture and sound, other bytes,
+                        // other name) — Telegram can't take it for the old one
+                        val remuxed = runCatching {
+                            Exporters.clip(ctx, Uri.fromFile(src), 0L, videos[i].durationS * 1_000_000L + 2_000_000L, copy) { f ->
+                                step("Видео застряло — делаю новую копию: ${(f * 100).toInt()}%", fraction); !cancelled
+                            }
+                            copy.length() > need / 2
+                        }.getOrDefault(false)
+                        if (cancelled) throw InterruptedException()
+                        if (!remuxed) java.io.FileInputStream(src).channel.use { a ->
                             copy.outputStream().channel.use { b ->
                                 var pos = 0L
                                 while (pos < need) {
@@ -269,7 +279,7 @@ object TgPublish {
                                 }
                             }
                         }
-                        val m = Tg.call(TdApi.SendMessage(chat.id, null, null, opts, null, videoContent(i, copy.path)), 120) as? TdApi.Message
+                        val m = Tg.call(TdApi.SendMessage(chat.id, null, null, opts, null, videoContent(i, copy.path, withThumb = false)), 120) as? TdApi.Message
                             ?: throw IllegalStateException("Telegram не принял видео при повторной попытке")
                         waiting += m.id; videoMsg[m.id] = i
                         fileOf(m.content)?.let { f -> sizes[f.id] = maxOf(f.size, f.expectedSize, 1); videoFiles += f.id; videoFileOf[m.id] = f.id }
@@ -323,7 +333,7 @@ object TgPublish {
     /** No byte uploaded for this long = stuck. */
     private const val STALL_MS = 5 * 60_000L
     /** No byte for this long while a video waits: it is sent again once from a fresh copy. */
-    private const val RETRY_MS = 75_000L
+    private const val RETRY_MS = 45_000L
 
     /**
      * Messages still «sending» or failed — in this channel and in the other chats too (Telegram
