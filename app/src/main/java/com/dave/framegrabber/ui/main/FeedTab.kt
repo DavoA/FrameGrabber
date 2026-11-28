@@ -597,7 +597,7 @@ class FeedTab(private val s: MainScreen) {
             upBar!!.isIndeterminate = false
             upBar!!.progress = (P.fraction * 1000).toInt()
             val pct = (P.fraction * 100).toInt()
-            upStage!!.text = if (P.bytesTotal > 0) {
+            upStage!!.text = if (P.bytesTotal > 0 && !P.stage.startsWith("Видео стоит")) {
                 val left = P.etaSec
                 "$pct% · ${mbs(P.bytesDone)} из ${mbs(P.bytesTotal)}" +
                     (if (left >= 0) " · осталось ${eta(left)}" else " · считаю, сколько осталось…")

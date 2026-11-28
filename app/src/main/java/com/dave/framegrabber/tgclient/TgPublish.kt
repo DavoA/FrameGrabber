@@ -155,6 +155,7 @@ object TgPublish {
             val sent = ConcurrentHashMap.newKeySet<Long>()
             var lastProgress = System.currentTimeMillis()
             val sizes = ConcurrentHashMap<Int, Long>()
+            val videoFiles = ConcurrentHashMap.newKeySet<Int>()
             val uploaded = ConcurrentHashMap<Int, Long>()
             var failure: String? = null
             val allSent = CountDownLatch(1)
@@ -189,7 +190,7 @@ object TgPublish {
             }
             Tg.rawListeners += listener
             try {
-                fun sendGroup(contents: List<TdApi.InputMessageContent>) {
+                fun sendGroup(contents: List<TdApi.InputMessageContent>, isVideo: Boolean = false) {
                     for (chunk in contents.chunked(10)) {
                         val res = if (chunk.size == 1)
                             Tg.call(TdApi.SendMessage(chat.id, null, null, opts, null, chunk[0]), 120).let { m -> (m as? TdApi.Message)?.let { arrayOf(it) } ?: throw IllegalStateException(Tg.errorOf(m)) }
@@ -197,23 +198,32 @@ object TgPublish {
                             ?: throw IllegalStateException("Telegram не принял сообщения")
                         res.forEach { m ->
                             waiting += m.id
-                            fileOf(m.content)?.let { f -> sizes[f.id] = maxOf(f.size, f.expectedSize, 1) }
+                            fileOf(m.content)?.let { f -> sizes[f.id] = maxOf(f.size, f.expectedSize, 1); if (isVideo) videoFiles += f.id }
                         }
                     }
                 }
                 step("Отправляю фото…", 0.25f)
                 sendGroup(photoContents)
-                if (videoContents.isNotEmpty()) sendGroup(videoContents)
+                if (videoContents.isNotEmpty()) sendGroup(videoContents, isVideo = true)
                 // big uploads take a while: wait as long as bytes keep going, unless cancelled
                 fun dropPost() {
                     val ids = (waiting + sent).toLongArray()
                     if (ids.isNotEmpty()) Tg.call(TdApi.DeleteMessages(chat.id, ids, true))
                 }
+                var diag = ""
+                var lastDiag = 0L
                 while (!allSent.await(2, TimeUnit.SECONDS)) {
                     if (cancelled) { dropPost(); throw InterruptedException() }
-                    if (System.currentTimeMillis() - lastProgress > STALL_MS) {
+                    val idle = System.currentTimeMillis() - lastProgress
+                    // nothing moves: ask Telegram what it is doing with the video, show it
+                    if (idle > 40_000 && System.currentTimeMillis() - lastDiag > 10_000 && videoFiles.isNotEmpty()) {
+                        lastDiag = System.currentTimeMillis()
+                        diag = videoFiles.joinToString("\n") { id -> describeFile(id) }
+                        step("Видео стоит ${idle / 1000} с.\n$diag", fraction)
+                    }
+                    if (idle > STALL_MS) {
                         dropPost()
-                        throw IllegalStateException("Видео не загружалось ${STALL_MS / 60000} минут (ни байта) — пост убран из канала, попробуй ещё раз")
+                        throw IllegalStateException("Видео не загружалось ${STALL_MS / 60000} мин — пост убран из канала.\n$diag")
                     }
                 }
                 // a part failed: the rest of the post shouldn't hang in the channel without it
@@ -242,14 +252,48 @@ object TgPublish {
     /** No byte uploaded for this long = stuck. */
     private const val STALL_MS = 5 * 60_000L
 
-    /** Outgoing messages of the channel that are still «sending» or failed: deleted (cancels their uploads). */
+    /**
+     * Messages still «sending» or failed — in this channel and in the other chats too (Telegram
+     * uploads only a few files at once: an old dead upload anywhere can hold the new one): deleted,
+     * which cancels their uploads.
+     */
     private fun clearStuck(chatId: Long) {
-        runCatching {
-            val h = Tg.call(TdApi.GetChatHistory(chatId, 0, 0, 100, true)) as? TdApi.Messages ?: return
-            val stuck = h.messages.filterNotNull().filter { it.sendingState != null }.map { it.id }
-            if (stuck.isEmpty()) return
-            step("Убираю зависшие отправки: ${stuck.size}…", 0.01f)
-            Tg.call(TdApi.DeleteMessages(chatId, stuck.toLongArray(), true))
+        val chats = LinkedHashSet<Long>().apply {
+            add(chatId)
+            // only channels (where this app posts): personal chats are left alone
+            runCatching { (Tg.call(TdApi.GetChats(TdApi.ChatListMain(), 60)) as? TdApi.Chats)?.chatIds?.forEach { id ->
+                val t = (Tg.call(TdApi.GetChat(id), 10) as? TdApi.Chat)?.type
+                if (t is TdApi.ChatTypeSupergroup && t.isChannel) add(id)
+            } }
+        }
+        var n = 0
+        chats.forEach { c ->
+            runCatching {
+                val h = Tg.call(TdApi.GetChatHistory(c, 0, 0, 50, true), 10) as? TdApi.Messages ?: return@forEach
+                val stuck = h.messages.filterNotNull().filter { it.isOutgoing && it.sendingState != null }.map { it.id }
+                if (stuck.isEmpty()) return@forEach
+                n += stuck.size
+                step("Убираю зависшие отправки: $n…", 0.01f)
+                Tg.call(TdApi.DeleteMessages(c, stuck.toLongArray(), true))
+            }
+        }
+    }
+
+    /** What Telegram says about an uploading file — for «видео стоит». */
+    private fun describeFile(id: Int): String {
+        val f = Tg.call(TdApi.GetFile(id), 10) as? TdApi.File ?: return "Telegram не отвечает про файл"
+        val local = f.local
+        val name = local.path.substringAfterLast('/').take(40)
+        val exists = local.path.isNotEmpty() && File(local.path).let { it.exists() && it.canRead() }
+        return buildString {
+            append("Файл «").append(name.ifEmpty { "?" }).append("»: ")
+            append(if (exists) "на месте" else "не читается")
+            append(" · ").append(when {
+                f.remote.isUploadingCompleted -> "загружен"
+                f.remote.isUploadingActive -> "Telegram грузит, ${mb(f.remote.uploadedSize)}"
+                else -> "Telegram не начал загрузку"
+            })
+            append(" · ").append(mb(maxOf(f.size, f.expectedSize)))
         }
     }
 
@@ -373,6 +417,7 @@ class TgPublishService : Service() {
                 .setSmallIcon(R.drawable.ic_send)
                 .setContentTitle(if (TgPublish.error == null) "Пост в канале ✓" else "Пост не опубликован")
                 .setContentText(TgPublish.error ?: TgPublish.doneText ?: "")
+                .setStyle(Notification.BigTextStyle().bigText(TgPublish.error ?: TgPublish.doneText ?: ""))
                 .setContentIntent(PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
                 .setAutoCancel(true).build())
             stopSelf()
@@ -388,6 +433,7 @@ class TgPublishService : Service() {
         .setSmallIcon(R.drawable.ic_send)
         .setContentTitle("Публикую пост в канал")
         .setContentText(TgPublish.stage)
+        .setStyle(Notification.BigTextStyle().bigText(TgPublish.stage))
         .setProgress(1000, (TgPublish.fraction * 1000).toInt(), false)
         .setOngoing(true)
         .setOnlyAlertOnce(true)
