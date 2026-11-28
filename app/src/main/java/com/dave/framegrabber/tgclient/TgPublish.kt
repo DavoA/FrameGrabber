@@ -154,11 +154,24 @@ object TgPublish {
             /** Messages of this post already in the channel (deleted again if the post fails). */
             val sent = ConcurrentHashMap.newKeySet<Long>()
             var lastProgress = System.currentTimeMillis()
+            // Telegram may answer «sent» before SendMessage itself returns (a video it already has
+            // from an earlier try goes out at once): answers are kept here and matched afterwards
+            val succeeded = ConcurrentHashMap<Long, Long>()
+            val failedIds = ConcurrentHashMap<Long, String>()
+            var allQueued = false
             val sizes = ConcurrentHashMap<Int, Long>()
             val videoFiles = ConcurrentHashMap.newKeySet<Int>()
             val uploaded = ConcurrentHashMap<Int, Long>()
             var failure: String? = null
             val allSent = CountDownLatch(1)
+            val settleLock = Any()
+            fun settle() = synchronized(settleLock) {
+                for (id in waiting.toList()) {
+                    succeeded[id]?.let { newId -> waiting.remove(id); sent += newId }
+                    failedIds[id]?.let { e -> waiting.remove(id); failure = e }
+                }
+                if (allQueued && waiting.isEmpty()) allSent.countDown()
+            }
             val listener: (TdApi.Object) -> Unit = { u ->
                 when (u) {
                     is TdApi.UpdateFile -> if (sizes.containsKey(u.file.id)) {
@@ -178,13 +191,13 @@ object TgPublish {
                         step((if (r.sendAt > 0) "Загружаю (пост запланирован)… " else "Загружаю… ") +
                             "${mb(uploaded.values.sum())} из ${mb(total)}", 0.25f + 0.75f * uploaded.values.sum() / total)
                     }
-                    is TdApi.UpdateMessageSendSucceeded -> if (waiting.remove(u.oldMessageId)) {
-                        sent += u.message.id; lastProgress = System.currentTimeMillis()
-                        if (waiting.isEmpty()) allSent.countDown()
+                    is TdApi.UpdateMessageSendSucceeded -> if (u.message.chatId == chat.id) {
+                        succeeded[u.oldMessageId] = u.message.id; lastProgress = System.currentTimeMillis()
+                        settle()
                     }
-                    is TdApi.UpdateMessageSendFailed -> if (waiting.remove(u.oldMessageId)) {
-                        failure = Tg.errorOf(u.error) ?: u.error.message
-                        if (waiting.isEmpty()) allSent.countDown()
+                    is TdApi.UpdateMessageSendFailed -> if (u.message.chatId == chat.id) {
+                        failedIds[u.oldMessageId] = Tg.errorOf(u.error) ?: u.error.message
+                        settle()
                     }
                 }
             }
@@ -205,6 +218,8 @@ object TgPublish {
                 step("Отправляю фото…", 0.25f)
                 sendGroup(photoContents)
                 if (videoContents.isNotEmpty()) sendGroup(videoContents, isVideo = true)
+                allQueued = true
+                settle()
                 // big uploads take a while: wait as long as bytes keep going, unless cancelled
                 fun dropPost() {
                     val ids = (waiting + sent).toLongArray()
