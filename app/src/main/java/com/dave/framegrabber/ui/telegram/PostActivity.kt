@@ -224,6 +224,8 @@ class PostActivity : Activity() {
         findViewById<TextView>(R.id.txtPhotosHint).text =
             "Нажимай на кадры по порядку — нужно ${PostCaption.PHOTOS}. Первый — обложка. Нажми ещё раз, чтобы убрать."
         photoGrid.rowCount = GridLayout.UNDEFINED
+        // the queue goes through the Telegram login, the bot setup isn't needed
+        cardSetup.visibility = View.GONE
         btnPublish.text = if (pos >= total) "Начать заливку" else "Далее →"
         // a queue goes right away: no time choice
         (txtWhen.parent as? View)?.visibility = View.GONE
