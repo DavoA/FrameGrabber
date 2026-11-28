@@ -78,6 +78,20 @@ class PostActivity : Activity() {
                 .putExtra(EXTRA_VIDEO, video)
                 .putExtra(EXTRA_VIDEO_KEY, videoKey)
 
+        // «Очередь постов»: the page is one step of several; it returns what was composed
+        private const val EXTRA_QUEUE_POS = "queuePos"
+        private const val EXTRA_QUEUE_TOTAL = "queueTotal"
+        const val RES_FILES = "resFiles"
+        const val RES_TEXT = "resText"
+        const val RES_VIDEO = "resVideo"
+        const val RES_TITLE = "resTitle"
+
+        /** Queue step: all frames of the video are offered, you tap 6 of them. */
+        fun queueIntent(ctx: Context, allFiles: List<String>, allTimes: List<Long>, video: String, videoKey: String,
+                        videoUri: Uri?, pos: Int, total: Int) =
+            intent(ctx, allFiles, allTimes, video, videoKey, videoUri)
+                .putExtra(EXTRA_QUEUE_POS, pos).putExtra(EXTRA_QUEUE_TOTAL, total)
+
         /** Hashtag colour in Telegram's dark theme (preview). */
         private const val TG_LINK = 0xFF6AB3F3.toInt()
     }
@@ -106,6 +120,11 @@ class PostActivity : Activity() {
     /** Hashtag choice (public for tests). */
     lateinit var tags: TagPicker
     private var posting = false
+    /** A step of «Очередь постов» (see [queueIntent]). */
+    private var queueMode = false
+    /** Queue step: every frame of the video; [files] are the picked ones, in tap order. */
+    private val allFiles = mutableListOf<File>()
+    private val allTimes = mutableListOf<Long>()
 
     private lateinit var photoGrid: GridLayout
     private lateinit var previewGrid: GridLayout
@@ -132,9 +151,16 @@ class PostActivity : Activity() {
         log = PostLog(this)
         videoKey = intent.getStringExtra(EXTRA_VIDEO_KEY) ?: ""
 
-        intent.getStringArrayListExtra(EXTRA_FILES)?.forEach { files += File(it) }
-        intent.getLongArrayExtra(EXTRA_TIMES)?.forEach { times += it }
-        while (times.size < files.size) times += 0L
+        queueMode = intent.hasExtra(EXTRA_QUEUE_POS)
+        if (queueMode) {
+            intent.getStringArrayListExtra(EXTRA_FILES)?.forEach { allFiles += File(it) }
+            intent.getLongArrayExtra(EXTRA_TIMES)?.forEach { allTimes += it }
+            while (allTimes.size < allFiles.size) allTimes += 0L
+        } else {
+            intent.getStringArrayListExtra(EXTRA_FILES)?.forEach { files += File(it) }
+            intent.getLongArrayExtra(EXTRA_TIMES)?.forEach { times += it }
+            while (times.size < files.size) times += 0L
+        }
 
         photoGrid = findViewById(R.id.photoGrid)
         previewGrid = findViewById(R.id.previewGrid)
@@ -161,11 +187,13 @@ class PostActivity : Activity() {
         findViewById<View>(R.id.btnEditTags).setOnClickListener { startActivity(Intent(this, TagsActivity::class.java)) }
         btnPublish.setOnClickListener { publish() }
 
-        // the draft from last time (if it wasn't published)
-        editStudio.setText(store.draftStudio)
-        models += store.draftModels
-        val lib = com.dave.framegrabber.telegram.TagLibrary(this)
-        tags.selected += store.draftTags.filter { lib.contains(it) }
+        // the draft from last time (if it wasn't published); a queue post starts empty
+        if (!queueMode) {
+            editStudio.setText(store.draftStudio)
+            models += store.draftModels
+            val lib = com.dave.framegrabber.telegram.TagLibrary(this)
+            tags.selected += store.draftTags.filter { lib.contains(it) }
+        }
 
         editStudio.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, store.studios))
         editModel.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, store.models))
@@ -184,6 +212,101 @@ class PostActivity : Activity() {
         updateSetup()
         updatePreview()
         buildVideoCard()
+        if (queueMode) setupQueueStep()
+    }
+
+    // ================================================================ «Очередь постов» step
+
+    private fun setupQueueStep() {
+        val pos = intent.getIntExtra(EXTRA_QUEUE_POS, 1); val total = intent.getIntExtra(EXTRA_QUEUE_TOTAL, 1)
+        ((txtChannel.parent as? android.view.ViewGroup)?.getChildAt(0) as? TextView)?.text = "Очередь · пост $pos из $total"
+        txtChannel.text = intent.getStringExtra(EXTRA_VIDEO) ?: ""
+        findViewById<TextView>(R.id.txtPhotosHint).text =
+            "Нажимай на кадры по порядку — нужно ${PostCaption.PHOTOS}. Первый — обложка. Нажми ещё раз, чтобы убрать."
+        photoGrid.rowCount = GridLayout.UNDEFINED
+        btnPublish.text = if (pos >= total) "Начать заливку" else "Далее →"
+        // a queue goes right away: no time choice
+        (txtWhen.parent as? View)?.visibility = View.GONE
+        if (videoUri != null && !swVideo.isChecked) swVideo.isChecked = true
+    }
+
+    /** All frames, numbered in the order they were tapped. */
+    private fun fillPick(grid: GridLayout) {
+        grid.removeAllViews()
+        val gap = 6 * d
+        val total = grid.width.takeIf { it > 0 } ?: (resources.displayMetrics.widthPixels - (60 * d).toInt())
+        val cell = ((total - gap * 3) / 3).toInt()
+        if (grid.width == 0) grid.post { if (grid.width > 0) fillPick(grid) }
+        allFiles.forEachIndexed { i, f ->
+            val n = files.indexOf(f) + 1
+            val tile = FrameLayout(this).apply {
+                layoutParams = GridLayout.LayoutParams().apply {
+                    width = cell; height = cell
+                    setMargins((gap / 2).toInt(), (gap / 2).toInt(), (gap / 2).toInt(), (gap / 2).toInt())
+                }
+                setBackgroundResource(R.drawable.bg_thumb)
+                clipToOutline = true
+                if (n > 0) foreground = getDrawable(R.drawable.fg_selected)
+            }
+            tile.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                layoutParams = FrameLayout.LayoutParams(-1, -1)
+                thumbs[f.path]?.let { setImageBitmap(it) } ?: setBackgroundColor(Color.DKGRAY)
+                alpha = if (n == 0 && files.size >= PostCaption.PHOTOS) 0.4f else 1f
+            })
+            if (n > 0) tile.addView(TextView(this).apply {
+                text = if (n == 1) "1 · обложка" else n.toString()
+                setTextColor(Color.WHITE); textSize = 12f; typeface = android.graphics.Typeface.DEFAULT_BOLD
+                background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 20 * d; setColor(tc(R.color.accent)) }
+                setPadding((8 * d).toInt(), (2 * d).toInt(), (8 * d).toInt(), (2 * d).toInt())
+                layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START).apply { setMargins((5 * d).toInt(), (5 * d).toInt(), 0, 0) }
+            })
+            tile.addView(TextView(this).apply {
+                text = TimeUtil.format(allTimes[i])
+                setTextColor(tc(R.color.textDim)); textSize = 9f
+                typeface = android.graphics.Typeface.MONOSPACE
+                setBackgroundResource(R.drawable.bg_chip)
+                setPadding((5 * d).toInt(), 0, (5 * d).toInt(), 0)
+                layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, (5 * d).toInt(), (5 * d).toInt()) }
+            })
+            if (f.path in dupPaths) tile.addView(TextView(this).apply {
+                text = "⚠"; setTextColor(tc(R.color.warn)); textSize = 11f
+                layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START).apply { setMargins((6 * d).toInt(), 0, 0, (4 * d).toInt()) }
+            })
+            tile.setOnClickListener { pickFrame(i) }
+            grid.addView(tile)
+        }
+    }
+
+    private fun pickFrame(i: Int) {
+        val f = allFiles[i]
+        val k = files.indexOf(f)
+        if (k >= 0) { files.removeAt(k); times.removeAt(k) }
+        else {
+            if (files.size >= PostCaption.PHOTOS) { toast("Уже выбрано ${PostCaption.PHOTOS}. Убери какой-нибудь кадр."); return }
+            files += f; times += allTimes[i]
+        }
+        updateDupWarning()
+        buildPhotoGrids()
+    }
+
+    /** «Далее»: what was composed goes back to the queue screen. */
+    private fun queueDone(text: String, studio: String) {
+        posted = true
+        store.rememberUsed(studio, models)
+        runCatching {
+            log.add(PostLog.Post(
+                System.currentTimeMillis(), store.chat, 0, null, studio, models.toList(), tags.ordered(),
+                intent.getStringExtra(EXTRA_VIDEO) ?: "", videoKey, files.mapNotNull { hashes[it.path] },
+            ))
+        }
+        com.dave.framegrabber.telegram.TagLibrary(this).countUse(tags.selected)
+        setResult(RESULT_OK, Intent()
+            .putStringArrayListExtra(RES_FILES, ArrayList(files.map { it.path }))
+            .putExtra(RES_TEXT, text)
+            .putExtra(RES_VIDEO, swVideo.isChecked && videoUri != null)
+            .putExtra(RES_TITLE, (studio + " - " + models.joinToString(" & ")).trim(' ', '-')))
+        finish()
     }
 
     // ================================================================ video after the photos · when
@@ -329,7 +452,7 @@ class PostActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
-        if (!posted) saveDraft()
+        if (!posted && !queueMode) saveDraft()
     }
 
     override fun onDestroy() { io.shutdownNow(); super.onDestroy() }
@@ -375,13 +498,14 @@ class PostActivity : Activity() {
 
     private fun loadThumbs() {
         buildPhotoGrids()
+        val src = if (queueMode) allFiles.toList() else files.toList()
         io.execute {
-            files.forEach { f ->
-                val b = FrameRender.decodeFile(f, 480) ?: return@forEach
+            src.forEach { f ->
+                val b = FrameRender.decodeFile(f, if (queueMode) 320 else 480) ?: return@forEach
                 ui.post { thumbs[f.path] = b; buildPhotoGrids() }
             }
             // then: was this video or any of these pictures already posted?
-            val h = files.associate { it.path to PostLog.hashOf(it) }
+            val h = src.associate { it.path to PostLog.hashOf(it) }
             ui.post {
                 h.forEach { (k, v) -> if (v != null) hashes[k] = v }
                 updateDupWarning()
@@ -391,7 +515,7 @@ class PostActivity : Activity() {
     }
 
     private fun buildPhotoGrids() {
-        fill(photoGrid, editable = true)
+        if (queueMode) fillPick(photoGrid) else fill(photoGrid, editable = true)
         fill(previewGrid, editable = false)
     }
 
@@ -533,7 +657,7 @@ class PostActivity : Activity() {
 
     private fun publish() {
         if (posting) return
-        if (!store.configured) { setup(); return }
+        if (!queueMode && !store.configured) { setup(); return }
         val studio = editStudio.text.toString().trim()
         if (editModel.text.isNotBlank()) addModel()   // typed but not added yet
         val problems = buildList {
@@ -551,6 +675,14 @@ class PostActivity : Activity() {
         val text = caption()
         val withoutTags = tags.selected.isEmpty()
         val dup = duplicates()
+        if (queueMode) {
+            if (dup != null && dup.any) AlertDialog.Builder(this).setTitle("⚠ Это уже было в канале")
+                .setMessage(describe(dup) + "\n\nВсё равно добавить в очередь?")
+                .setPositiveButton("Добавить") { _, _ -> queueDone(text, studio) }
+                .setNegativeButton("Отмена", null).show()
+            else queueDone(text, studio)
+            return
+        }
         val b = AlertDialog.Builder(this)
         if (dup != null && dup.any) {
             // already posted: say what exactly, and ask

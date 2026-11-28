@@ -131,6 +131,11 @@
             android:name=".data.Updater$InstallReceiver"
             android:exported="false" />
         <activity
+            android:name=".ui.telegram.QueueActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+        <activity
             android:name=".ui.LockActivity"
             android:exported="false"
             android:screenOrientation="portrait"

@@ -152,6 +152,7 @@ class FeedTab(private val s: MainScreen) {
             else list.setSelection(adapter.count - 1)
         }
         btnFavs.setOnClickListener { if (favMode) closeFavs() else openFavs() }
+        s.h<View>(R.id.btnFeedQueue).setOnClickListener { openQueue() }
         s.h<View>(R.id.btnFeedSearch).setOnClickListener {
             if (favMode) closeFavs()
             searchRow.visibility = View.VISIBLE
@@ -327,13 +328,14 @@ class FeedTab(private val s: MainScreen) {
     }
 
     private fun menu() {
-        val items = arrayOf("Статистика канала", "Другой канал", "Загрузки", "Выйти из аккаунта Telegram")
+        val items = arrayOf("Очередь постов", "Статистика канала", "Другой канал", "Загрузки", "Выйти из аккаунта Telegram")
         AlertDialog.Builder(act, R.style.DialogTheme).setItems(items) { _, i ->
             when (i) {
-                0 -> openStats()
-                1 -> askChannel()
-                2 -> showDownloads()
-                3 -> AlertDialog.Builder(act, R.style.DialogTheme)
+                0 -> openQueue()
+                1 -> openStats()
+                2 -> askChannel()
+                3 -> showDownloads()
+                4 -> AlertDialog.Builder(act, R.style.DialogTheme)
                     .setMessage("Выйти из аккаунта в приложении? Скачанные видео останутся.")
                     .setPositiveButton("Выйти") { _, _ -> posts.clear(); chatId = 0; adapter.notifyDataSetChanged(); Tg.logOut() }
                     .setNegativeButton("Отмена", null).show()
@@ -577,6 +579,8 @@ class FeedTab(private val s: MainScreen) {
         upload.addView(upBar, LinearLayout.LayoutParams(-1, (8 * d).toInt()).apply { topMargin = (8 * d).toInt() })
         upStage = TextView(act).apply { textSize = 12.5f; setTextColor(act.tc(R.color.textDim)); setPadding(0, (4 * d).toInt(), 0, 0) }
         upload.addView(upStage)
+        // tap the card: the queue screen (what's left, what didn't go)
+        upload.setOnClickListener { if (com.dave.framegrabber.tgclient.PostQueue.items(act).isNotEmpty()) openQueue() }
     }
 
     private fun showUpload() {
@@ -588,7 +592,8 @@ class FeedTab(private val s: MainScreen) {
         upload.visibility = View.VISIBLE
         if (P.running) {
             upWasRunning = true
-            upTitle!!.text = "Заливаю пост: ${P.what}"
+            val q = com.dave.framegrabber.tgclient.PostQueue.label(act)
+            upTitle!!.text = if (q != null) "$q · ${P.what}" else "Заливаю пост: ${P.what}"
             upBar!!.isIndeterminate = false
             upBar!!.progress = (P.fraction * 1000).toInt()
             val pct = (P.fraction * 100).toInt()
@@ -613,6 +618,8 @@ class FeedTab(private val s: MainScreen) {
             s.ui.postDelayed(hideUpload, if (P.error == null) 4000 else 8000)
         }
     }
+
+    private fun openQueue() = act.startActivity(Intent(act, com.dave.framegrabber.ui.telegram.QueueActivity::class.java))
 
     private fun mbs(b: Long) = if (b >= 1L shl 30) String.format(Locale.US, "%.2f ГБ", b / (1L shl 30).toDouble())
         else String.format(Locale.US, "%.0f МБ", b / (1L shl 20).toDouble())
