@@ -91,6 +91,9 @@ object TgPublish {
             step("Ищу канал…", 0f)
             val chat = Tg.call(TdApi.SearchPublicChat(r.channel)) as? TdApi.Chat
                 ?: throw IllegalStateException("Канал @${r.channel} не найден")
+            // sends left hanging from before (app closed mid-upload, files gone): Telegram keeps
+            // retrying them and the new upload waits behind them — remove them first
+            clearStuck(chat.id)
             val premium = (Tg.call(TdApi.GetMe()) as? TdApi.User)?.isPremium == true
             val limit = if (premium) SplitPlan.TELEGRAM_PREMIUM_LIMIT else SplitPlan.TELEGRAM_LIMIT
 
@@ -148,6 +151,9 @@ object TgPublish {
 
             // progress: bytes uploaded of every file, until each message is sent (or fails)
             val waiting = ConcurrentHashMap.newKeySet<Long>()
+            /** Messages of this post already in the channel (deleted again if the post fails). */
+            val sent = ConcurrentHashMap.newKeySet<Long>()
+            var lastProgress = System.currentTimeMillis()
             val sizes = ConcurrentHashMap<Int, Long>()
             val uploaded = ConcurrentHashMap<Int, Long>()
             var failure: String? = null
@@ -155,6 +161,7 @@ object TgPublish {
             val listener: (TdApi.Object) -> Unit = { u ->
                 when (u) {
                     is TdApi.UpdateFile -> if (sizes.containsKey(u.file.id)) {
+                        if ((uploaded[u.file.id] ?: -1L) != u.file.remote.uploadedSize) lastProgress = System.currentTimeMillis()
                         uploaded[u.file.id] = if (u.file.remote.isUploadingCompleted) sizes[u.file.id] ?: 0 else u.file.remote.uploadedSize
                         val total = sizes.values.sum().coerceAtLeast(1)
                         val done = uploaded.values.sum()
@@ -170,8 +177,14 @@ object TgPublish {
                         step((if (r.sendAt > 0) "Загружаю (пост запланирован)… " else "Загружаю… ") +
                             "${mb(uploaded.values.sum())} из ${mb(total)}", 0.25f + 0.75f * uploaded.values.sum() / total)
                     }
-                    is TdApi.UpdateMessageSendSucceeded -> { waiting.remove(u.oldMessageId); if (waiting.isEmpty()) allSent.countDown() }
-                    is TdApi.UpdateMessageSendFailed -> { failure = Tg.errorOf(u.error) ?: u.error.message; waiting.remove(u.oldMessageId); if (waiting.isEmpty()) allSent.countDown() }
+                    is TdApi.UpdateMessageSendSucceeded -> if (waiting.remove(u.oldMessageId)) {
+                        sent += u.message.id; lastProgress = System.currentTimeMillis()
+                        if (waiting.isEmpty()) allSent.countDown()
+                    }
+                    is TdApi.UpdateMessageSendFailed -> if (waiting.remove(u.oldMessageId)) {
+                        failure = Tg.errorOf(u.error) ?: u.error.message
+                        if (waiting.isEmpty()) allSent.countDown()
+                    }
                 }
             }
             Tg.rawListeners += listener
@@ -191,15 +204,22 @@ object TgPublish {
                 step("Отправляю фото…", 0.25f)
                 sendGroup(photoContents)
                 if (videoContents.isNotEmpty()) sendGroup(videoContents)
-                // big uploads take a while: wait as long as it takes, unless cancelled
+                // big uploads take a while: wait as long as bytes keep going, unless cancelled
+                fun dropPost() {
+                    val ids = (waiting + sent).toLongArray()
+                    if (ids.isNotEmpty()) Tg.call(TdApi.DeleteMessages(chat.id, ids, true))
+                }
                 while (!allSent.await(2, TimeUnit.SECONDS)) {
-                    if (cancelled) {
-                        waiting.forEach { id -> Tg.call(TdApi.DeleteMessages(chat.id, longArrayOf(id), true)) }
-                        throw InterruptedException()
+                    if (cancelled) { dropPost(); throw InterruptedException() }
+                    if (System.currentTimeMillis() - lastProgress > STALL_MS) {
+                        dropPost()
+                        throw IllegalStateException("Видео не загружалось ${STALL_MS / 60000} минут (ни байта) — пост убран из канала, попробуй ещё раз")
                     }
                 }
+                // a part failed: the rest of the post shouldn't hang in the channel without it
+                if (failure != null) dropPost()
             } finally { Tg.rawListeners -= listener }
-            failure?.let { throw IllegalStateException(it) }
+            failure?.let { throw IllegalStateException("$it — пост убран из канала") }
             doneText = when {
                 r.sendAt > 0 -> "Пост запланирован на ${java.text.SimpleDateFormat("d MMM, HH:mm", java.util.Locale("ru")).format(java.util.Date(r.sendAt * 1000L))}" +
                     (if (videos.size > 1) " (фото + ${videos.size} части видео)" else if (videos.isNotEmpty()) " (фото + видео)" else "")
@@ -216,6 +236,20 @@ object TgPublish {
             tmp.deleteRecursively()
             running = false
             changed()
+        }
+    }
+
+    /** No byte uploaded for this long = stuck. */
+    private const val STALL_MS = 5 * 60_000L
+
+    /** Outgoing messages of the channel that are still «sending» or failed: deleted (cancels their uploads). */
+    private fun clearStuck(chatId: Long) {
+        runCatching {
+            val h = Tg.call(TdApi.GetChatHistory(chatId, 0, 0, 100, true)) as? TdApi.Messages ?: return
+            val stuck = h.messages.filterNotNull().filter { it.sendingState != null }.map { it.id }
+            if (stuck.isEmpty()) return
+            step("Убираю зависшие отправки: ${stuck.size}…", 0.01f)
+            Tg.call(TdApi.DeleteMessages(chatId, stuck.toLongArray(), true))
         }
     }
 
