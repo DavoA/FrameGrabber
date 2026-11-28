@@ -1,0 +1,87 @@
+--------- beginning of main
+W/OpenGLRenderer(  842): Unknown dataspace 0
+W/OpenGLRenderer( 1063): Unknown dataspace 0
+W/OpenGLRenderer( 1063): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+W/OpenGLRenderer(  842): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+W/OpenGLRenderer( 1526): Unknown dataspace 0
+W/OpenGLRenderer( 1111): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+E/OpenGLRenderer( 1111): Unable to match the desired swap behavior.
+E/OpenGLRenderer( 1111): Unable to match the desired swap behavior.
+E/OpenGLRenderer( 1111): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+W/OpenGLRenderer( 1111): Unknown dataspace 0
+E/OpenGLRenderer( 1111): Unable to match the desired swap behavior.
+W/OpenGLRenderer( 1785): Unknown dataspace 0
+W/OpenGLRenderer(  842): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+W/OpenGLRenderer( 1785): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+E/OpenGLRenderer( 1111): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+I/FrameGrabber( 5679): FASTPIC big=https://i129.fastpic.org/big/2026/1126/40/_ec448b111e5831113f9f6772b6e2b640.jpg?md5=rLDnCL8mBvPg2pxMmRrhLw&expires=1795870800 ref= log=https://fastpic.org/view/129/2026/1126/_ec448b111e5831113f9f6772b6e2b640.jpg.html → 9056 симв. | https://fastpic.org/view/129/2026/1126/_ec448b111e5831113f9f6772b6e2b640.jpg.html → 86198 симв. | https://fastpic.org/view/129/2026/1126/_ec448b111e5831113f9f6772b6e2b640.jpg.html ⇒ https://i129.fastpic.org/big/2026/1126/40/_ec448b111e5831113f9f6772b6e2b640.jpg?md5=rLDnCL8mBvPg2pxMmRrhLw&expires=1795870800
+W/OpenGLRenderer( 5679): Unknown dataspace 0
+W/OpenGLRenderer( 5679): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+I/FrameGrabber( 5679): PROBE fmt_h264_aac.mov clip mp4 dropped=[]
+I/FrameGrabber( 5679): PROBE fmt_hevc_aac.mkv clip mp4 dropped=[]
+I/FrameGrabber( 5679): PROBE fmt_h264_mp3.mkv clip mp4 dropped=[mpeg]
+I/FrameGrabber( 5679): PROBE fmt_h264_mp2.ts clip mp4 dropped=[mpeg-L2]
+I/FrameGrabber( 5679): PROBE fmt_vp9_opus.webm clip webm dropped=[]
+I/FrameGrabber( 5679): PROBE fmt_vp8_vorbis.webm clip webm dropped=[]
+I/FrameGrabber( 5679): PROBE fmt_h264_aac.flv: 640x360 dur=4000000 fps=30.0 ffmpeg=true
+I/FrameGrabber( 5679): PROBE fmt_h264_aac.flv frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_h264_aac.mov: 640x360 dur=4023000 fps=29.82848620432513 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_h264_aac.mov frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_h264_ac3.mkv: 640x360 dur=4000000 fps=30.303030303030305 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_h264_ac3.mkv frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_h264_mp2.ts: 640x360 dur=3967000 fps=30.00030000300003 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_h264_mp2.ts frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_h264_mp3.mkv: 640x360 dur=4025000 fps=30.303030303030305 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_h264_mp3.mkv frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_hevc_aac.mkv: 640x360 dur=4023000 fps=30.303030303030305 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_hevc_aac.mkv frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_mpeg2.mpg: 640x360 dur=4000000 fps=30.0 ffmpeg=true
+I/FrameGrabber( 5679): PROBE fmt_mpeg2.mpg frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_vp8_vorbis.webm: 640x360 dur=4003000 fps=30.303030303030305 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_vp8_vorbis.webm frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_vp9_opus.webm: 640x360 dur=4008000 fps=30.303030303030305 ffmpeg=false
+I/FrameGrabber( 5679): PROBE fmt_vp9_opus.webm frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_wmv2.wmv: 640x360 dur=4000000 fps=30.0 ffmpeg=true
+I/FrameGrabber( 5679): PROBE fmt_wmv2.wmv frames OK (точный)
+I/FrameGrabber( 5679): PROBE fmt_xvid_mp3.avi: 640x360 dur=4000000 fps=30.0 ffmpeg=true
+I/FrameGrabber( 5679): PROBE fmt_xvid_mp3.avi frames OK (точный)
+W/OpenGLRenderer( 5679): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+W/OpenGLRenderer( 5654): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+I/FrameGrabber( 5679): ACTIVITY 17656 ms: 0.55, 0.59, 0.63, 0.71, 0.77, 0.82, 0.84, 0.97, 1.00, 1.00, 0.97, 0.99, 1.00, 1.00, 1.00, 0.99, 0.96, 0.95, 0.98, 1.00
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+W/OpenGLRenderer( 5679): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+W/OpenGLRenderer(  521): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+E/OpenGLRenderer(  842): Unable to match the desired swap behavior.
+I/FrameGrabber( 5679): SPLIT plan: 0-1956552:945850, 1956552-6789885:798456, 6789885-12023219:1003341
+I/FrameGrabber( 5679): SPLIT part 1: planned 945850 real 930084
+I/FrameGrabber( 5679): SPLIT part 2: planned 798456 real 783252
+I/FrameGrabber( 5679): SPLIT part 3: planned 1003341 real 987833
